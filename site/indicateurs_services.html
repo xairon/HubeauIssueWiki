@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indicateurs des services — Hub'Eau Knowledge Base</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Mobile hamburger -->
+    <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu">
+        <span></span><span></span><span></span>
+    </button>
+
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-logo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                    <path d="M8 12c0-2 1-4 4-4s4 2 4 4-1 4-4 4-4-2-4-4z" fill="currentColor" opacity="0.3"/>
+                </svg>
+                <span>Hub'Eau KB</span>
+            </a>
+        </div>
+        <div class="sidebar-section-title">APIs</div>
+        <div class="sidebar-links">
+            <a href="index.html">
+                <span class="api-name">Accueil</span>
+                <span class="issue-count home-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                </span>
+            </a>
+            <a href="general.html"><span class="api-name">Général</span><span class="issue-count">21</span></a>
+<a href="hydrobiologie.html"><span class="api-name">Hydrobiologie</span><span class="issue-count">15</span></a>
+<a href="hydrometrie.html"><span class="api-name">Hydrométrie</span><span class="issue-count">87</span></a>
+<a href="indicateurs_services.html" class="active"><span class="api-name">Indicateurs des services</span><span class="issue-count">10</span></a>
+<a href="phytopharmaceutiques.html"><span class="api-name">Phytopharmaceutiques</span><span class="issue-count">3</span></a>
+<a href="piezometrie.html"><span class="api-name">Piézométrie</span><span class="issue-count">33</span></a>
+<a href="poisson.html"><span class="api-name">Poisson</span><span class="issue-count">17</span></a>
+<a href="prelevements.html"><span class="api-name">Prélèvements en eau</span><span class="issue-count">13</span></a>
+<a href="qualite_eau_potable.html"><span class="api-name">Qualité de l'eau potable</span><span class="issue-count">17</span></a>
+<a href="qualite_cours_eau.html"><span class="api-name">Qualité des cours d'eau</span><span class="issue-count">31</span></a>
+<a href="qualite_nappes.html"><span class="api-name">Qualité des nappes</span><span class="issue-count">22</span></a>
+<a href="eaux_littorales.html"><span class="api-name">Surveillance des eaux littorales</span><span class="issue-count">3</span></a>
+<a href="temperature.html"><span class="api-name">Température des cours d'eau</span><span class="issue-count">8</span></a>
+<a href="ecoulement.html"><span class="api-name">Écoulement des cours d'eau</span><span class="issue-count">8</span></a>
+        </div>
+        <div class="sidebar-footer-text">
+            Base de connaissances
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main">
+        <div class="topbar">
+            <div class="search-container">
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Rechercher dans la base de connaissances..." autocomplete="off">
+                <div class="search-results" id="searchResults"></div>
+            </div>
+        </div>
+
+        <article class="content">
+            <h1 id="indicateurs-des-services">Indicateurs des services</h1>
+<h2 id="particularités-techniques">Particularités techniques</h2>
+<ul>
+<li>Le BRGM fournit un exemple d'appel de l'API Hub'Eau avec R pour les données piézométriques, disponible sur GitHub à l'adresse https://github.com/BRGM/hubeau/blob/master/code_examples/Trac%C3%A9%20d'une%20chronique%20pi%C3%A9zom%C3%A9trique%20avec%20R.ipynb. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
+<li>Le BRGM prévoit de publier d'autres exemples de code R pour l'API Hub'Eau sur son dépôt GitHub à l'adresse https://github.com/BRGM/hubeau/tree/master/code_examples. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
+<li>Un package R nommé <code>hubeau</code> est développé par INRAE pour interroger les APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
+<li>Le package R <code>hubeau</code> inclut une fonction générique d'interrogation et des fonctions spécifiques par API/opération, retournant les résultats sous forme de data.frame. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
+<li>Le package R <code>hubeau</code> prend en charge initialement les APIs 'Prélèvements en eau' et 'Indicateurs des services'. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
+<li>Le package R <code>hubeau</code> est disponible sur GitHub à l'adresse https://github.com/inrae/hubeau et sa documentation à https://inrae.github.io/hubeau/. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
+<li>L'API Hub'Eau renvoie un code de statut HTTP 206 Partial Content sur la dernière page d'une requête paginée si le nombre d'éléments retournés est inférieur à la taille de page demandée (paramètre 'size'). (<a href="https://github.com/BRGM/hubeau/issues/72">#72</a>)</li>
+<li>L'API Hub'Eau renvoie un code de statut HTTP 200 OK si la taille de page demandée (paramètre 'size') est suffisante pour récupérer tous les éléments disponibles en une seule requête. (<a href="https://github.com/BRGM/hubeau/issues/72">#72</a>)</li>
+<li>La balise 'next' dans la réponse de l'API Hub'Eau est l'indicateur fiable pour déterminer si une page est la dernière d'une séquence paginée, indépendamment du code de statut HTTP (200 ou 206). (<a href="https://github.com/BRGM/hubeau/issues/72">#72</a>)</li>
+<li>L'API <code>/indicateurs_services/communes</code> retourne un enregistrement par service pour une commune et une année données, même si la commune est desservie par plusieurs services. (<a href="https://github.com/BRGM/hubeau/issues/74">#74</a>)</li>
+<li>Contrairement à la documentation, l'API ne calcule pas et ne retourne pas de valeurs agrégées (minimum, maximum, moyenne) pour les indicateurs lorsqu'une commune est desservie par plusieurs services. (<a href="https://github.com/BRGM/hubeau/issues/74">#74</a>)</li>
+<li>Chaque enregistrement pour une commune et une année données contient un tableau <code>codes_service</code> et <code>noms_service</code> qui, dans l'exemple fourni, ne contient qu'un seul service, confirmant la granularité par service. (<a href="https://github.com/BRGM/hubeau/issues/74">#74</a>)</li>
+<li>L'API Indicateurs des services ne retourne pas de résultats pour les services d'assainissement collectif (type_service=AC). (<a href="https://github.com/BRGM/hubeau/issues/75">#75</a>)</li>
+<li>L'API Indicateurs des services ne retourne pas de résultats pour les services d'assainissement non-collectif (type_service=ANC). (<a href="https://github.com/BRGM/hubeau/issues/75">#75</a>)</li>
+<li>L'API Indicateurs des services est prévue pour être refondue en 2023. (<a href="https://github.com/BRGM/hubeau/issues/75">#75</a>)</li>
+<li>Une nouvelle version de l'API Indicateurs des services, intégrant les corrections, devrait entrer en production après l'été 2023. (<a href="https://github.com/BRGM/hubeau/issues/75">#75</a>)</li>
+<li>Au 07/09/2021, l'API Indicateurs des services ne permettait pas d'interroger les données d'Assainissement Collectif via le code SANDRE de l'ouvrage. (<a href="https://github.com/BRGM/hubeau/issues/78">#78</a>)</li>
+<li>Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>L'API Indicateurs des services ne permet pas d'accéder aux indicateurs D201.0 et D301.0. (<a href="https://github.com/BRGM/hubeau/issues/195">#195</a>)</li>
+<li>Les indicateurs D201.0 et D301.0 ne sont pas implémentés dans l'API Indicateurs des services. (<a href="https://github.com/BRGM/hubeau/issues/195">#195</a>)</li>
+<li>Le point d'accès <code>indicateurs_services/indicateurs</code> semble ne renvoyer que des entrées pour l'eau potable pour certains indicateurs. (<a href="https://github.com/BRGM/hubeau/issues/195">#195</a>)</li>
+<li>Les évolutions de l'API Indicateurs des services évoquées dans l'issue #75 et attendues pour l'été 2023 n'ont pas été réalisées. (<a href="https://github.com/BRGM/hubeau/issues/195">#195</a>)</li>
+<li>Le format GeoJSON n'est pas implémenté sur l'API Hub'Eau "Indicateurs des services". (<a href="https://github.com/BRGM/hubeau/issues/219">#219</a>)</li>
+<li>Les données de la version 0 de l'API "Indicateurs des services" ne contiennent pas de coordonnées géographiques. (<a href="https://github.com/BRGM/hubeau/issues/219">#219</a>)</li>
+<li>Le format GeoJSON est désactivé sur tous les endpoints de l'API "Indicateurs des services", à l'exception de l'endpoint <code>communes</code>. (<a href="https://github.com/BRGM/hubeau/issues/219">#219</a>)</li>
+<li>Lorsqu'on demande le format GeoJSON sur l'endpoint <code>communes</code> de l'API "Indicateurs des services", les géométries retournées sont vides. (<a href="https://github.com/BRGM/hubeau/issues/219">#219</a>)</li>
+<li>Le comportement attendu pour l'endpoint <code>communes</code> de l'API "Indicateurs des services" (version 0) est de retourner une réponse au format JSON même si le format GeoJSON est demandé. (<a href="https://github.com/BRGM/hubeau/issues/219">#219</a>)</li>
+<li>Le swagger de l'API "Indicateurs des services" liste l'option GeoJSON pour l'endpoint <code>communes</code> alors qu'elle n'est pas fonctionnelle. (<a href="https://github.com/BRGM/hubeau/issues/219">#219</a>)</li>
+</ul>
+<h2 id="informations-métier">Informations métier</h2>
+<ul>
+<li>Les données de l'API Indicateurs des services proviennent de la plateforme http://www.services.eaufrance.fr/donnees/telechargement. (<a href="https://github.com/BRGM/hubeau/issues/12">#12</a>)</li>
+<li>La source des données pour l'API Indicateurs des services (www.services.eaufrance.fr/donnees/telechargement) est mise à jour hebdomadairement. (<a href="https://github.com/BRGM/hubeau/issues/12">#12</a>)</li>
+<li>Le code indicateur 'D102.0' est utilisé dans l'API indicateurs_services pour filtrer les données. (<a href="https://github.com/BRGM/hubeau/issues/72">#72</a>)</li>
+<li>Les données de l'API indicateurs_services peuvent être filtrées par année, par exemple '2012'. (<a href="https://github.com/BRGM/hubeau/issues/72">#72</a>)</li>
+<li>Une même commune peut être desservie par plusieurs services publics d'eau et d'assainissement. (<a href="https://github.com/BRGM/hubeau/issues/74">#74</a>)</li>
+<li>Les données incluent des indicateurs de performance pour ces services (ex: D102.0, P101.1, VP.178). (<a href="https://github.com/BRGM/hubeau/issues/74">#74</a>)</li>
+<li>Les données des services d'assainissement collectif (AC) et non-collectif (ANC) sont absentes de l'API Indicateurs des services. (<a href="https://github.com/BRGM/hubeau/issues/75">#75</a>)</li>
+<li>L'API Indicateurs des services fournit uniquement les résultats pour les services d'eau potable. (<a href="https://github.com/BRGM/hubeau/issues/75">#75</a>)</li>
+<li>Le code SANDRE de l'ouvrage est un identifiant standard pour les infrastructures d'eau en France, pertinent pour les données d'Assainissement Collectif. (<a href="https://github.com/BRGM/hubeau/issues/78">#78</a>)</li>
+<li>Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Les indicateurs D201.0 et D301.0 représentent le nombre d'habitants desservis en Assainissement Collectif (AC) et Assainissement Non Collectif (ANC) respectivement. (<a href="https://github.com/BRGM/hubeau/issues/195">#195</a>)</li>
+<li>Les données d'assainissement (AC/ANC) par commune ne sont pas disponibles via l'API Indicateurs des services pour les indicateurs D201.0 et D301.0. (<a href="https://github.com/BRGM/hubeau/issues/195">#195</a>)</li>
+<li>Les utilisateurs de l'endpoint <code>communes</code> de l'API "Indicateurs des services" pourraient s'attendre à obtenir les géométries communales pour des usages cartographiques. (<a href="https://github.com/BRGM/hubeau/issues/219">#219</a>)</li>
+<li>La représentation géographique des "services" (au sens de l'API) est complexe. (<a href="https://github.com/BRGM/hubeau/issues/219">#219</a>)</li>
+<li>Les indicateurs de service sont disponibles jusqu'à 2023 sur le site <code>services.eaufrance.fr</code>, ce qui indique un décalage de fraîcheur des données par rapport à l'API Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/225">#225</a>)</li>
+<li>L'indicateur <code>D102.0</code> est un exemple d'indicateur de service affecté par le problème de fraîcheur des données. (<a href="https://github.com/BRGM/hubeau/issues/225">#225</a>)</li>
+</ul>
+<h2 id="problèmes-connus">Problèmes connus</h2>
+<ul>
+<li>L'API Indicateurs des services a rencontré un bug où elle retournait des résultats vides pour certaines requêtes (ex: indicateurs?code_indicateur=P101.1, services?code_commune=17300). (<a href="https://github.com/BRGM/hubeau/issues/12">#12</a>)</li>
+<li>L'API Hub'Eau présente des bugs connus, mentionnés dans les issues #72 et #74. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
+<li>Le chantier de refonte de l'API Indicateurs des services, qui devait résoudre ce problème, a été reporté sans replanification. (<a href="https://github.com/BRGM/hubeau/issues/195">#195</a>)</li>
+<li>L'API 'Indicateurs des services' de Hub'Eau ne fournit des données que jusqu'à 2019 via l'endpoint <code>/indicateurs</code> (ex: <code>https://hubeau.eaufrance.fr/api/v0/indicateurs_services/indicateurs?code_indicateur=D102.0&amp;size=5000</code>). (<a href="https://github.com/BRGM/hubeau/issues/225">#225</a>)</li>
+</ul>
+<hr />
+<h2 id="issues-sources">Issues sources</h2>
+<ul>
+<li><strong>#12</strong> [API Indicateur de services] : pas de résultat  — L'API Indicateurs des services a connu un bug de résultats vides, désormais résolu, et ses données proviennent de services.eaufrance.fr avec une mise à jour hebdomadaire. <code>[résolu]</code></li>
+<li><strong>#62</strong> Utilisation de l'API dans R / Package dédié ? — Cette issue a mené au développement et à la publication du package R <code>hubeau</code> par INRAE pour interroger les APIs Hub'Eau, complété par des exemples de code R du BRGM et la mention de bugs existants dans l'API. <code>[résolu]</code></li>
+<li><strong>#72</strong> [API indicateurs_services] operation "indicateurs" statut 206 sur la dernière page — L'API Hub'Eau <code>indicateurs_services</code> renvoie un statut 206 Partial Content sur la dernière page si le nombre d'éléments retournés est inférieur à la taille de page demandée, et c'est la balise 'next' qui indique la fin de la pagination. <code>[information]</code></li>
+<li><strong>#74</strong> [API indicateurs services] duplication des communes si plusieurs services — L'API <code>/indicateurs_services/communes</code> de Hub'Eau retourne des données par service plutôt qu'agrégées par commune comme indiqué dans la documentation, lorsqu'une commune est desservie par plusieurs services. <code>[en_cours]</code></li>
+<li><strong>#75</strong> [API indicateurs services] Absence des services d'assainissement  — L'API Indicateurs des services présente un bug où elle ne retourne pas les données pour les services d'assainissement collectif et non-collectif, et une refonte de l'API est prévue en 2023 pour corriger cette anomalie. <code>[en_cours]</code></li>
+<li><strong>#78</strong> Interroger API services AC à partir du Code SANDRE ouvrage — Cette issue demande et enregistre la possibilité d'interroger l'API Indicateurs des services pour l'Assainissement Collectif en utilisant le code SANDRE de l'ouvrage. <code>[en_cours]</code></li>
+<li><strong>#137</strong> Package R pour requêter les APIs hubeau — Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN, permettant de requêter 10 des 12 APIs Hub'Eau avec une syntaxe simplifiée, et est utilisé par l'OFB pour des rapports mensuels sur l'écoulement des cours d'eau. <code>[résolu]</code></li>
+<li><strong>#195</strong> [API indicateurs services] accès aux données assainissement D201.0 et D301.0 — L'API Indicateurs des services ne fournit pas les données pour les indicateurs d'assainissement D201.0 et D301.0 car leur implémentation et la refonte de l'API ont été reportées indéfiniment. <code>[en_cours]</code></li>
+<li><strong>#219</strong> [API indicateurs des services] format geojson inopérant sur l'endpoint communes — L'API Hub'Eau "Indicateurs des services" ne supporte pas le format GeoJSON car les données sous-jacentes n'incluent pas de coordonnées, et l'endpoint <code>communes</code> retourne des géométries vides ou du JSON par défaut malgré l'affichage de l'option GeoJSON dans le swagger. <code>[information]</code></li>
+<li><strong>#225</strong> Indicateurs de service - Fraicheur des données — L'API Hub'Eau des indicateurs de service présente un retard de fraîcheur des données, ne proposant des informations que jusqu'à 2019 alors que des données plus récentes (jusqu'à 2023) sont disponibles sur services.eaufrance.fr. <code>[en_cours]</code></li>
+</ul>
+        </article>
+
+        <footer class="footer">
+            <p>Projet de recherche &mdash; Universit&eacute; de Tours, LIFAT</p>
+            <p class="footer-sub">Donn&eacute;es extraites automatiquement des issues GitHub <a href="https://github.com/BRGM/hubeau">BRGM/hubeau</a></p>
+        </footer>
+    </main>
+
+    <script src="search.js"></script>
+    <script>
+        // Hamburger menu toggle
+        const hamburger = document.getElementById('hamburger');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        hamburger.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+            hamburger.classList.toggle('open');
+        });
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            hamburger.classList.remove('open');
+        });
+    </script>
+</body>
+</html>

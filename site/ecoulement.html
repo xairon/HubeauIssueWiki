@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Écoulement des cours d'eau — Hub'Eau Knowledge Base</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Mobile hamburger -->
+    <button class="hamburger" id="hamburger" aria-label="Ouvrir le menu">
+        <span></span><span></span><span></span>
+    </button>
+
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-logo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                    <path d="M8 12c0-2 1-4 4-4s4 2 4 4-1 4-4 4-4-2-4-4z" fill="currentColor" opacity="0.3"/>
+                </svg>
+                <span>Hub'Eau KB</span>
+            </a>
+        </div>
+        <div class="sidebar-section-title">APIs</div>
+        <div class="sidebar-links">
+            <a href="index.html">
+                <span class="api-name">Accueil</span>
+                <span class="issue-count home-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+                </span>
+            </a>
+            <a href="general.html"><span class="api-name">Général</span><span class="issue-count">21</span></a>
+<a href="hydrobiologie.html"><span class="api-name">Hydrobiologie</span><span class="issue-count">15</span></a>
+<a href="hydrometrie.html"><span class="api-name">Hydrométrie</span><span class="issue-count">87</span></a>
+<a href="indicateurs_services.html"><span class="api-name">Indicateurs des services</span><span class="issue-count">10</span></a>
+<a href="phytopharmaceutiques.html"><span class="api-name">Phytopharmaceutiques</span><span class="issue-count">3</span></a>
+<a href="piezometrie.html"><span class="api-name">Piézométrie</span><span class="issue-count">33</span></a>
+<a href="poisson.html"><span class="api-name">Poisson</span><span class="issue-count">17</span></a>
+<a href="prelevements.html"><span class="api-name">Prélèvements en eau</span><span class="issue-count">13</span></a>
+<a href="qualite_eau_potable.html"><span class="api-name">Qualité de l'eau potable</span><span class="issue-count">17</span></a>
+<a href="qualite_cours_eau.html"><span class="api-name">Qualité des cours d'eau</span><span class="issue-count">31</span></a>
+<a href="qualite_nappes.html"><span class="api-name">Qualité des nappes</span><span class="issue-count">22</span></a>
+<a href="eaux_littorales.html"><span class="api-name">Surveillance des eaux littorales</span><span class="issue-count">3</span></a>
+<a href="temperature.html"><span class="api-name">Température des cours d'eau</span><span class="issue-count">8</span></a>
+<a href="ecoulement.html" class="active"><span class="api-name">Écoulement des cours d'eau</span><span class="issue-count">8</span></a>
+        </div>
+        <div class="sidebar-footer-text">
+            Base de connaissances
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main">
+        <div class="topbar">
+            <div class="search-container">
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Rechercher dans la base de connaissances..." autocomplete="off">
+                <div class="search-results" id="searchResults"></div>
+            </div>
+        </div>
+
+        <article class="content">
+            <h1 id="écoulement-des-cours-deau">Écoulement des cours d'eau</h1>
+<h2 id="particularités-techniques">Particularités techniques</h2>
+<ul>
+<li>Depuis le 12 avril 2023, les données de l'API Écoulement des cours d'eau sont mises à jour de façon quotidienne. (<a href="https://github.com/BRGM/hubeau/issues/122">#122</a>)</li>
+<li>Le champ <code>Numéro de page</code> est incorrectement nommé dans la description OpenAPI de l'API Écoulement, il s'agit d'une description et non d'un nom de champ. (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
+<li>Le champ <code>Liste des champs...</code> est incorrectement nommé dans la description OpenAPI de l'API Écoulement, il s'agit d'une description et non d'un nom de champ, et devrait être <code>fields</code>. (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
+<li>Le type du champ <code>fields</code> dans la description OpenAPI de l'API Écoulement devrait être <code>[array(string)]</code>. (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
+<li>La description du champ <code>size</code> dans la description OpenAPI de l'API Écoulement est encapsulée incorrectement dans le sous-item "schema". (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
+<li>Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>L'API Écoulement des cours d'eau est passée de la version beta à la version stable 1.0 le 23/05/2023. (<a href="https://github.com/BRGM/hubeau/issues/142">#142</a>)</li>
+<li>La version beta de l'API Écoulement des cours d'eau n'est plus accessible depuis le 26/05/2023. (<a href="https://github.com/BRGM/hubeau/issues/142">#142</a>)</li>
+<li>Le chemin de l'URL d'interrogation pour l'API Écoulement des cours d'eau a changé de <code>/api/vbeta/</code> à <code>/api/v1/</code>. (<a href="https://github.com/BRGM/hubeau/issues/142">#142</a>)</li>
+<li>Le paramètre <code>date_observation_min</code> de l'API Écoulement des cours d'eau (endpoint <code>observations</code>) utilise une comparaison stricte ('&gt;') au lieu de la comparaison inclusive ('&gt;=') documentée. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
+<li>Le paramètre <code>date_observation_max</code> de l'API Écoulement des cours d'eau (endpoint <code>observations</code>) utilise une comparaison stricte ('&lt;') au lieu de la comparaison inclusive ('&lt;=') documentée. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
+<li>Si <code>date_observation_min</code> et <code>date_observation_max</code> sont définis sur la même date, l'API Écoulement des cours d'eau (endpoint <code>observations</code>) ne renvoie aucune observation. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
+<li>Pour récupérer les observations d'une date spécifique (ex: D), il est nécessaire de définir <code>date_observation_min</code> à D-1 et <code>date_observation_max</code> à D. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
+<li>L'API ecoulement/observations peut produire des doublons d'observations (features) lors de la pagination, où une même observation apparaît sur différentes pages. (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+<li>L'ordre des résultats de l'API ecoulement/observations n'est pas garanti comme étant identique lorsque le paramètre 'size' est modifié. (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+<li>Le comportement de doublons n'est pas systématiquement reproductible par l'équipe Hub'eau. (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+<li>Le champ uri_cours_eau de l'API Hub'Eau Écoulement des cours d'eau contient le TYPENAME (ex: CoursEau_Carthage2017) nécessaire pour interroger le service WFS du Sandre. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</li>
+<li>Le TYPENAME peut être extrait de l'URI http://id.eaufrance.fr/{TYPENAME}/{CODE}. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</li>
+<li>Le champ code_cours_eau de l'API Hub'Eau correspond au CdEntiteHydrographique utilisé dans le filtre WFS du Sandre. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</li>
+<li>L'URL du service WFS du Sandre pour les données géographiques est https://services.sandre.eaufrance.fr/geo/sandre. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</li>
+<li>Le format de sortie GeoJSON pour le WFS du Sandre est OUTPUTFORMAT=application/json; subtype=geojson. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</li>
+<li>Le endpoint "stations" de l'API "Écoulement des cours d'eau" a été indisponible et ne retournait pas de données du 10 au 14 mai. (<a href="https://github.com/BRGM/hubeau/issues/233">#233</a>)</li>
+<li>L'anomalie concernant l'indisponibilité du endpoint "stations" de l'API "Écoulement des cours d'eau" a été traitée et le service rétabli le 14 mai. (<a href="https://github.com/BRGM/hubeau/issues/233">#233</a>)</li>
+</ul>
+<h2 id="informations-métier">Informations métier</h2>
+<ul>
+<li>Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>L'API Écoulement des cours d'eau fournit des observations du réseau ONDE (Observatoire National des Étiages). (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
+<li>Des observations ONDE sont disponibles pour la région Corse via l'API Écoulement des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
+<li>Les observations d'écoulement incluent des détails sur le cours d'eau (ex: 'l'Helpe Mineure', code 'D0130700'), la station (ex: 'L'Helpe mineure à Fourmies', code 'D0137052'), et le type d'écoulement (ex: '1' pour 'Ecoulement visible'). (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+<li>Les données d'écoulement sont associées à un 'code_campagne'. (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+<li>Les observations sont géolocalisées avec des coordonnées et des informations de projection (RGF93 / Lambert 93). (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+<li>La BD Carthage 2017 (CoursEau_Carthage2017) est un jeu de données de référence pour les entités hydrographiques utilisé par Hub'eau. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</li>
+<li>Le Sandre fournit un service WFS pour accéder aux données géographiques des entités hydrographiques. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</li>
+<li>Le CdEntiteHydrographique est l'identifiant unique d'une entité hydrographique dans le référentiel Sandre. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</li>
+<li>L'API "Écoulement des cours d'eau" propose un endpoint dédié ("stations") pour accéder aux informations descriptives des stations hydrométriques. (<a href="https://github.com/BRGM/hubeau/issues/233">#233</a>)</li>
+</ul>
+<h2 id="problèmes-connus">Problèmes connus</h2>
+<ul>
+<li>L'API Écoulement présente des erreurs dans sa description OpenAPI/Swagger. (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
+</ul>
+<h2 id="tips-dutilisation">Tips d'utilisation</h2>
+<ul>
+<li>La préconisation pour éviter les doublons est d'utiliser un paramètre '_size' plus grand ou un ciblage fonctionnel plus précis pour éviter la pagination. (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+</ul>
+<hr />
+<h2 id="issues-sources">Issues sources</h2>
+<ul>
+<li><strong>#122</strong> [API Ecoulement des cours d'eau] Fréquence d'actualisation — L'API Écoulement des cours d'eau est désormais mise à jour quotidiennement depuis le 12 avril 2023, résolvant les retards de publication. <code>[résolu]</code></li>
+<li><strong>#127</strong> [API Ecoulement] Erreurs dans la description openapi — L'issue rapporte plusieurs erreurs dans la description OpenAPI de l'API Écoulement, concernant les noms de paramètres, leurs types et la structure des descriptions, ce qui impacte l'automatisation de la gestion des champs. <code>[en_cours]</code></li>
+<li><strong>#137</strong> Package R pour requêter les APIs hubeau — Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN, permettant de requêter 10 des 12 APIs Hub'Eau avec une syntaxe simplifiée, et est utilisé par l'OFB pour des rapports mensuels sur l'écoulement des cours d'eau. <code>[résolu]</code></li>
+<li><strong>#142</strong> [API Ecoulement des cours d'eau] Passage en version stable — L'API Écoulement des cours d'eau est passée de la version beta à la version stable 1.0 le 23/05/2023, nécessitant la modification du chemin de l'URL de <code>/api/vbeta/</code> à <code>/api/v1/</code>. <code>[résolu]</code></li>
+<li><strong>#192</strong> [API Ecoulement des cours d'eau] observations - erreur sur les champs date_observation_min &amp; date_observation_max — L'API Écoulement des cours d'eau présente une erreur où les paramètres de date <code>date_observation_min</code> et <code>date_observation_max</code> utilisent des comparaisons strictes au lieu d'inclusives, ce qui empêche la récupération correcte des données, notamment pour une période d'une seule journée. <code>[en_cours]</code></li>
+<li><strong>#193</strong> [API Ecoulement des cours d'eau] observations - doublons produits par l'API — L'API Écoulement des cours d'eau peut retourner des doublons d'observations lors de la pagination, et l'ordre des résultats n'est pas stable si le paramètre de taille est modifié. <code>[en_cours]</code></li>
+<li><strong>#194</strong> [API Ecoulement des cours d'eau] Comment retrouver les ressources liées ? — L'API Écoulement des cours d'eau permet de retrouver les données géographiques des cours d'eau via le service WFS du Sandre en utilisant les champs uri_cours_eau et code_cours_eau. <code>[résolu]</code></li>
+<li><strong>#233</strong> [API Ecoulement des cours d'eau] pas de données stations — Le endpoint "stations" de l'API "Écoulement des cours d'eau" a connu une indisponibilité temporaire des données entre le 10 et le 14 mai, mais l'anomalie a été résolue. <code>[résolu]</code></li>
+</ul>
+        </article>
+
+        <footer class="footer">
+            <p>Projet de recherche &mdash; Universit&eacute; de Tours, LIFAT</p>
+            <p class="footer-sub">Donn&eacute;es extraites automatiquement des issues GitHub <a href="https://github.com/BRGM/hubeau">BRGM/hubeau</a></p>
+        </footer>
+    </main>
+
+    <script src="search.js"></script>
+    <script>
+        // Hamburger menu toggle
+        const hamburger = document.getElementById('hamburger');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        hamburger.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+            hamburger.classList.toggle('open');
+        });
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+            hamburger.classList.remove('open');
+        });
+    </script>
+</body>
+</html>
