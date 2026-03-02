@@ -14,8 +14,10 @@ GITHUB_REPO = "BRGM/hubeau"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_API_BASE = "https://api.github.com"
 
-# Claude
-CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+# Gemini
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = "gemini-2.5-flash-preview-05-20"
+GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 # Hub'Eau APIs — used for classification and wiki file mapping
 HUBEAU_APIS = {

@@ -1,13 +1,14 @@
-"""Extract structured facts from issues using Claude."""
+"""Extract structured facts from issues using Gemini."""
 
 import argparse
 import json
 import re
 import sys
+import time
 
-import anthropic
+import httpx
 
-from config import CLAUDE_MODEL, EXTRACTED_DIR, HUBEAU_APIS, RAW_DATA_DIR
+from config import EXTRACTED_DIR, GEMINI_API_BASE, GEMINI_API_KEY, GEMINI_MODEL, HUBEAU_APIS, RAW_DATA_DIR
 
 EXTRACTION_PROMPT = """\
 Tu es un expert en hydrologie et en APIs de données environnementales. Tu analyses des issues GitHub du projet Hub'Eau (plateforme d'accès aux données sur l'eau en France).
@@ -75,17 +76,32 @@ def format_issue_for_prompt(issue: dict) -> str:
     )
 
 
-def extract_facts(client: anthropic.Anthropic, issue: dict) -> dict:
-    """Send issue to Claude and get structured facts back."""
+def extract_facts(client: httpx.Client, issue: dict) -> dict:
+    """Send issue to Gemini and get structured facts back."""
     prompt = format_issue_for_prompt(issue)
 
-    response = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=1024,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    url = f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent"
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "temperature": 0.2,
+        },
+    }
 
-    text = response.content[0].text.strip()
+    resp = client.post(url, json=payload, params={"key": GEMINI_API_KEY})
+
+    # Handle rate limiting
+    if resp.status_code == 429:
+        retry_after = int(resp.headers.get("Retry-After", 10))
+        print(f"  Rate limited. Waiting {retry_after}s...")
+        time.sleep(retry_after)
+        resp = client.post(url, json=payload, params={"key": GEMINI_API_KEY})
+
+    resp.raise_for_status()
+    result = resp.json()
+
+    text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
 
     # Parse JSON response
     try:
@@ -96,7 +112,7 @@ def extract_facts(client: anthropic.Anthropic, issue: dict) -> dict:
         if match:
             facts = json.loads(match.group())
         else:
-            print(f"  WARNING: Could not parse Claude response for issue #{issue['number']}")
+            print(f"  WARNING: Could not parse Gemini response for issue #{issue['number']}")
             facts = {
                 "api_concernee": ["Général"],
                 "faits_techniques": [],
@@ -113,9 +129,13 @@ def extract_facts(client: anthropic.Anthropic, issue: dict) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Extract facts from fetched issues using Claude")
+    parser = argparse.ArgumentParser(description="Extract facts from fetched issues using Gemini")
     parser.add_argument("--force", action="store_true", help="Re-extract even if output exists")
     args = parser.parse_args()
+
+    if not GEMINI_API_KEY:
+        print("ERROR: GEMINI_API_KEY environment variable not set.")
+        sys.exit(1)
 
     EXTRACTED_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -124,25 +144,24 @@ def main() -> None:
         print("No issues found in raw_data/issues/. Run fetch_issues.py first.")
         sys.exit(1)
 
-    client = anthropic.Anthropic()  # Uses ANTHROPIC_API_KEY env var
-
     total = len(issue_files)
     extracted = 0
     skipped = 0
 
-    for i, filepath in enumerate(issue_files, 1):
-        issue = json.loads(filepath.read_text(encoding="utf-8"))
-        num = issue["number"]
-        out_path = EXTRACTED_DIR / f"{num:04d}_facts.json"
+    with httpx.Client(timeout=60) as client:
+        for i, filepath in enumerate(issue_files, 1):
+            issue = json.loads(filepath.read_text(encoding="utf-8"))
+            num = issue["number"]
+            out_path = EXTRACTED_DIR / f"{num:04d}_facts.json"
 
-        if out_path.exists() and not args.force:
-            skipped += 1
-            continue
+            if out_path.exists() and not args.force:
+                skipped += 1
+                continue
 
-        print(f"  [{i}/{total}] Extracting #{num}: {issue['title'][:60]}...")
-        facts = extract_facts(client, issue)
-        out_path.write_text(json.dumps(facts, ensure_ascii=False, indent=2), encoding="utf-8")
-        extracted += 1
+            print(f"  [{i}/{total}] Extracting #{num}: {issue['title'][:60]}...")
+            facts = extract_facts(client, issue)
+            out_path.write_text(json.dumps(facts, ensure_ascii=False, indent=2), encoding="utf-8")
+            extracted += 1
 
     print(f"\nDone. Extracted: {extracted}, Skipped: {skipped}")
 
