@@ -68,7 +68,8 @@
 
         <article class="content">
             <h1 id="hubeau-base-de-connaissances">Hub'Eau — Base de connaissances</h1>
-<p>Wiki généré automatiquement à partir des issues GitHub de <a href="https://github.com/BRGM/hubeau/issues">BRGM/hubeau</a>.</p>
+<p>Guide pratique et archive des connaissances extraites des issues GitHub de <a href="https://github.com/BRGM/hubeau/issues">BRGM/hubeau</a>.</p>
+<p>Chaque page contient un <strong>guide synthétique</strong> (ce qui est encore vrai et actionnable) et une <strong>archive détaillée</strong> (tous les faits bruts avec références).</p>
 <h2 id="apis">APIs</h2>
 <ul>
 <li><a href="general.html">Général</a> (21 issues)</li>
@@ -94,7 +95,36 @@
         </footer>
     </main>
 
+    <!-- Chatbot toggle button -->
+    <button class="chatbot-toggle" id="chatbotToggle" aria-label="Ouvrir le chatbot">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+
+    <!-- Chatbot panel -->
+    <div class="chatbot-panel" id="chatbotPanel">
+        <div class="chatbot-header">
+            <div class="chatbot-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Hub'Eau Assistant
+            </div>
+            <button class="chatbot-close" id="chatbotClose">&times;</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg chat-msg-bot">
+                <div class="chat-bubble">Bonjour ! Posez-moi une question sur les APIs Hub'Eau. Je cherche dans la base de connaissances pour vous r&eacute;pondre.</div>
+            </div>
+        </div>
+        <div class="chatbot-status" id="chatbotStatus" style="display:none;"></div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" placeholder="Posez votre question..." autocomplete="off">
+            <button class="chatbot-send" id="chatbotSend">Envoyer</button>
+        </div>
+    </div>
+
     <script src="search.js"></script>
+    <script src="chatbot.js"></script>
     <script>
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');

@@ -54,7 +54,7 @@ def parse_index_for_apis(wiki_dir: str):
 # ---------------------------------------------------------------------------
 
 def build_search_index(wiki_dir: str, apis):
-    """Extract bullet-point facts from each section of each API page.
+    """Extract text from each section of each API page.
 
     Returns a list of dicts:
       {title, section, text, url, api}
@@ -70,30 +70,63 @@ def build_search_index(wiki_dir: str, apis):
             lines = f.readlines()
 
         current_section = ""
+        in_details = False
         api_name = api["name"]
         slug = api["slug"]
 
         for line in lines:
-            # Detect h2 sections
+            stripped = line.strip()
+
+            # Track <details> block (archive)
+            if stripped.startswith("<details"):
+                in_details = True
+                continue
+            if stripped.startswith("</details>"):
+                in_details = False
+                continue
+            if stripped.startswith("<summary") or stripped.startswith("</summary"):
+                continue
+
+            # Detect h2/h3 sections
             h2 = re.match(r"^##\s+(.+)", line)
             if h2:
                 current_section = h2.group(1).strip()
                 continue
+            h3 = re.match(r"^###\s+(.+)", line)
+            if h3:
+                current_section = h3.group(1).strip()
+                continue
+
+            if not current_section:
+                continue
+            # Skip "Issues sources" section
+            if current_section == "Issues sources":
+                continue
+
+            section_anchor = _section_to_anchor(current_section)
 
             # Detect bullet points
             bullet = re.match(r"^-\s+(.+)", line)
-            if bullet and current_section:
+            if bullet:
                 text = bullet.group(1).strip()
-                # Skip the "Issues sources" section entries (they start with **)
-                if current_section == "Issues sources":
-                    continue
-                # Build anchor from section name (same logic as python-markdown toc)
-                section_anchor = _section_to_anchor(current_section)
                 index_entries.append(
                     {
                         "title": api_name,
                         "section": current_section,
                         "text": text,
+                        "url": f"{slug}.html#{section_anchor}",
+                        "api": api_name,
+                    }
+                )
+                continue
+
+            # Detect prose paragraphs (non-empty, not a heading, not in archive)
+            if stripped and not in_details and not stripped.startswith(("#", ">", "---", "-")):
+                index_entries.append(
+                    {
+                        "title": api_name,
+                        "section": current_section,
+                        "text": stripped,
                         "url": f"{slug}.html#{section_anchor}",
                         "api": api_name,
                     }
@@ -120,11 +153,15 @@ def convert_md_to_html(filepath: str):
     with open(filepath, encoding="utf-8") as f:
         text = f.read()
 
+    # Add markdown="block" to <details> so md_in_html processes inner markdown
+    text = text.replace("<details>", '<details markdown="block">')
+
     md = markdown.Markdown(
         extensions=[
             TocExtension(permalink=False, slugify=_toc_slugify),
             "fenced_code",
             "tables",
+            "md_in_html",
         ]
     )
     html = md.convert(text)
@@ -242,7 +279,36 @@ def render_page(body_html: str, title: str, apis: list, active_slug: str) -> str
         </footer>
     </main>
 
+    <!-- Chatbot toggle button -->
+    <button class="chatbot-toggle" id="chatbotToggle" aria-label="Ouvrir le chatbot">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+
+    <!-- Chatbot panel -->
+    <div class="chatbot-panel" id="chatbotPanel">
+        <div class="chatbot-header">
+            <div class="chatbot-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Hub'Eau Assistant
+            </div>
+            <button class="chatbot-close" id="chatbotClose">&times;</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg chat-msg-bot">
+                <div class="chat-bubble">Bonjour ! Posez-moi une question sur les APIs Hub'Eau. Je cherche dans la base de connaissances pour vous r&eacute;pondre.</div>
+            </div>
+        </div>
+        <div class="chatbot-status" id="chatbotStatus" style="display:none;"></div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" placeholder="Posez votre question..." autocomplete="off">
+            <button class="chatbot-send" id="chatbotSend">Envoyer</button>
+        </div>
+    </div>
+
     <script src="search.js"></script>
+    <script src="chatbot.js"></script>
     <script>
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');
@@ -749,6 +815,265 @@ body {
     .content h2 { font-size: 1.2em; }
 }
 
+/* --- Details/Archive section --- */
+details {
+    margin: 1.5em 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+}
+
+details summary {
+    padding: 14px 20px;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--dark);
+    background: #f8fafc;
+    border-radius: var(--radius);
+    transition: background .15s;
+    list-style: none;
+}
+
+details summary::-webkit-details-marker { display: none; }
+
+details summary::before {
+    content: "\\25B6";
+    display: inline-block;
+    margin-right: 10px;
+    font-size: 11px;
+    transition: transform .2s;
+    color: var(--text-light);
+}
+
+details[open] summary::before {
+    transform: rotate(90deg);
+}
+
+details summary:hover {
+    background: #f1f5f9;
+}
+
+details[open] summary {
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+details > *:not(summary) {
+    padding: 0 20px;
+}
+
+details > h3, details > h4 {
+    padding: 0 20px;
+}
+
+/* Strikethrough for resolved facts */
+.content li del {
+    color: var(--text-light);
+    text-decoration: line-through;
+}
+
+/* --- Chatbot --- */
+.chatbot-toggle {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, .35);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .2s, box-shadow .2s;
+}
+
+.chatbot-toggle:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 24px rgba(37, 99, 235, .45);
+}
+
+.chatbot-toggle svg { pointer-events: none; }
+
+.chatbot-panel {
+    display: none;
+    position: fixed;
+    bottom: 92px;
+    right: 24px;
+    width: 420px;
+    max-height: 540px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.15);
+    z-index: 300;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.chatbot-panel.open { display: flex; }
+
+.chatbot-header {
+    padding: 16px 20px;
+    background: var(--dark);
+    color: #fff;
+    font-weight: 600;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chatbot-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chatbot-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,.7);
+    cursor: pointer;
+    font-size: 20px;
+    padding: 0 4px;
+    transition: color .15s;
+}
+
+.chatbot-close:hover { color: #fff; }
+
+.chatbot-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    min-height: 200px;
+    max-height: 360px;
+}
+
+.chat-msg {
+    margin-bottom: 12px;
+    display: flex;
+    gap: 8px;
+}
+
+.chat-msg-user { justify-content: flex-end; }
+
+.chat-bubble {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.chat-msg-user .chat-bubble {
+    background: var(--primary);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-msg-bot .chat-bubble {
+    background: #f1f5f9;
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+}
+
+.chat-bubble a {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.chat-msg-user .chat-bubble a { color: #bfdbfe; }
+
+.chat-sources {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0,0,0,.08);
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.chat-sources a { font-weight: 500; }
+
+.chat-typing {
+    display: flex;
+    gap: 4px;
+    padding: 8px 12px;
+}
+
+.chat-typing span {
+    width: 6px; height: 6px;
+    background: var(--text-light);
+    border-radius: 50%;
+    animation: chatTyping .6s infinite alternate;
+}
+
+.chat-typing span:nth-child(2) { animation-delay: .2s; }
+.chat-typing span:nth-child(3) { animation-delay: .4s; }
+
+@keyframes chatTyping {
+    from { opacity: .3; transform: translateY(0); }
+    to { opacity: 1; transform: translateY(-3px); }
+}
+
+.chatbot-input-area {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+}
+
+.chatbot-input-area input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .2s;
+}
+
+.chatbot-input-area input:focus { border-color: var(--primary-light); }
+
+.chatbot-send {
+    padding: 8px 16px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background .15s;
+}
+
+.chatbot-send:hover { background: var(--primary-light); }
+.chatbot-send:disabled { opacity: .5; cursor: not-allowed; }
+
+.chatbot-status {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--text-light);
+    text-align: center;
+    background: #fefce8;
+    border-top: 1px solid #fef08a;
+}
+
+@media (max-width: 768px) {
+    .chatbot-panel {
+        bottom: 0; right: 0; left: 0;
+        width: 100%;
+        max-height: 80vh;
+        border-radius: 16px 16px 0 0;
+    }
+    .chatbot-toggle { bottom: 16px; right: 16px; }
+}
+
 /* --- Search highlight --- */
 mark {
     background: #fef08a;
@@ -918,6 +1243,13 @@ def main():
     with open(js_path, "w", encoding="utf-8") as f:
         f.write(SEARCH_JS)
     print("Wrote search.js")
+
+    # Copy chatbot.js
+    chatbot_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chatbot.js")
+    if os.path.isfile(chatbot_src):
+        import shutil
+        shutil.copy2(chatbot_src, os.path.join(SITE_DIR, "chatbot.js"))
+        print("Copied chatbot.js")
 
     # 4. Convert each wiki page to HTML
     # Start with index.md

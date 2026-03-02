@@ -68,142 +68,150 @@
 
         <article class="content">
             <h1 id="qualité-des-nappes">Qualité des nappes</h1>
-<h2 id="particularités-techniques">Particularités techniques</h2>
+<blockquote>
+<p>22 issues analysées</p>
+</blockquote>
+<h2 id="guide">Guide</h2>
+<h3 id="comportement-actuel">Comportement actuel</h3>
+<p>L'API Qualité des nappes d'eau souterraines propose des endpoints pour les analyses et les stations de mesure (<a href="https://github.com/BRGM/hubeau/issues/186">#186</a>). Le endpoint <code>/stations</code> supporte le format GeoJSON, facilitant son intégration dans les SIG. Les coordonnées des captages d'eau potable sont floutées et remplacées par celles du chef-lieu de la commune pour des raisons réglementaires ; le champ <code>precision_coordonnees</code> (valeurs '0' pour réelles, '18' pour floutées, selon Sandre 916) indique cette précision (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>). Le filtrage des stations par <code>nom_reseau</code> est actuellement disponible (#63, #210).</p>
+<h3 id="pièges-à-éviter">Pièges à éviter</h3>
+<p>L'API ne fournit pas les attributs 'laboratoire', 'préleveur' ni le 'support de l'analyse' (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>). Le endpoint <code>/analyses</code> ne supporte pas le format GeoJSON ; toute requête avec <code>format=geojson</code> retournera du JSON standard (<a href="https://github.com/BRGM/hubeau/issues/186">#186</a>). Une limitation de 20 000 résultats par requête (<code>page * size</code>) impose de fractionner les requêtes volumineuses (<a href="https://github.com/BRGM/hubeau/issues/204">#204</a>). Le filtrage des stations par <code>code_reseau</code> n'est pas encore implémenté, seule la recherche par <code>nom_reseau</code> est possible (#63, #210). Le champ "heure de prélèvement" est manquant, ce qui peut compliquer la comparaison avec d'autres sources et la différenciation de prélèvements multiples le même jour sur un même site (<a href="https://github.com/BRGM/hubeau/issues/235">#235</a>). L'accès aux métadonnées (années, producteurs, paramètres) par station est actuellement inefficace et un endpoint dédié est en cours de développement pour d'autres APIs avant d'être étendu aux nappes (<a href="https://github.com/BRGM/hubeau/issues/204">#204</a>).</p>
+<h3 id="bonnes-pratiques">Bonnes pratiques</h3>
+<p>Pour pallier l'absence du 'support de l'analyse', sachez que le 'code support' est généralement '3' (eau), et peut être reconstitué à partir du 'code fraction' (ex: 3, 22, 23) (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>). En l'absence de filtrage par <code>code_reseau</code> pour les stations, utilisez des listes de codes BSS comme solution de contournement (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>). Il est recommandé de privilégier l'API Hub'Eau Qualité des nappes plutôt que le WS getData d'ADES, ce dernier étant connu pour sa lenteur et ses timeouts (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>).</p>
+<h3 id="contexte-métier">Contexte métier</h3>
+<p>Les données de qualité des eaux souterraines sont issues de la base ADES (#51, #235). Les réseaux de surveillance sont identifiables par un 'code réseau' et un 'nom de réseau', et leurs fiches sont consultables sur ades.eaufrance.fr (#63, #210). Le 'code support 3' correspond à l'eau, et les codes fraction 3, 22, 23 y sont associés (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>). Le champ <code>precision_coordonnees</code> utilise la nomenclature Sandre 916 pour indiquer la précision des coordonnées, notamment le floutage des captages AEP pour des raisons réglementaires (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>). Les utilisateurs ont besoin de métadonnées telles que les années de données, les producteurs et les paramètres analysés par station pour optimiser leurs requêtes (<a href="https://github.com/BRGM/hubeau/issues/204">#204</a>).</p>
+<hr />
+<details>
+<summary><strong>Archive détaillée</strong> — Tous les faits bruts extraits des issues</summary>
+<h3 id="faits-actuels">Faits actuels</h3>
 <ul>
-<li>L'opération <code>qualite_nappes/stations</code> de l'API Qualité des nappes permet de récupérer des informations détaillées sur un point d'eau à partir de son code BSS. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>L'API Qualité des nappes fournit des informations complètes sur les points d'eau de type qualitomètre, incluant des données géographiques, administratives et hydrogéologiques (ex: masses d'eau, entités BDLISA). (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>L'API Piézométrie fournissait, au moment de l'issue, moins d'informations sur les points d'eau (notamment les masses d'eau) que l'API Qualité des nappes. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>L'attribut 'next' de la pagination est généré avec une URL même lorsque la page de données est vide, contrairement à la documentation qui indique 'null'. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)</li>
-<li>Ce comportement est lié à des inconsistances dans le 'count' total des résultats renvoyés par l'API. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)</li>
-<li>Lorsque le 'count' change sur la dernière page, l'API peut générer un 'next' infini et un 'last' nul. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)</li>
-<li>Contournement possible : vérifier que <code>page * size</code> ne dépasse pas le 'count' obtenu lors du premier appel. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)</li>
-<li>L'utilisation de très grandes valeurs pour 'size' peut potentiellement entraîner des timeouts. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)</li>
-<li>L'API Qualité des nappes peut retourner un nombre total de résultats (count) incohérent pour une même requête si le paramètre size est modifié. (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)</li>
-<li>Les données Hub'Eau sont dupliquées sur plusieurs serveurs pour la tolérance aux pannes et l'accélération des réponses. (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)</li>
-<li>Des désynchronisations d'index entre les serveurs de données peuvent entraîner des incohérences dans les résultats des requêtes (ex: count incorrect). (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)</li>
 <li>L'API Qualité des nappes ne renvoie pas les attributs 'laboratoire' et 'préleveur'. (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>)</li>
 <li>L'API Qualité des nappes ne renvoie pas le 'support de l'analyse'. (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>)</li>
 <li>Le 'code support' peut être reconstitué à partir du 'code fraction' (ex: code fraction 3, 22, 23 -&gt; code support 3). (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>)</li>
 <li>Le 'code support' est a priori toujours égal à 3 (eau) dans l'API Qualité des nappes. (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>)</li>
-<li>L'API Hub'Eau Qualité des nappes (endpoint /analyses) dispose d'un filtre <code>date_debut_prelevement</code> qui permet de récupérer les analyses dont la date de début de prélèvement est égale ou postérieure à la date spécifiée. (<a href="https://github.com/BRGM/hubeau/issues/52">#52</a>)</li>
-<li>Les filtres <code>date_max_maj</code> et <code>date_min_maj</code> de l'API Qualité des nappes se réfèrent à la date de mise à jour des données et non à la date de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/52">#52</a>)</li>
-<li>L'API Qualité des nappes ne propose pas de filtres <code>date_debut_prelevement_min</code> ou <code>date_debut_prelevement_max</code>. (<a href="https://github.com/BRGM/hubeau/issues/52">#52</a>)</li>
-<li>Cette limite est imposée pour ne pas surcharger le serveur. (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)</li>
-<li>Pour récupérer plus de 20 000 enregistrements, il faut découper la requête en utilisant des critères plus discriminants, comme <code>date_debut_prelevement</code>. (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)</li>
-<li>L'API peut retourner des URLs erronées dans les attributs 'last' et 'next' lorsque la limite <code>page * size</code> est dépassée. (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)</li>
+<li>Le code support 3 correspond à l'eau. (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>)</li>
+<li>Les codes fraction 3, 22, 23 sont associés au code support 3 (eau). (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>)</li>
+<li>Le WS getData d'ADES est connu pour être lent et sujet aux timeouts, incitant à l'utilisation de l'API Hub'Eau Qualité des nappes. (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>)</li>
 <li>L'API Piézométrie ne permettait pas de filtrer les stations ou les chroniques par code_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
 <li>L'API Qualité des nappes ne permettait pas de filtrer les stations par code_reseau (mais le permettait pour les analyses). (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
 <li>L'API Qualité des nappes permettait de filtrer les stations par nom_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
 <li>Les informations sur les réseaux de mesure (code, mnémo, nom) sont présentes dans l'index sous-jacent de Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
 <li>L'ajout de filtres par code_reseau et l'inclusion des détails du réseau dans les réponses API étaient envisagés mais non prioritaires. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
-<li>L'API qualite_nappes pouvait retourner un nombre variable d'enregistrements pour une même requête exécutée à quelques secondes d'intervalle. (<a href="https://github.com/BRGM/hubeau/issues/79">#79</a>)</li>
-<li>L'anomalie de consistance des résultats pour l'API qualite_nappes a été corrigée. (<a href="https://github.com/BRGM/hubeau/issues/79">#79</a>)</li>
-<li>L'API Hub'Eau ne traitait pas correctement les paramètres de requête avec plusieurs valeurs séparées par des virgules (ex: code_bss=val1,val2) pour l'endpoint niveaux_nappes/chroniques de l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>Ce dysfonctionnement était une régression suite à une migration technique réalisée en décembre 2022. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>La même anomalie affectait l'endpoint <em>analyses</em> de l'API Qualité des nappes d'eau souterraines et les endpoints 'stations' de diverses APIs. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>Une solution de contournement temporaire était d'effectuer des appels API séparés pour chaque valeur unitaire. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>L'anomalie a été corrigée en mars 2023, et la recherche avec plusieurs valeurs séparées par des virgules est de nouveau fonctionnelle. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le paramètre <em>format</em>=geojson permet d'obtenir des données au format GeoJSON via les API Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)</li>
-<li>Le format GeoJSON n'est pas implémenté pour toutes les API Hub'Eau ; dans ce cas, la syntaxe <em>format</em>=geojson retourne des données au format JSON standard. (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)</li>
-<li>Seules les données GeoJSON diffusées par certaines API Hub'Eau peuvent être chargées directement dans QGIS. (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)</li>
-<li>Sans automatisation des échanges de données, les couches chargées dans QGIS sont limitées à 20 000 entités. (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)</li>
+<li>La base ADES permet de consulter et d'extraire les données par code_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
+<li>Les réseaux de mesure ont des fiches consultables publiquement sur ades.eaufrance.fr (ex: 0400000020 pour le réseau Bretagne). (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
+<li>Le filtrage par code_reseau est jugé plus pratique que par nom_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
+<li>Les utilisateurs peuvent utiliser des listes de codes BSS comme solution de contournement en l'absence de filtrage par réseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
 <li>Le format GeoJSON n'est pas implémenté pour le endpoint <code>/analyses</code> de l'API Qualité des nappes d'eau souterraines. (<a href="https://github.com/BRGM/hubeau/issues/186">#186</a>)</li>
 <li>L'utilisation du paramètre <code>format=geojson</code> sur le endpoint <code>/analyses</code> de l'API Qualité des nappes d'eau souterraines entraîne une réponse au format JSON standard, et non GeoJSON. (<a href="https://github.com/BRGM/hubeau/issues/186">#186</a>)</li>
 <li>Le endpoint <code>/stations</code> de l'API Qualité des nappes d'eau souterraines supporte le format GeoJSON. (<a href="https://github.com/BRGM/hubeau/issues/186">#186</a>)</li>
+<li>L'API Qualité des nappes d'eau souterraines fournit des données d'analyses et de stations. (<a href="https://github.com/BRGM/hubeau/issues/186">#186</a>)</li>
 <li>L'API Qualité des nappes peut nécessiter de nombreuses requêtes pour obtenir des métadonnées (années, producteurs, paramètres) par station, pouvant entraîner des résultats vides. (<a href="https://github.com/BRGM/hubeau/issues/204">#204</a>)</li>
 <li>Il existe une limitation à 20 000 résultats par requête sur l'API Qualité des nappes, nécessitant le fractionnement des requêtes. (<a href="https://github.com/BRGM/hubeau/issues/204">#204</a>)</li>
 <li>Un nouveau endpoint "_parametres" est prévu pour les APIs de qualité (rivières, nappes, eau potable) afin d'optimiser les interrogations. (<a href="https://github.com/BRGM/hubeau/issues/204">#204</a>)</li>
 <li>Le endpoint "_parametres" sera d'abord ajouté à l'API Qualité des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/204">#204</a>)</li>
 <li>Les remarques de l'utilisateur concernant les métadonnées (années, producteurs, paramètres) seront prises en compte pour l'implémentation du endpoint "_parametres" sur l'API Qualité des nappes. (<a href="https://github.com/BRGM/hubeau/issues/204">#204</a>)</li>
+<li>Les utilisateurs de l'API Qualité des nappes ont besoin de connaître les années de données disponibles, les producteurs d'analyses et les paramètres analysés pour chaque station de mesure afin d'optimiser leurs requêtes. (<a href="https://github.com/BRGM/hubeau/issues/204">#204</a>)</li>
 <li>L'API Qualité des nappes d'eau souterraines ne permet pas actuellement de filtrer les données par 'code réseau'. (<a href="https://github.com/BRGM/hubeau/issues/210">#210</a>)</li>
 <li>Le filtrage par 'nom de réseau' est actuellement disponible dans l'API Qualité des nappes d'eau souterraines. (<a href="https://github.com/BRGM/hubeau/issues/210">#210</a>)</li>
 <li>Une demande d'évolution a été enregistrée pour ajouter le filtrage par 'code réseau' sur les deux endpoints de l'API Qualité des nappes d'eau souterraines. (<a href="https://github.com/BRGM/hubeau/issues/210">#210</a>)</li>
-<li>L'argument 'fields' de l'API Qualité des nappes (endpoint /analyses) est une fonctionnalité expérimentale. (<a href="https://github.com/BRGM/hubeau/issues/214">#214</a>)</li>
-<li>L'argument 'fields' de l'API Qualité des nappes (endpoint /analyses) nécessite l'utilisation des noms de champs exacts pour être pris en compte. (<a href="https://github.com/BRGM/hubeau/issues/214">#214</a>)</li>
-<li>Des noms de champs incorrects (ex: 'code_parametre', 'resultat_numerique', 'date_prelevement') entraînent l'ignorance de l'argument 'fields' et le retour de toutes les données. (<a href="https://github.com/BRGM/hubeau/issues/214">#214</a>)</li>
-<li>Les noms de champs corrects pour l'exemple donné sont 'code_param', 'resultat' et 'date_debut_prelevement'. (<a href="https://github.com/BRGM/hubeau/issues/214">#214</a>)</li>
-<li>Les APIs Hub'Eau ne fournissent pas de concentrations journalières agrégées à l'échelle départementale pour des paramètres spécifiques comme le métolachlore ESA. (<a href="https://github.com/BRGM/hubeau/issues/220">#220</a>)</li>
-<li>Le rôle de Hub'Eau est de donner accès aux données brutes ou semi-brutes, et non de fournir des analyses hydrologiques complexes ou des agrégations de données à l'échelle départementale. (<a href="https://github.com/BRGM/hubeau/issues/220">#220</a>)</li>
-<li>L'API Qualité des nappes peut être fréquemment inaccessible (1 à 3 fois par semaine) pendant plusieurs heures (4 à 5 heures). (<a href="https://github.com/BRGM/hubeau/issues/231">#231</a>)</li>
-<li>Des sollicitations intensives et des collectes massives de données à un rythme soutenu dégradent les performances de l'API Qualité des nappes. (<a href="https://github.com/BRGM/hubeau/issues/231">#231</a>)</li>
-<li>Hub'Eau peut bloquer des adresses IP en cas de sollicitations excessives dégradant l'API. (<a href="https://github.com/BRGM/hubeau/issues/231">#231</a>)</li>
-<li>L'API Qualité des nappes est utilisée pour des requêtes 'lourdes' et longues à exécuter. (<a href="https://github.com/BRGM/hubeau/issues/231">#231</a>)</li>
-<li>Le champ "heure de prélèvement" n'est pas exposé dans l'API Hub'Eau 'Qualité des Nappes' pour les données d'analyses issues de la banque ADES. (<a href="https://github.com/BRGM/hubeau/issues/235">#235</a>)</li>
-<li>Le changelog de l'API Qualité des nappes pour la version 1.3.0 était initialement manquant. (<a href="https://github.com/BRGM/hubeau/issues/269">#269</a>)</li>
-<li>La documentation de l'API Qualité des nappes a été mise à jour pour inclure les changements de la version 1.3.0. (<a href="https://github.com/BRGM/hubeau/issues/269">#269</a>)</li>
-<li>Les coordonnées des points d'eau retournées par les endpoints 'Analyses' et 'Stations' de l'API Qualité des nappes sont désormais floutées lorsqu'elles concernent un captage d'eau potable. (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
-<li>Le floutage des coordonnées consiste à remplacer les coordonnées réelles du point d'eau par les coordonnées du chef-lieu de la commune sur laquelle le captage est implanté. (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
-<li>Un nouveau champ 'precision_coordonnees' est disponible pour indiquer l'état de floutage d'un point d'eau. (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
-<li>La valeur '0' pour le champ 'precision_coordonnees' indique des coordonnées réelles (précision inconnue). (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
-<li>La valeur '18' pour le champ 'precision_coordonnees' indique des coordonnées floutées (coordonnées du chef-lieu de la commune). (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
-<li>L'API Hub'Eau 'Qualité des nappes' peut subir des chargements partiels de données depuis ADES suite à des anomalies dans les traitements d'alimentation. (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)</li>
-<li>Ces anomalies peuvent entraîner une sous-estimation significative du nombre d'analyses disponibles via l'API par rapport à la source ADES. (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)</li>
-</ul>
-<h2 id="informations-métier">Informations métier</h2>
-<ul>
-<li>Un code BSS (BSS_ID) identifie un point d'eau souterraine et peut être utilisé pour interroger ses caractéristiques. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>Les points d'eau souterraine sont associés à des masses d'eau (codes_masse_eau_rap, codes_masse_eau_edl) et des entités hydrogéologiques BDLISA. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>Les données de qualité des eaux souterraines proviennent de la base ADES. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>Les stations de suivi des nappes sont identifiées par un bss_id (code BSS). (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)</li>
-<li>Les analyses de qualité des nappes peuvent être filtrées par code_param. (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)</li>
-<li>Le code support 3 correspond à l'eau. (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>)</li>
-<li>Les codes fraction 3, 22, 23 sont associés au code support 3 (eau). (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>)</li>
-<li>Le WS getData d'ADES est connu pour être lent et sujet aux timeouts, incitant à l'utilisation de l'API Hub'Eau Qualité des nappes. (<a href="https://github.com/BRGM/hubeau/issues/51">#51</a>)</li>
-<li>Il est possible de filtrer les données de qualité des eaux souterraines par la date de début de prélèvement pour n'obtenir que les données les plus récentes ou celles d'une période spécifique. (<a href="https://github.com/BRGM/hubeau/issues/52">#52</a>)</li>
-<li>Certaines stations (ex: BSS000LGJB) peuvent avoir un très grand nombre de mesures (plus de 20 000). (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)</li>
-<li>La base ADES permet de consulter et d'extraire les données par code_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
-<li>Les réseaux de mesure ont des fiches consultables publiquement sur ades.eaufrance.fr (ex: 0400000020 pour le réseau Bretagne). (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
-<li>Le filtrage par code_reseau est jugé plus pratique que par nom_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
-<li>Les utilisateurs peuvent utiliser des listes de codes BSS comme solution de contournement en l'absence de filtrage par réseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
-<li>Le paramètre code_bss est utilisé pour filtrer les chroniques piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>Les endpoints 'stations' permettent de lister les points de mesure selon des critères comme la masse d'eau ou le département. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>L'utilisation des API Hub'Eau avec QGIS est un cas d'usage pour l'intégration de données hydrologiques dans un SIG. (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)</li>
-<li>Les données de qualité des nappes peuvent être filtrées par numéro de département (ex: num_departement=23). (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)</li>
-<li>L'API Qualité des nappes d'eau souterraines fournit des données d'analyses et de stations. (<a href="https://github.com/BRGM/hubeau/issues/186">#186</a>)</li>
-<li>Les utilisateurs de l'API Qualité des nappes ont besoin de connaître les années de données disponibles, les producteurs d'analyses et les paramètres analysés pour chaque station de mesure afin d'optimiser leurs requêtes. (<a href="https://github.com/BRGM/hubeau/issues/204">#204</a>)</li>
 <li>Les réseaux de surveillance de la qualité des nappes d'eau souterraines sont identifiables par un 'code réseau' en plus d'un 'nom de réseau'. (<a href="https://github.com/BRGM/hubeau/issues/210">#210</a>)</li>
-<li>L'estimation d'une concentration journalière globale pour un paramètre (ex: métolachlore ESA) sur un département entier à partir de mesures de stations multiples nécessite une méthodologie spécifique. (<a href="https://github.com/BRGM/hubeau/issues/220">#220</a>)</li>
-<li>La simple moyenne des concentrations mesurées par toutes les stations un jour donné n'est pas nécessairement la méthode la plus pertinente pour estimer une concentration départementale globale. (<a href="https://github.com/BRGM/hubeau/issues/220">#220</a>)</li>
-<li>Pour les questions méthodologiques concernant l'interprétation et l'agrégation des données de qualité de l'eau (eaux souterraines ou superficielles), il convient de contacter directement les équipes expertes d'Ades (eaux souterraines) ou de Naïades (eaux superficielles). (<a href="https://github.com/BRGM/hubeau/issues/220">#220</a>)</li>
+<li>Le champ "heure de prélèvement" n'est pas exposé dans l'API Hub'Eau 'Qualité des Nappes' pour les données d'analyses issues de la banque ADES. (<a href="https://github.com/BRGM/hubeau/issues/235">#235</a>)</li>
 <li>Le champ "heure de prélèvement" est présent sur la plateforme ADES pour les données d'analyses. (<a href="https://github.com/BRGM/hubeau/issues/235">#235</a>)</li>
 <li>Les exports SISE-EAUX (ARS) incluent le champ "heure de prélèvement". (<a href="https://github.com/BRGM/hubeau/issues/235">#235</a>)</li>
 <li>L'absence du champ "heure de prélèvement" dans l'API Hub'Eau empêche une comparaison précise avec les données SISE-EAUX. (<a href="https://github.com/BRGM/hubeau/issues/235">#235</a>)</li>
 <li>Plusieurs prélèvements peuvent avoir lieu le même jour sur un même captage ou station. (<a href="https://github.com/BRGM/hubeau/issues/235">#235</a>)</li>
 <li>Sans l'heure de prélèvement, les prélèvements multiples du même jour sur un même site peuvent être fusionnés ou confondus. (<a href="https://github.com/BRGM/hubeau/issues/235">#235</a>)</li>
 <li>L'heure de prélèvement est cruciale pour la traçabilité et la reconstitution fidèle des séries de mesures, notamment pour les analyses de dépassements, le suivi qualité et les diagnostics temporels. (<a href="https://github.com/BRGM/hubeau/issues/235">#235</a>)</li>
-<li>La version 1.3.0 de l'API Qualité des nappes introduit le floutage des coordonnées des captages AEP. (<a href="https://github.com/BRGM/hubeau/issues/269">#269</a>)</li>
-<li>Le floutage des coordonnées des captages AEP s'effectue au niveau du chef-lieu de la commune. (<a href="https://github.com/BRGM/hubeau/issues/269">#269</a>)</li>
+<li>Les coordonnées des points d'eau retournées par les endpoints 'Analyses' et 'Stations' de l'API Qualité des nappes sont désormais floutées lorsqu'elles concernent un captage d'eau potable. (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
+<li>Le floutage des coordonnées consiste à remplacer les coordonnées réelles du point d'eau par les coordonnées du chef-lieu de la commune sur laquelle le captage est implanté. (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
+<li>Un nouveau champ 'precision_coordonnees' est disponible pour indiquer l'état de floutage d'un point d'eau. (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
+<li>La valeur '0' pour le champ 'precision_coordonnees' indique des coordonnées réelles (précision inconnue). (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
+<li>La valeur '18' pour le champ 'precision_coordonnees' indique des coordonnées floutées (coordonnées du chef-lieu de la commune). (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
 <li>Le floutage des coordonnées des captages d'eau potable est appliqué en application des réglementations françaises et européennes. (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
 <li>Le champ 'precision_coordonnees' repose sur la nomenclature Sandre 916. (<a href="https://github.com/BRGM/hubeau/issues/270">#270</a>)</li>
-<li>Les données de qualité des nappes de Hub'Eau sont issues du système ADES. (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)</li>
-<li>Les points de mesure des nappes sont identifiés par un code BSS (ex: BSS000JGAH). (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)</li>
-<li>La volumétrie des analyses pour un point BSS peut évoluer dans le temps (ex: pour BSS000JGAH, de 80 000 à plus de 100 000 analyses en un an). (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)</li>
 </ul>
-<h2 id="problèmes-connus">Problèmes connus</h2>
+<h3 id="historique-des-problèmes-résolus">Historique des problèmes résolus</h3>
 <ul>
-<li>L'API Qualité des nappes a rencontré un bug où l'attribut <code>count</code> variait pour une même requête. (<a href="https://github.com/BRGM/hubeau/issues/14">#14</a>)</li>
-<li>Ce problème était dû à une désynchronisation des multiples copies de données utilisées par Hub'Eau pour augmenter la sécurité et les temps de réponse. (<a href="https://github.com/BRGM/hubeau/issues/14">#14</a>)</li>
-<li>Le problème de désynchronisation des données a été corrigé par l'équipe Hub'Eau, assurant des résultats consistants. (<a href="https://github.com/BRGM/hubeau/issues/14">#14</a>)</li>
-<li>Contournement possible : utiliser de grandes valeurs pour 'size' (5000-20000) pour réduire le nombre de pages et l'impact des inconsistances de 'count'. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)</li>
-<li>La résolution des problèmes de désynchronisation d'index implique une ré-indexation complète des données. (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)</li>
-<li>Dépasser la limite <code>page * size &gt; 20000</code> entraîne une erreur <code>InvalidRequest</code> avec le code <code>ValidatePageDepth</code>. (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)</li>
-<li>Les problèmes de volumétrie sont généralement résolus après correction des traitements d'alimentation. (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)</li>
+<li>~~L'opération <code>qualite_nappes/stations</code> de l'API Qualité des nappes permet de récupérer des informations détaillées sur un point d'eau à partir de son code BSS. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~L'API Qualité des nappes fournit des informations complètes sur les points d'eau de type qualitomètre, incluant des données géographiques, administratives et hydrogéologiques (ex: masses d'eau, entités BDLISA). (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~L'API Piézométrie fournissait, au moment de l'issue, moins d'informations sur les points d'eau (notamment les masses d'eau) que l'API Qualité des nappes. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~Un code BSS (BSS_ID) identifie un point d'eau souterraine et peut être utilisé pour interroger ses caractéristiques. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~Les points d'eau souterraine sont associés à des masses d'eau (codes_masse_eau_rap, codes_masse_eau_edl) et des entités hydrogéologiques BDLISA. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~Les données de qualité des eaux souterraines proviennent de la base ADES. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~L'API Qualité des nappes a rencontré un bug où l'attribut <code>count</code> variait pour une même requête. (<a href="https://github.com/BRGM/hubeau/issues/14">#14</a>)~~</li>
+<li>~~Ce problème était dû à une désynchronisation des multiples copies de données utilisées par Hub'Eau pour augmenter la sécurité et les temps de réponse. (<a href="https://github.com/BRGM/hubeau/issues/14">#14</a>)~~</li>
+<li>~~Le problème de désynchronisation des données a été corrigé par l'équipe Hub'Eau, assurant des résultats consistants. (<a href="https://github.com/BRGM/hubeau/issues/14">#14</a>)~~</li>
+<li>~~L'attribut 'next' de la pagination est généré avec une URL même lorsque la page de données est vide, contrairement à la documentation qui indique 'null'. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)~~</li>
+<li>~~Ce comportement est lié à des inconsistances dans le 'count' total des résultats renvoyés par l'API. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)~~</li>
+<li>~~Lorsque le 'count' change sur la dernière page, l'API peut générer un 'next' infini et un 'last' nul. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)~~</li>
+<li>~~Contournement possible : vérifier que <code>page * size</code> ne dépasse pas le 'count' obtenu lors du premier appel. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)~~</li>
+<li>~~Contournement possible : utiliser de grandes valeurs pour 'size' (5000-20000) pour réduire le nombre de pages et l'impact des inconsistances de 'count'. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)~~</li>
+<li>~~L'utilisation de très grandes valeurs pour 'size' peut potentiellement entraîner des timeouts. (<a href="https://github.com/BRGM/hubeau/issues/15">#15</a>)~~</li>
+<li>~~L'API Qualité des nappes peut retourner un nombre total de résultats (count) incohérent pour une même requête si le paramètre size est modifié. (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)~~</li>
+<li>~~Les données Hub'Eau sont dupliquées sur plusieurs serveurs pour la tolérance aux pannes et l'accélération des réponses. (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)~~</li>
+<li>~~Des désynchronisations d'index entre les serveurs de données peuvent entraîner des incohérences dans les résultats des requêtes (ex: count incorrect). (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)~~</li>
+<li>~~La résolution des problèmes de désynchronisation d'index implique une ré-indexation complète des données. (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)~~</li>
+<li>~~Les stations de suivi des nappes sont identifiées par un bss_id (code BSS). (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)~~</li>
+<li>~~Les analyses de qualité des nappes peuvent être filtrées par code_param. (<a href="https://github.com/BRGM/hubeau/issues/42">#42</a>)~~</li>
+<li>~~L'API Hub'Eau Qualité des nappes (endpoint /analyses) dispose d'un filtre <code>date_debut_prelevement</code> qui permet de récupérer les analyses dont la date de début de prélèvement est égale ou postérieure à la date spécifiée. (<a href="https://github.com/BRGM/hubeau/issues/52">#52</a>)~~</li>
+<li>~~Les filtres <code>date_max_maj</code> et <code>date_min_maj</code> de l'API Qualité des nappes se réfèrent à la date de mise à jour des données et non à la date de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/52">#52</a>)~~</li>
+<li>~~L'API Qualité des nappes ne propose pas de filtres <code>date_debut_prelevement_min</code> ou <code>date_debut_prelevement_max</code>. (<a href="https://github.com/BRGM/hubeau/issues/52">#52</a>)~~</li>
+<li>~~Il est possible de filtrer les données de qualité des eaux souterraines par la date de début de prélèvement pour n'obtenir que les données les plus récentes ou celles d'une période spécifique. (<a href="https://github.com/BRGM/hubeau/issues/52">#52</a>)~~</li>
+<li>~~La multiplication des paramètres <code>page</code> et <code>size</code> dans les requêtes Hub'Eau ne peut excéder 20 000 enregistrements (profondeur d'accès aux résultats). (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)~~</li>
+<li>~~Dépasser la limite <code>page * size &gt; 20000</code> entraîne une erreur <code>InvalidRequest</code> avec le code <code>ValidatePageDepth</code>. (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)~~</li>
+<li>~~Cette limite est imposée pour ne pas surcharger le serveur. (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)~~</li>
+<li>~~Pour récupérer plus de 20 000 enregistrements, il faut découper la requête en utilisant des critères plus discriminants, comme <code>date_debut_prelevement</code>. (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)~~</li>
+<li>~~L'API peut retourner des URLs erronées dans les attributs 'last' et 'next' lorsque la limite <code>page * size</code> est dépassée. (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)~~</li>
+<li>~~Certaines stations (ex: BSS000LGJB) peuvent avoir un très grand nombre de mesures (plus de 20 000). (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)~~</li>
+<li>~~L'API qualite_nappes pouvait retourner un nombre variable d'enregistrements pour une même requête exécutée à quelques secondes d'intervalle. (<a href="https://github.com/BRGM/hubeau/issues/79">#79</a>)~~</li>
+<li>~~L'anomalie de consistance des résultats pour l'API qualite_nappes a été corrigée. (<a href="https://github.com/BRGM/hubeau/issues/79">#79</a>)~~</li>
+<li>~~L'API Hub'Eau ne traitait pas correctement les paramètres de requête avec plusieurs valeurs séparées par des virgules (ex: code_bss=val1,val2) pour l'endpoint niveaux_nappes/chroniques de l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~Ce dysfonctionnement était une régression suite à une migration technique réalisée en décembre 2022. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~La même anomalie affectait l'endpoint <em>analyses</em> de l'API Qualité des nappes d'eau souterraines et les endpoints 'stations' de diverses APIs. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~Une solution de contournement temporaire était d'effectuer des appels API séparés pour chaque valeur unitaire. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~L'anomalie a été corrigée en mars 2023, et la recherche avec plusieurs valeurs séparées par des virgules est de nouveau fonctionnelle. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~Le paramètre code_bss est utilisé pour filtrer les chroniques piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~Les endpoints 'stations' permettent de lister les points de mesure selon des critères comme la masse d'eau ou le département. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le paramètre <em>format</em>=geojson permet d'obtenir des données au format GeoJSON via les API Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)~~</li>
+<li>~~Le format GeoJSON n'est pas implémenté pour toutes les API Hub'Eau ; dans ce cas, la syntaxe <em>format</em>=geojson retourne des données au format JSON standard. (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)~~</li>
+<li>~~Seules les données GeoJSON diffusées par certaines API Hub'Eau peuvent être chargées directement dans QGIS. (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)~~</li>
+<li>~~Sans automatisation des échanges de données, les couches chargées dans QGIS sont limitées à 20 000 entités. (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)~~</li>
+<li>~~L'utilisation des API Hub'Eau avec QGIS est un cas d'usage pour l'intégration de données hydrologiques dans un SIG. (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)~~</li>
+<li>~~Les données de qualité des nappes peuvent être filtrées par numéro de département (ex: num_departement=23). (<a href="https://github.com/BRGM/hubeau/issues/149">#149</a>)~~</li>
+<li>~~L'argument 'fields' de l'API Qualité des nappes (endpoint /analyses) est une fonctionnalité expérimentale. (<a href="https://github.com/BRGM/hubeau/issues/214">#214</a>)~~</li>
+<li>~~L'argument 'fields' de l'API Qualité des nappes (endpoint /analyses) nécessite l'utilisation des noms de champs exacts pour être pris en compte. (<a href="https://github.com/BRGM/hubeau/issues/214">#214</a>)~~</li>
+<li>~~Des noms de champs incorrects (ex: 'code_parametre', 'resultat_numerique', 'date_prelevement') entraînent l'ignorance de l'argument 'fields' et le retour de toutes les données. (<a href="https://github.com/BRGM/hubeau/issues/214">#214</a>)~~</li>
+<li>~~Les noms de champs corrects pour l'exemple donné sont 'code_param', 'resultat' et 'date_debut_prelevement'. (<a href="https://github.com/BRGM/hubeau/issues/214">#214</a>)~~</li>
+<li>~~Les APIs Hub'Eau ne fournissent pas de concentrations journalières agrégées à l'échelle départementale pour des paramètres spécifiques comme le métolachlore ESA. (<a href="https://github.com/BRGM/hubeau/issues/220">#220</a>)~~</li>
+<li>~~Le rôle de Hub'Eau est de donner accès aux données brutes ou semi-brutes, et non de fournir des analyses hydrologiques complexes ou des agrégations de données à l'échelle départementale. (<a href="https://github.com/BRGM/hubeau/issues/220">#220</a>)~~</li>
+<li>~~L'estimation d'une concentration journalière globale pour un paramètre (ex: métolachlore ESA) sur un département entier à partir de mesures de stations multiples nécessite une méthodologie spécifique. (<a href="https://github.com/BRGM/hubeau/issues/220">#220</a>)~~</li>
+<li>~~La simple moyenne des concentrations mesurées par toutes les stations un jour donné n'est pas nécessairement la méthode la plus pertinente pour estimer une concentration départementale globale. (<a href="https://github.com/BRGM/hubeau/issues/220">#220</a>)~~</li>
+<li>~~Pour les questions méthodologiques concernant l'interprétation et l'agrégation des données de qualité de l'eau (eaux souterraines ou superficielles), il convient de contacter directement les équipes expertes d'Ades (eaux souterraines) ou de Naïades (eaux superficielles). (<a href="https://github.com/BRGM/hubeau/issues/220">#220</a>)~~</li>
+<li>~~L'API Qualité des nappes peut être fréquemment inaccessible (1 à 3 fois par semaine) pendant plusieurs heures (4 à 5 heures). (<a href="https://github.com/BRGM/hubeau/issues/231">#231</a>)~~</li>
+<li>~~Des sollicitations intensives et des collectes massives de données à un rythme soutenu dégradent les performances de l'API Qualité des nappes. (<a href="https://github.com/BRGM/hubeau/issues/231">#231</a>)~~</li>
+<li>~~Hub'Eau peut bloquer des adresses IP en cas de sollicitations excessives dégradant l'API. (<a href="https://github.com/BRGM/hubeau/issues/231">#231</a>)~~</li>
+<li>~~L'API Qualité des nappes est utilisée pour des requêtes 'lourdes' et longues à exécuter. (<a href="https://github.com/BRGM/hubeau/issues/231">#231</a>)~~</li>
+<li>~~Le changelog de l'API Qualité des nappes pour la version 1.3.0 était initialement manquant. (<a href="https://github.com/BRGM/hubeau/issues/269">#269</a>)~~</li>
+<li>~~La documentation de l'API Qualité des nappes a été mise à jour pour inclure les changements de la version 1.3.0. (<a href="https://github.com/BRGM/hubeau/issues/269">#269</a>)~~</li>
+<li>~~La version 1.3.0 de l'API Qualité des nappes introduit le floutage des coordonnées des captages AEP. (<a href="https://github.com/BRGM/hubeau/issues/269">#269</a>)~~</li>
+<li>~~Le floutage des coordonnées des captages AEP s'effectue au niveau du chef-lieu de la commune. (<a href="https://github.com/BRGM/hubeau/issues/269">#269</a>)~~</li>
+<li>~~L'API Hub'Eau 'Qualité des nappes' peut subir des chargements partiels de données depuis ADES suite à des anomalies dans les traitements d'alimentation. (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)~~</li>
+<li>~~Ces anomalies peuvent entraîner une sous-estimation significative du nombre d'analyses disponibles via l'API par rapport à la source ADES. (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)~~</li>
+<li>~~Les problèmes de volumétrie sont généralement résolus après correction des traitements d'alimentation. (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)~~</li>
+<li>~~Les données de qualité des nappes de Hub'Eau sont issues du système ADES. (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)~~</li>
+<li>~~Les points de mesure des nappes sont identifiés par un code BSS (ex: BSS000JGAH). (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)~~</li>
+<li>~~La volumétrie des analyses pour un point BSS peut évoluer dans le temps (ex: pour BSS000JGAH, de 80 000 à plus de 100 000 analyses en un an). (<a href="https://github.com/BRGM/hubeau/issues/271">#271</a>)~~</li>
 </ul>
-<h2 id="tips-dutilisation">Tips d'utilisation</h2>
-<ul>
-<li>La multiplication des paramètres <code>page</code> et <code>size</code> dans les requêtes Hub'Eau ne peut excéder 20 000 enregistrements (profondeur d'accès aux résultats). (<a href="https://github.com/BRGM/hubeau/issues/57">#57</a>)</li>
-</ul>
-<hr />
-<h2 id="issues-sources">Issues sources</h2>
+<h3 id="issues-sources">Issues sources</h3>
 <ul>
 <li><strong>#10</strong> caractéristiques hydrogéologiques  — L'API Qualité des nappes permet de récupérer des informations hydrogéologiques détaillées pour un code BSS, incluant les masses d'eau, contrairement à l'API Piézométrie qui était plus limitée à l'époque de l'issue. <code>[résolu]</code></li>
 <li><strong>#14</strong> [API Qualité des nappes d'eau souterraine] Nombre de résultats aléatoire — L'API Qualité des nappes a connu un bug où l'attribut <code>count</code> variait pour une même requête à cause d'une désynchronisation des copies de données, problème qui a été résolu. <code>[résolu]</code></li>
@@ -228,6 +236,7 @@
 <li><strong>#270</strong> [API Qualité des Nappes] Floutage des coordonnées de captages — L'API Qualité des nappes floute désormais les coordonnées des captages d'eau potable, les remplaçant par celles du chef-lieu de la commune, et un champ 'precision_coordonnees' indique l'état de floutage. <code>[information]</code></li>
 <li><strong>#271</strong> [Qualité des nappes] Incohérence de volumétrie entre Hub'Eau et ADES — L'API Hub'Eau 'Qualité des nappes' a rencontré une incohérence de volumétrie de données pour la station BSS000JGAH due à une anomalie dans les traitements d'alimentation depuis ADES, mais la situation a été rétablie. <code>[résolu]</code></li>
 </ul>
+</details>
         </article>
 
         <footer class="footer">
@@ -236,7 +245,36 @@
         </footer>
     </main>
 
+    <!-- Chatbot toggle button -->
+    <button class="chatbot-toggle" id="chatbotToggle" aria-label="Ouvrir le chatbot">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+
+    <!-- Chatbot panel -->
+    <div class="chatbot-panel" id="chatbotPanel">
+        <div class="chatbot-header">
+            <div class="chatbot-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Hub'Eau Assistant
+            </div>
+            <button class="chatbot-close" id="chatbotClose">&times;</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg chat-msg-bot">
+                <div class="chat-bubble">Bonjour ! Posez-moi une question sur les APIs Hub'Eau. Je cherche dans la base de connaissances pour vous r&eacute;pondre.</div>
+            </div>
+        </div>
+        <div class="chatbot-status" id="chatbotStatus" style="display:none;"></div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" placeholder="Posez votre question..." autocomplete="off">
+            <button class="chatbot-send" id="chatbotSend">Envoyer</button>
+        </div>
+    </div>
+
     <script src="search.js"></script>
+    <script src="chatbot.js"></script>
     <script>
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');

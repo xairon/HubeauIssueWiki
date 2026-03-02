@@ -1,0 +1,286 @@
+"""Generate synthesized wiki with Guide + Archive from extracted facts."""
+
+import json
+import re
+import sys
+import time
+from collections import defaultdict
+
+import httpx
+import unicodedata
+
+from config import (
+    EXTRACTED_DIR,
+    GEMINI_API_BASE,
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
+    HUBEAU_APIS,
+    MIN_RELEVANCE,
+    WIKI_DIR,
+)
+
+SYNTHESIS_PROMPT = """\
+Tu es un expert en hydrologie et en APIs de données environnementales. Tu rédiges un guide pratique pour les développeurs et data scientists qui utilisent l'API Hub'Eau "{api_name}".
+
+Voici {count} faits extraits de {issue_count} issues GitHub. Chaque fait a un statut (résolu/en_cours/information) et un score de pertinence (1-5).
+
+## Faits bruts
+
+{facts_text}
+
+---
+
+À partir de ces faits, rédige un guide structuré en prose concise. **Distingue clairement** ce qui est encore vrai aujourd'hui de ce qui a été corrigé/résolu dans le passé.
+
+Réponds UNIQUEMENT avec du markdown valide (PAS de JSON), structuré exactement comme suit :
+
+### Comportement actuel
+
+Décris le fonctionnement actuel de l'API : endpoints principaux, format des données, pagination, paramètres importants. Ne mentionne que ce qui est **encore vrai**. Fusionne les faits redondants. Écris au présent.
+
+### Pièges à éviter
+
+Liste les limitations, comportements surprenants et erreurs fréquentes qui sont **encore d'actualité**. Pour chaque piège, explique brièvement pourquoi c'est un problème et comment le contourner.
+
+### Bonnes pratiques
+
+Donne des conseils concrets et actionnables pour bien utiliser l'API. Basé sur les retours d'expérience des utilisateurs.
+
+### Contexte métier
+
+Explique les concepts hydrologiques ou de données nécessaires pour comprendre et utiliser correctement cette API (codes BSS, SANDRE, types de stations, sources de données, etc.). Ce qui est utile pour un non-spécialiste.
+
+Règles :
+- Écris en français, en prose (pas juste des listes à puces)
+- Sois concis : chaque section fait 3-10 lignes max
+- Ne répète pas les mêmes infos entre sections
+- Si un fait est marqué "résolu", ne le mentionne PAS dans le guide (il ira dans l'archive)
+- Cite les numéros d'issues entre parenthèses quand c'est pertinent, ex: (#123)
+- Si une section serait vide, écris juste "*Rien de notable.*"
+"""
+
+
+def normalize_api_name(name: str) -> str:
+    """Normalize API name to match canonical names in HUBEAU_APIS."""
+    def strip_accents(s: str) -> str:
+        return "".join(
+            c for c in unicodedata.normalize("NFD", s)
+            if unicodedata.category(c) != "Mn"
+        )
+    name_key = strip_accents(name.strip().lower())
+    for canonical in HUBEAU_APIS:
+        if strip_accents(canonical.lower()) == name_key:
+            return canonical
+    return name
+
+
+def load_all_facts() -> list[dict]:
+    """Load all extracted fact files."""
+    facts = []
+    for filepath in sorted(EXTRACTED_DIR.glob("*_facts.json")):
+        data = json.loads(filepath.read_text(encoding="utf-8"))
+        facts.append(data)
+    return facts
+
+
+def group_by_api(facts: list[dict]) -> dict[str, list[dict]]:
+    """Group facts by API name, filtering by relevance."""
+    grouped = defaultdict(list)
+    for fact in facts:
+        if fact.get("pertinence", 0) < MIN_RELEVANCE:
+            continue
+        apis = fact.get("api_concernee", ["Général"])
+        if isinstance(apis, str):
+            apis = [apis]
+        for api in apis:
+            api = normalize_api_name(api)
+            grouped[api].append(fact)
+    return dict(grouped)
+
+
+def format_facts_for_synthesis(facts: list[dict]) -> str:
+    """Format all facts of an API into text for the synthesis prompt."""
+    lines = []
+    for fact in sorted(facts, key=lambda f: f.get("issue_number", 0)):
+        num = fact.get("issue_number", "?")
+        title = fact.get("issue_title", "")
+        statut = fact.get("statut", "information")
+        pertinence = fact.get("pertinence", 3)
+
+        lines.append(f"### Issue #{num}: {title} [statut: {statut}, pertinence: {pertinence}/5]")
+
+        for f in fact.get("faits_techniques", []):
+            if f:
+                lines.append(f"- [TECHNIQUE] {f}")
+        for f in fact.get("faits_metier", []):
+            if f:
+                lines.append(f"- [MÉTIER] {f}")
+
+        resume = fact.get("resume", "")
+        if resume:
+            lines.append(f"- [RÉSUMÉ] {resume}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def synthesize_guide(client: httpx.Client, api_name: str, facts: list[dict]) -> str:
+    """Call Gemini to synthesize a guide from all facts of an API."""
+    facts_text = format_facts_for_synthesis(facts)
+    total_facts = sum(
+        len(f.get("faits_techniques", [])) + len(f.get("faits_metier", []))
+        for f in facts
+    )
+
+    prompt = SYNTHESIS_PROMPT.format(
+        api_name=api_name,
+        count=total_facts,
+        issue_count=len(facts),
+        facts_text=facts_text,
+    )
+
+    url = f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent"
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.3},
+    }
+
+    resp = client.post(url, json=payload, params={"key": GEMINI_API_KEY})
+
+    if resp.status_code == 429:
+        retry_after = int(resp.headers.get("Retry-After", 15))
+        print(f"    Rate limited. Waiting {retry_after}s...")
+        time.sleep(retry_after)
+        resp = client.post(url, json=payload, params={"key": GEMINI_API_KEY})
+
+    resp.raise_for_status()
+    result = resp.json()
+    return result["candidates"][0]["content"]["parts"][0]["text"].strip()
+
+
+def render_archive(facts: list[dict]) -> str:
+    """Render the archive section with raw facts."""
+    lines = []
+
+    # Split into current vs resolved
+    current_facts = []
+    resolved_facts = []
+
+    for fact in facts:
+        issue_ref = f"(#{fact.get('issue_number', '?')})"
+        statut = fact.get("statut", "information")
+
+        for f in fact.get("faits_techniques", []):
+            if f:
+                entry = f"{f} {issue_ref}"
+                if statut == "résolu":
+                    resolved_facts.append(entry)
+                else:
+                    current_facts.append(entry)
+
+        for f in fact.get("faits_metier", []):
+            if f:
+                entry = f"{f} {issue_ref}"
+                if statut == "résolu":
+                    resolved_facts.append(entry)
+                else:
+                    current_facts.append(entry)
+
+    if current_facts:
+        lines.append("### Faits actuels\n")
+        for f in current_facts:
+            lines.append(f"- {f}")
+        lines.append("")
+
+    if resolved_facts:
+        lines.append("### Historique des problèmes résolus\n")
+        for f in resolved_facts:
+            lines.append(f"- ~~{f}~~")
+        lines.append("")
+
+    # Issue sources
+    lines.append("### Issues sources\n")
+    for fact in sorted(facts, key=lambda f: f.get("issue_number", 0)):
+        num = fact.get("issue_number", "?")
+        title = fact.get("issue_title", "")
+        resume = fact.get("resume", "")
+        statut = fact.get("statut", "")
+        lines.append(f"- **#{num}** {title} — {resume} `[{statut}]`")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def render_api_page(api_name: str, guide_text: str, facts: list[dict]) -> str:
+    """Render a full API page with Guide + Archive."""
+    lines = [
+        f"# {api_name}\n",
+        f"> {len(facts)} issues analysées\n",
+        "## Guide\n",
+        guide_text,
+        "",
+        "---\n",
+        "<details>",
+        "<summary><strong>Archive détaillée</strong> — Tous les faits bruts extraits des issues</summary>\n",
+        render_archive(facts),
+        "</details>",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def render_index(api_groups: dict[str, list[dict]]) -> str:
+    """Render the wiki index page."""
+    lines = [
+        "# Hub'Eau — Base de connaissances\n",
+        "Guide pratique et archive des connaissances extraites des issues GitHub de [BRGM/hubeau](https://github.com/BRGM/hubeau/issues).\n",
+        "Chaque page contient un **guide synthétique** (ce qui est encore vrai et actionnable) et une **archive détaillée** (tous les faits bruts avec références).\n",
+        "## APIs\n",
+    ]
+
+    for api_name in sorted(api_groups.keys()):
+        slug = HUBEAU_APIS.get(api_name, api_name.lower().replace(" ", "_").replace("'", ""))
+        count = len(api_groups[api_name])
+        lines.append(f"- [{api_name}]({slug}.md) ({count} issues)")
+
+    lines.append("")
+    return "\n".join(lines)
+
+
+def main() -> None:
+    if not GEMINI_API_KEY:
+        print("ERROR: GEMINI_API_KEY environment variable not set.")
+        sys.exit(1)
+
+    WIKI_DIR.mkdir(parents=True, exist_ok=True)
+
+    facts = load_all_facts()
+    if not facts:
+        print("No extracted facts found. Run extract_facts.py first.")
+        sys.exit(1)
+
+    api_groups = group_by_api(facts)
+    print(f"Found {len(api_groups)} APIs to synthesize.\n")
+
+    with httpx.Client(timeout=120) as client:
+        for api_name, api_facts in api_groups.items():
+            slug = HUBEAU_APIS.get(api_name, api_name.lower().replace(" ", "_").replace("'", ""))
+            filepath = WIKI_DIR / f"{slug}.md"
+
+            print(f"  Synthesizing {api_name} ({len(api_facts)} issues)...")
+            guide_text = synthesize_guide(client, api_name, api_facts)
+
+            content = render_api_page(api_name, guide_text, api_facts)
+            filepath.write_text(content, encoding="utf-8")
+            print(f"    -> {filepath.name}")
+
+    # Generate index
+    index_path = WIKI_DIR / "index.md"
+    index_path.write_text(render_index(api_groups), encoding="utf-8")
+    print(f"  Generated index.md")
+
+    print(f"\nDone. Wiki v2 generated in {WIKI_DIR}/")
+
+
+if __name__ == "__main__":
+    main()

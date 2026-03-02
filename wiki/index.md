@@ -1,6 +1,8 @@
 # Hub'Eau — Base de connaissances
 
-Wiki généré automatiquement à partir des issues GitHub de [BRGM/hubeau](https://github.com/BRGM/hubeau/issues).
+Guide pratique et archive des connaissances extraites des issues GitHub de [BRGM/hubeau](https://github.com/BRGM/hubeau/issues).
+
+Chaque page contient un **guide synthétique** (ce qui est encore vrai et actionnable) et une **archive détaillée** (tous les faits bruts avec références).
 
 ## APIs
 

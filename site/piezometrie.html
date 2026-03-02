@@ -68,105 +68,86 @@
 
         <article class="content">
             <h1 id="piézométrie">Piézométrie</h1>
-<h2 id="particularités-techniques">Particularités techniques</h2>
+<blockquote>
+<p>33 issues analysées</p>
+</blockquote>
+<h2 id="guide">Guide</h2>
+<h3 id="comportement-actuel">Comportement actuel</h3>
+<p>L'API Piézométrie offre trois endpoints principaux : <code>/niveaux_nappes/stations</code> pour les informations sur les points de mesure, <code>/niveaux_nappes/chroniques</code> pour les données historiques agrégées, et <code>/niveaux_nappes/chroniques_tr</code> pour les mesures brutes en temps réel. Le endpoint <code>stations</code> accepte les identifiants <code>bss_id</code> (nouveau code BSS) et <code>code_bss</code> (ancien), tandis que <code>chroniques_tr</code> utilise le <code>bss_id</code> et <code>chroniques</code> l'ancien <code>code_bss</code> (#49, #59, #207). Les niveaux de nappe (<code>niveau_nappe_eau</code>) sont exprimés en mètres NGF, et la profondeur (<code>profondeur_nappe</code>) en mètres par rapport à un repère de mesure, avec la relation <code>niveau_nappe_eau = altitude_repere - profondeur_nappe</code> (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>). Le paramètre <code>size</code> par défaut est de 5000 résultats, et il est possible de requêter jusqu'à 200 <code>code_bss</code> simultanément (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>).</p>
+<h3 id="pièges-à-éviter">Pièges à éviter</h3>
+<p>L'endpoint <code>/niveaux_nappes/chroniques</code> ne supporte pas le <code>bss_id</code> (nouveau code BSS), nécessitant l'utilisation de l'ancien <code>code_bss</code> (#49, #59, #207). Le paramètre <code>date_fin_mesure</code> filtre sur le <code>timestamp_mesure</code> (date et heure), excluant les données après 00h00 du jour spécifié, ce qui peut entraîner la perte des mesures les plus récentes (<a href="https://github.com/BRGM/hubeau/issues/259">#259</a>). Il n'existe pas de filtre par date de mise à jour des données, obligeant à recharger des jeux de données complets pour la synchronisation (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>). Les informations de "période d'activité" des stations ne sont pas mises à jour en temps réel, pouvant fausser les requêtes récentes sur <code>/stations</code> (#50, #93). Le filtrage par <code>code_reseau</code> n'est pas disponible, et cette information est absente des résultats des stations (#63, #230). Enfin, le tri global par <code>date_mesure</code> n'est pas direct pour plusieurs piézomètres, le tri s'appliquant d'abord par <code>code_bss</code> (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>).</p>
+<h3 id="bonnes-pratiques">Bonnes pratiques</h3>
+<p>Pour contourner l'absence de filtre par date de mise à jour, il est recommandé de requêter périodiquement (ex: mensuellement) les données sur une période donnée (ex: la dernière année) pour identifier les changements, même si cette approche est sous-optimale (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>). Lors de l'extraction de chroniques pour plusieurs piézomètres, si vous souhaitez la dernière mesure de chacun, il est plus fiable d'effectuer des requêtes individuelles ou de post-traiter le jeu de résultats global (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>). Utilisez le paramètre <code>fields</code> pour limiter les champs retournés et optimiser le volume de données (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>). Pour les développeurs R, le package <code>hubeau</code> d'INRAE (disponible sur GitHub) simplifie l'interrogation des APIs Hub'Eau, y compris la Piézométrie (#62, #137).</p>
+<h3 id="contexte-métier">Contexte métier</h3>
+<p>Les points d'eau souterraine sont identifiés par un <code>code_bss</code> (ancien) ou un <code>bss_id</code> (nouveau, officiel depuis 2016) (#49, #59, #207). Les anciens codes BSS incluent un indice de 10 caractères pour l'identification unique et une désignation, tandis que les nouveaux <code>bss_id</code> sont des identifiants uniques sans désignation (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>). Les données piézométriques proviennent de la base ADES (Accès aux Données sur les Eaux Souterraines) et sont disponibles sous forme de chroniques historiques (agrégées et corrigées) ou temps réel (brutes, issues des capteurs) (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>). Les nomenclatures SANDRE définissent les codes de statut et de qualification des données, essentiels pour leur interprétation (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>). L'altitude du repère de mesure (<code>altitude_repere</code>) peut varier dans le temps pour un même piézomètre, impactant le calcul du niveau de nappe (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>).</p>
+<hr />
+<details>
+<summary><strong>Archive détaillée</strong> — Tous les faits bruts extraits des issues</summary>
+<h3 id="faits-actuels">Faits actuels</h3>
 <ul>
-<li>L'opération <code>qualite_nappes/stations</code> de l'API Qualité des nappes permet de récupérer des informations détaillées sur un point d'eau à partir de son code BSS. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>L'API Qualité des nappes fournit des informations complètes sur les points d'eau de type qualitomètre, incluant des données géographiques, administratives et hydrogéologiques (ex: masses d'eau, entités BDLISA). (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>L'API Piézométrie fournissait, au moment de l'issue, moins d'informations sur les points d'eau (notamment les masses d'eau) que l'API Qualité des nappes. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>La spécification Swagger des APIs Hub'Eau contenait des propriétés "allowEmptyValues: false" non conformes à la spécification Swagger, empêchant la génération de clients API. (<a href="https://github.com/BRGM/hubeau/issues/19">#19</a>)</li>
-<li>Les noms d'objets dans la spécification Swagger (ex: "Résultat d'une rêquete sur les chroniques") n'étaient pas optimaux pour la génération de code, rendant le code client potentiellement "douteux". (<a href="https://github.com/BRGM/hubeau/issues/19">#19</a>)</li>
-<li>Avant le 23 avril 2019, l'API Piézométrie pouvait présenter des retards ou des manques de données par rapport à la base ADES. (<a href="https://github.com/BRGM/hubeau/issues/22">#22</a>)</li>
-<li>Depuis le 23 avril 2019, l'API Piézométrie est synchronisée avec ADES, fournissant l'intégralité des données piézométriques avec la même fréquence de mise à jour. (<a href="https://github.com/BRGM/hubeau/issues/22">#22</a>)</li>
-<li>L'API Piézométrie utilise le paramètre <code>code_bss</code> pour identifier les points d'eau (e.g., 00271X0002/P2). (<a href="https://github.com/BRGM/hubeau/issues/22">#22</a>)</li>
-<li>L'opération 'stations' de l'API Piézométrie a été enrichie pour inclure des informations sur les masses d'eau. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)</li>
-<li>L'API Piézométrie fournit désormais le code, le nom et l'URI de la masse d'eau captée pour chaque piézomètre. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)</li>
-<li>Les informations sur les masses d'eau fournies par l'API Piézométrie sont basées sur la version 'état des lieux'. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)</li>
-<li>L'API Piézométrie chroniques ne fournissait pas d'information sur la continuité des courbes, ce qui pouvait fausser l'interprétation des chroniques piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)</li>
-<li>L'API Piézométrie chroniques a été mise à jour pour inclure l'information sur la continuité des courbes. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)</li>
-<li>L'API Piézométrie chroniques a été enrichie avec des informations sur le producteur, la nature de la mesure et la profondeur de l'eau par rapport au repère de mesure. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)</li>
-<li>La documentation du site Hub'Eau (exemples et liste des changements) a été mise à jour pour refléter l'ajout de ces nouveaux champs dans l'API chroniques. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)</li>
-<li>L'endpoint <code>chroniques</code> de l'API Piézométrie supporte les paramètres <code>sort</code> (asc/desc), <code>size</code> et <code>fields</code> pour filtrer et ordonner les résultats. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)</li>
-<li>L'endpoint <code>chroniques_tr</code> (données temps réel) de l'API Piézométrie fournit directement la <code>cote_ngf_repere</code> (altitude NGF du repère de mesure), mais toutes les stations ne disposent pas de données en temps réel. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)</li>
-<li>L'endpoint <code>stations</code> de l'API Piézométrie fournit l'<code>altitude_station</code> (altitude du sol au niveau du piézomètre). (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)</li>
-<li>Des informations détaillées sur les piézomètres, y compris l'historique des altitudes des repères de mesure, sont accessibles via le lien <code>urn_bss</code> fourni par Hub'Eau, qui mène au portail ADES, puis à la 'Fiche BSSEAU'. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)</li>
-<li>L'API Piézométrie de Hub'Eau fournit les informations de continuité des chroniques via les champs <code>code_continuite</code> et <code>nom_continuite</code>. (<a href="https://github.com/BRGM/hubeau/issues/43">#43</a>)</li>
-<li>Pour récupérer les informations de continuité, il est nécessaire de spécifier les champs <code>code_continuite</code> et <code>nom_continuite</code> dans la requête API. (<a href="https://github.com/BRGM/hubeau/issues/43">#43</a>)</li>
-<li>Le démonstrateur Hub'Eau (visualiseur en ligne) ne gère pas et n'affiche pas les informations de continuité des chroniques piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/43">#43</a>)</li>
+<li>L'API <code>/niveaux_nappes/chroniques</code> ne supporte pas le paramètre <code>bss_id</code> (nouveau code BSS) et retourne une erreur "code BSS ne peut pas être null". (<a href="https://github.com/BRGM/hubeau/issues/49">#49</a>)</li>
 <li>L'API <code>/niveaux_nappes/chroniques</code> fonctionne avec le paramètre <code>code_bss</code> (ancien code BSS). (<a href="https://github.com/BRGM/hubeau/issues/49">#49</a>)</li>
 <li>L'API <code>/niveaux_nappes/chroniques_tr</code> supporte le paramètre <code>bss_id</code>. (<a href="https://github.com/BRGM/hubeau/issues/49">#49</a>)</li>
-<li>L'API niveaux_nappes/stations utilise une information de "période d'activité" pour filtrer les stations par date_recherche. (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)</li>
-<li>L'information de "période d'activité" des stations n'est pas rafraîchie très fréquemment dans l'API Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)</li>
-<li>Un délai de rafraîchissement de 1 à 2 mois pour l'information de "période d'activité" des stations a été constaté. (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)</li>
-<li>Des requêtes avec date_recherche trop proche de la date actuelle peuvent retourner moins de résultats que prévu à cause du délai de rafraîchissement de la "période d'activité". (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)</li>
+<li>Il existe un "nouveau code BSS" (identifié comme <code>bss_id</code>) et un "ancien code BSS" (identifié comme <code>code_bss</code>) pour les données piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/49">#49</a>)</li>
+<li>La récupération des historiques de chroniques piézométriques est impactée par l'utilisation de ces codes. (<a href="https://github.com/BRGM/hubeau/issues/49">#49</a>)</li>
 <li>L'API niveaux_nappes/stations accepte le paramètre 'bss_id' pour les nouveaux codes BSS et le paramètre 'code_bss' pour les anciens codes BSS. (<a href="https://github.com/BRGM/hubeau/issues/59">#59</a>)</li>
 <li>L'API niveaux_nappes/chroniques (chroniques historiques/temps différé) n'accepte que le paramètre 'code_bss' (anciens codes BSS). (<a href="https://github.com/BRGM/hubeau/issues/59">#59</a>)</li>
 <li>L'API niveaux_nappes/chroniques_tr (chroniques temps réel) accepte le paramètre 'bss_id' (nouveaux codes BSS). (<a href="https://github.com/BRGM/hubeau/issues/59">#59</a>)</li>
+<li>Il existe un bug où la 'date_fin_mesure' retournée par l'API niveaux_nappes/stations peut être obsolète par rapport aux données réelles des chroniques. (<a href="https://github.com/BRGM/hubeau/issues/59">#59</a>)</li>
 <li>Le support des nouveaux codes BSS ('bss_id') pour les chroniques historiques (niveaux_nappes/chroniques) est prévu dans la feuille de route 2023. (<a href="https://github.com/BRGM/hubeau/issues/59">#59</a>)</li>
-<li>L'API Hub'Eau Piézométrie supporte les requêtes Cross-Origin (CORS). (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)</li>
-<li>L'en-tête <code>access-control-allow-origin: *</code> est inclus dans les réponses de l'API Hub'Eau, permettant l'accès depuis n'importe quelle origine. (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)</li>
-<li>Les requêtes vers l'API Hub'Eau sont servies via Cloudflare. (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)</li>
-<li>Un blocage de requête Cross-Origin avec l'API Hub'Eau est plus probablement dû à une implémentation client (ex: exécution asynchrone) qu'à un manque de support CORS côté serveur. (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)</li>
-<li>Le BRGM fournit un exemple d'appel de l'API Hub'Eau avec R pour les données piézométriques, disponible sur GitHub à l'adresse https://github.com/BRGM/hubeau/blob/master/code_examples/Trac%C3%A9%20d'une%20chronique%20pi%C3%A9zom%C3%A9trique%20avec%20R.ipynb. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>Le BRGM prévoit de publier d'autres exemples de code R pour l'API Hub'Eau sur son dépôt GitHub à l'adresse https://github.com/BRGM/hubeau/tree/master/code_examples. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>Un package R nommé <code>hubeau</code> est développé par INRAE pour interroger les APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>Le package R <code>hubeau</code> inclut une fonction générique d'interrogation et des fonctions spécifiques par API/opération, retournant les résultats sous forme de data.frame. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>Le package R <code>hubeau</code> prend en charge initialement les APIs 'Prélèvements en eau' et 'Indicateurs des services'. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>Le package R <code>hubeau</code> est disponible sur GitHub à l'adresse https://github.com/inrae/hubeau et sa documentation à https://inrae.github.io/hubeau/. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
+<li>Les stations de piézométrie possèdent deux types de codes identifiants : un 'ancien code BSS' (ex: 05202X0099/P) et un 'nouveau code BSS' (ex: BSS001KJRF). (<a href="https://github.com/BRGM/hubeau/issues/59">#59</a>)</li>
+<li>Les données de piézométrie sont disponibles sous forme de 'chroniques temps différé' (historiques) et 'chroniques temps réel'. (<a href="https://github.com/BRGM/hubeau/issues/59">#59</a>)</li>
 <li>L'API Piézométrie ne permettait pas de filtrer les stations ou les chroniques par code_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
 <li>L'API Qualité des nappes ne permettait pas de filtrer les stations par code_reseau (mais le permettait pour les analyses). (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
 <li>L'API Qualité des nappes permettait de filtrer les stations par nom_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
 <li>Les informations sur les réseaux de mesure (code, mnémo, nom) sont présentes dans l'index sous-jacent de Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
 <li>L'ajout de filtres par code_reseau et l'inclusion des détails du réseau dans les réponses API étaient envisagés mais non prioritaires. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
+<li>La base ADES permet de consulter et d'extraire les données par code_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
+<li>Les réseaux de mesure ont des fiches consultables publiquement sur ades.eaufrance.fr (ex: 0400000020 pour le réseau Bretagne). (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
+<li>Le filtrage par code_reseau est jugé plus pratique que par nom_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
+<li>Les utilisateurs peuvent utiliser des listes de codes BSS comme solution de contournement en l'absence de filtrage par réseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
 <li>L'API Piézométrie (endpoint <code>niveaux_nappes/stations</code>) ne met pas à jour les données de stations immédiatement. (<a href="https://github.com/BRGM/hubeau/issues/93">#93</a>)</li>
 <li>L'utilisation du paramètre <code>date_recherche</code> sur l'API <code>niveaux_nappes/stations</code> peut renvoyer un nombre variable de stations, y compris zéro, pour des dates récentes, même si des données existent pour des dates antérieures proches. (<a href="https://github.com/BRGM/hubeau/issues/93">#93</a>)</li>
-<li>Les données "temps réel" de l'API Piézométrie sont brutes, non corrigées et proviennent directement des capteurs. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)</li>
-<li>La profondeur temporelle des données "temps réel" de l'API Piézométrie n'est actuellement pas limitée, mais une limitation à 1 an est envisagée. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)</li>
-<li>Les données du endpoint <code>/chroniques</code> de l'API Piézométrie sont agrégées et peuvent être corrigées. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)</li>
-<li>Hub'Eau se synchronise une fois par jour avec la banque ADES pour alimenter le endpoint <code>/chroniques</code> de l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)</li>
-<li>La fréquence de remontée des données par les producteurs vers ADES peut varier, entraînant des délais dans la disponibilité des données récentes pour le endpoint <code>/chroniques</code>. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)</li>
-<li>L'API Piézométrie (endpoint <code>niveaux_nappes/chroniques</code>) peut ne pas renvoyer immédiatement les dernières mesures disponibles en raison de délais de transmission des données. (<a href="https://github.com/BRGM/hubeau/issues/116">#116</a>)</li>
-<li>L'endpoint <code>niveaux_nappes/chroniques</code> fonctionnait correctement pour une requête sur un seul <code>code_bss</code>. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)</li>
-<li>L'endpoint <code>niveaux_nappes/chronique_tr</code> de l'API Piézométrie fonctionnait correctement pour une liste de <code>code_bss</code>. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)</li>
+<li>La disponibilité des stations piézométriques via l'API pour une <code>date_recherche</code> donnée peut être inconsistante pour les dates récentes, reflétant un délai dans la publication des données. (<a href="https://github.com/BRGM/hubeau/issues/93">#93</a>)</li>
 <li>Les APIs Hub'Eau (notamment Piézométrie, Hydrobiologie, Qualité des cours d'eau, Hydrométrie) ne disposent pas de paramètre de filtre par date de mise à jour des données. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>L'absence de filtre par date de mise à jour oblige les utilisateurs à charger l'intégralité des données pour rester à jour. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>L'API Hydrométrie inclut une 'date de production' dans ses résultats, mais ce paramètre n'est pas utilisable comme filtre de requête. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>L'ajout d'un filtre par date de mise à jour n'est pas prévu à court terme pour l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>L'ajout d'un filtre par date de mise à jour est une évolution identifiée pour l'API Hydrométrie. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
-<li>L'API Hub'Eau ne traitait pas correctement les paramètres de requête avec plusieurs valeurs séparées par des virgules (ex: code_bss=val1,val2) pour l'endpoint niveaux_nappes/chroniques de l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>Ce dysfonctionnement était une régression suite à une migration technique réalisée en décembre 2022. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>La même anomalie affectait l'endpoint <em>analyses</em> de l'API Qualité des nappes d'eau souterraines et les endpoints 'stations' de diverses APIs. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>Une solution de contournement temporaire était d'effectuer des appels API séparés pour chaque valeur unitaire. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>L'anomalie a été corrigée en mars 2023, et la recherche avec plusieurs valeurs séparées par des virgules est de nouveau fonctionnelle. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Le service web ADES (Accès aux Données sur les Eaux Souterraines) offre une fonctionnalité de synchronisation des points d'eau et mesures basée sur une date de mise à jour. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
+<li>La synchronisation par date de mise à jour est essentielle pour récupérer uniquement les différences et les corrections apportées aux données sans télécharger l'intégralité du jeu de données. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
+<li>Les données environnementales peuvent être corrigées après leur première publication ('date de production'), nécessitant un mécanisme de mise à jour efficace. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
+<li>Une pratique courante pour contourner l'absence de filtre est de requêter toutes les données d'une période (ex: dernière année) mensuellement, ce qui est sous-optimal. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>Il est proposé d'implémenter le format GeoJSON pour les chroniques en temps réel de l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/140">#140</a>)</li>
-<li>Le paramètre <code>bbox</code> de l'API Piézométrie (endpoint <code>/niveaux_nappes/stations</code>) doit être fourni comme une seule chaîne de caractères avec les quatre coordonnées (min_lon,min_lat,max_lon,max_lat) séparées par des virgules. (<a href="https://github.com/BRGM/hubeau/issues/144">#144</a>)</li>
-<li>L'utilisation de paramètres séparés comme <code>bbox1</code>, <code>bbox2</code>, <code>bbox3</code>, <code>bbox4</code> pour définir une boîte englobante n'est pas supportée par l'API Piézométrie et peut entraîner le retour de toutes les données nationales. (<a href="https://github.com/BRGM/hubeau/issues/144">#144</a>)</li>
+<li>Les chroniques en temps réel sont des séries de mesures piézométriques continues dans le temps. (<a href="https://github.com/BRGM/hubeau/issues/140">#140</a>)</li>
 <li>Le paramètre <code>sort</code> (asc/desc) de l'API Piézométrie (<code>niveaux_nappes/chroniques</code>) trie les mesures au sein de chaque station (bss_id), et non globalement par date sur l'ensemble des résultats. (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>)</li>
 <li>Le premier critère de tri global de l'API Piézométrie est le <code>code_bss</code>. (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>)</li>
 <li>Lorsqu'une requête inclut plusieurs <code>bss_id</code> et un paramètre <code>size</code>, le <code>size</code> s'applique à la page de résultats globale après le tri par <code>code_bss</code>, ce qui peut renvoyer plusieurs mesures pour le premier <code>bss_id</code> au lieu d'une mesure par <code>bss_id</code>. (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>)</li>
 <li>Pour obtenir la dernière mesure de plusieurs piézomètres, il est nécessaire de faire autant de requêtes que de piézomètres ou de traiter le jeu de résultats en rupture sur le code du piézomètre. (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>)</li>
 <li>Le comportement de l'API concernant le tri pourra être ajusté lors d'une prochaine évolution. (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>)</li>
-<li>Avant le correctif, l'utilisation du paramètre "fields" sur l'endpoint "niveaux_nappes/chroniques" avec "timestamp_mesure" seul pouvait retourner des valeurs nulles pour "timestamp_mesure". (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)</li>
-<li>Un correctif a été déployé : le champ "timestamp_mesure" est désormais correctement valorisé indépendamment de la présence du champ "date_mesure" lors de l'utilisation du paramètre "fields" sur l'endpoint "niveaux_nappes/chroniques". (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)</li>
-<li>L'endpoint concerné est <code>/api/v1/niveaux_nappes/chroniques</code>. (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)</li>
-<li>Le paramètre <code>fields</code> permet de sélectionner les champs à retourner dans la réponse de l'API. (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)</li>
+<li>Les données de piézométrie incluent des informations comme le <code>code_bss</code> (identifiant du piézomètre), la <code>date_mesure</code> et la <code>profondeur_nappe</code>. (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>)</li>
+<li>Un cas d'usage courant est de vouloir récupérer la dernière mesure pour une liste de piézomètres. (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>)</li>
 <li>La valeur par défaut pour le paramètre <code>code_bss</code> (ex: "07548X0009/F") mentionnée dans la documentation s'applique uniquement à la console de test (formulaire) de l'API et non à l'API Hub'Eau elle-même. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
 <li>L'API Hub'Eau pour <code>niveaux_nappes/chroniques_tr</code> ne fixe pas de valeur par défaut pour les paramètres <code>code_bss</code> ou <code>bss_id</code> lors d'un appel direct. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
 <li>Lors de l'utilisation du formulaire de test, si des paramètres comme <code>code_bss</code> (par défaut) et <code>bss_id</code> sont présents simultanément dans l'URL générée, l'utilisateur doit en retirer un manuellement pour éviter les conflits. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
-<li>Un dysfonctionnement a affecté l'ensemble des API Hub'Eau, les rendant momentanément indisponibles. (<a href="https://github.com/BRGM/hubeau/issues/184">#184</a>)</li>
-<li>Les API Hub'Eau ont été rétablies et sont de nouveau disponibles. (<a href="https://github.com/BRGM/hubeau/issues/184">#184</a>)</li>
+<li>La valeur par défaut du paramètre <code>size</code> est de 5000 pour l'API Hub'Eau, tandis qu'elle est de 20 dans la console de test. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
+<li><code>code_bss</code> est un code national de station (ancien code BSS) pour les piézomètres. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
+<li><code>bss_id</code> est un autre identifiant pour les piézomètres. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
+<li>Il est possible d'interroger jusqu'à 200 <code>code_bss</code> en les séparant par une virgule dans la requête. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
 <li>L'API Piézométrie permet de télécharger les données de stations en utilisant le paramètre bss_id. (<a href="https://github.com/BRGM/hubeau/issues/207">#207</a>)</li>
 <li>Le téléchargement des chroniques (séries temporelles) via l'API Piézométrie ne peut être réalisé qu'en passant l'ancien code BSS en paramètre. (<a href="https://github.com/BRGM/hubeau/issues/207">#207</a>)</li>
 <li>Le bss_id (identifiant BSS en vigueur depuis 2016) n'est pas utilisable comme paramètre pour le téléchargement des chroniques de piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/207">#207</a>)</li>
+<li>Le bss_id est l'identifiant BSS officiel des points d'eau en vigueur depuis 2016. (<a href="https://github.com/BRGM/hubeau/issues/207">#207</a>)</li>
+<li>Il existe un ancien code BSS qui n'est plus le code officiel des points d'eau pour les points de piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/207">#207</a>)</li>
 <li>L'API piézométrie ne permet pas de requêter par code(s) de réseau. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
 <li>L'information du code de réseau est manquante dans les résultats du endpoint <code>/v1/niveaux_nappes/stations</code>. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
 <li>Il est suggéré que l'API piézométrie accepte des requêtes basées uniquement sur les 10 premiers caractères des codes BSS (anciens et nouveaux) pour l'identification d'un point. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
 <li>L'utilisation d'une désignation ('/X') avec les nouveaux codes BSS peut créer une confusion car elle n'est pas nécessaire et imite l'ancien format. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
+<li>Les anciens codes BSS (ex: 00471X0095/PZ2013) sont composés d'un indice (les 10 premiers caractères) et d'une désignation. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
+<li>Seul l'indice (les 10 premiers caractères) des codes BSS est utile pour l'identification unique d'un point piézométrique. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
+<li>La désignation des codes BSS n'est pas toujours stockée dans les bases de données et n'est pas pertinente pour l'identification unique. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
+<li>Les nouveaux codes BSS (ex: BSS000EBLL) sont des codes uniques et n'incluent pas de désignation. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
+<li>Les codes de réseau (ex: 0102400001) sont des identifiants pertinents pour la piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
 <li>Le paramètre <code>date_fin_mesure</code> de l'API Piézométrie (<code>niveaux_nappes/chroniques</code>) filtre les données en fonction du <code>timestamp_mesure</code> (date et heure), et non de la <code>date_mesure</code> (date seule). (<a href="https://github.com/BRGM/hubeau/issues/259">#259</a>)</li>
 <li>Ce comportement fait que les mesures enregistrées après 00h00 le jour de <code>date_fin_mesure</code> sont exclues par défaut. (<a href="https://github.com/BRGM/hubeau/issues/259">#259</a>)</li>
 <li>Pour inclure toutes les données d'une journée <code>Dfin</code>, il est nécessaire de spécifier <code>date_fin_mesure = Dfin + 1 jour</code>. (<a href="https://github.com/BRGM/hubeau/issues/259">#259</a>)</li>
@@ -174,110 +155,140 @@
 <li>Le comportement d'inclusion/exclusion de <code>date_fin_mesure</code> est inconsistent entre différentes stations piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/259">#259</a>)</li>
 <li>Le paramètre <code>date_debut_mesure</code> de l'API Piézométrie filtre également sur le <code>timestamp_mesure</code> (date et heure). (<a href="https://github.com/BRGM/hubeau/issues/259">#259</a>)</li>
 <li>L'API Hydrométrie (<code>hydrometrie/chroniques</code>) semble traiter correctement les paramètres de date pour les observations élaborées (historiques) en se basant sur la date seule. (<a href="https://github.com/BRGM/hubeau/issues/259">#259</a>)</li>
-<li>L'API Piézométrie fournit actuellement des libellés textuels longs pour certains champs (ex: statut, qualification) sans les codes numériques ou mnémoniques correspondants. (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>)</li>
-<li>L'ajout de codes courts pour ces champs permettrait de réduire le volume de données exportées et d'accélérer les extractions. (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>)</li>
-<li>Il est possible de limiter les champs exportés via le paramètre 'fields'. (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>)</li>
-</ul>
-<h2 id="informations-métier">Informations métier</h2>
-<ul>
-<li>Un code BSS (BSS_ID) identifie un point d'eau souterraine et peut être utilisé pour interroger ses caractéristiques. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>Les points d'eau souterraine sont associés à des masses d'eau (codes_masse_eau_rap, codes_masse_eau_edl) et des entités hydrogéologiques BDLISA. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>Les données de qualité des eaux souterraines proviennent de la base ADES. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)</li>
-<li>L'API Piézométrie (niveaux_nappes) fournit des données de chroniques (séries temporelles) pour les niveaux de nappe. (<a href="https://github.com/BRGM/hubeau/issues/19">#19</a>)</li>
-<li>ADES (Accès aux Données sur les Eaux Souterraines) est la source de référence pour les données piézométriques en France. (<a href="https://github.com/BRGM/hubeau/issues/22">#22</a>)</li>
-<li>Les données piézométriques concernent les niveaux de nappe. (<a href="https://github.com/BRGM/hubeau/issues/22">#22</a>)</li>
-<li>Les piézomètres peuvent être liés à des 'masses d'eau'. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)</li>
-<li>L'API 'qualité des nappes' intégrait déjà la liaison aux masses d'eau. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)</li>
-<li>La liaison entre les entités BD LISA et les masses d'eau était historiquement prévue à partir de l'état des lieux 2019. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)</li>
-<li>Des données de liaison entre les masses d'eau de 'rapportage' et les piézomètres sont disponibles dans la base de données Waterbase Quantity de l'EEA (données remontées par la France pour la Directive Cadre sur l'Eau). (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)</li>
-<li>Dans la base Waterbase Quantity, 'waterBodyIdentifier' représente un code de masse d'eau et 'monitoringSiteIdentifier' un code de piézomètre. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)</li>
-<li>Les données piézométriques peuvent présenter des ruptures de suivi et des points initiaux multiples, reflétant des suivis irréguliers sur certains sites. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)</li>
-<li>La valorisation des chroniques piézométriques nécessite de connaître la continuité des courbes pour une interprétation correcte des données. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)</li>
-<li>Des métadonnées importantes pour les chroniques piézométriques incluent le producteur, la nature de la mesure et la profondeur de l'eau par rapport au repère de mesure. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)</li>
-<li><code>niveau_nappe_eau</code> dans l'API Piézométrie est exprimé en mètres NGF (Nivellement Général de la France), représentant l'altitude de la nappe par rapport au niveau de la mer. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)</li>
-<li><code>profondeur_nappe</code> dans l'API Piézométrie est exprimée en mètres par rapport à un repère de mesure spécifique (ex: sol, haut du tube piézométrique, margelle du puits). (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)</li>
-<li>La relation entre les champs est <code>niveau_nappe_eau = altitude_repere - profondeur_nappe</code>, où <code>altitude_repere</code> est l'altitude NGF du repère de mesure. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)</li>
-<li>L'<code>altitude_repere</code> peut varier dans le temps pour un même piézomètre (ex: suite à des travaux ou changements de pratiques de mesure). (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)</li>
-<li>La précision des mesures de <code>profondeur_nappe</code> est de l'ordre du centimètre, tandis que la précision des altitudes (NGF) est de l'ordre du mètre. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)</li>
-<li>Pour connaître l'<code>altitude_repere</code> exacte d'une mesure, il faut consulter la 'Fiche BSSEAU' via ADES ou la calculer avec <code>altitude_repere = niveau_nappe_eau + profondeur_nappe</code>. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)</li>
-<li>Les chroniques piézométriques peuvent présenter des ruptures de continuité, qui sont des informations importantes pour l'analyse des données. (<a href="https://github.com/BRGM/hubeau/issues/43">#43</a>)</li>
-<li>Le site ADES (ades.eaufrance.fr) est une source de référence pour les chroniques piézométriques et affiche les informations de continuité. (<a href="https://github.com/BRGM/hubeau/issues/43">#43</a>)</li>
-<li>Il existe un "nouveau code BSS" (identifié comme <code>bss_id</code>) et un "ancien code BSS" (identifié comme <code>code_bss</code>) pour les données piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/49">#49</a>)</li>
-<li>La récupération des historiques de chroniques piézométriques est impactée par l'utilisation de ces codes. (<a href="https://github.com/BRGM/hubeau/issues/49">#49</a>)</li>
-<li>La "période d'activité" est un critère important pour la recherche de stations piézométriques actives à une date donnée. (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)</li>
-<li>Il existe un décalage temporel entre l'activité réelle d'une station piézométrique et la mise à jour de sa "période d'activité" dans les données de l'API. (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)</li>
-<li>Le démonstrateur Hub'Eau pour la piézométrie présente des graphiques d'évolution des données et des liens vers les détails des points de mesure. (<a href="https://github.com/BRGM/hubeau/issues/54">#54</a>)</li>
-<li>L'affichage des données piézométriques sur des écrans de faible résolution (ex: 1366x768) peut nécessiter des adaptations (ex: suppression de graphiques) pour garantir l'accessibilité des informations essentielles comme les liens de détail. (<a href="https://github.com/BRGM/hubeau/issues/54">#54</a>)</li>
-<li>Les stations de piézométrie possèdent deux types de codes identifiants : un 'ancien code BSS' (ex: 05202X0099/P) et un 'nouveau code BSS' (ex: BSS001KJRF). (<a href="https://github.com/BRGM/hubeau/issues/59">#59</a>)</li>
-<li>Les données de piézométrie sont disponibles sous forme de 'chroniques temps différé' (historiques) et 'chroniques temps réel'. (<a href="https://github.com/BRGM/hubeau/issues/59">#59</a>)</li>
-<li>L'API Piézométrie fournit des données sur la chronique du niveau des nappes. (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)</li>
-<li>L'endpoint <code>/api/v1/niveaux_nappes/stations</code> permet de récupérer des informations sur les stations de mesure des niveaux de nappes. (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)</li>
-<li>La base ADES permet de consulter et d'extraire les données par code_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
-<li>Les réseaux de mesure ont des fiches consultables publiquement sur ades.eaufrance.fr (ex: 0400000020 pour le réseau Bretagne). (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
-<li>Le filtrage par code_reseau est jugé plus pratique que par nom_reseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
-<li>Les utilisateurs peuvent utiliser des listes de codes BSS comme solution de contournement en l'absence de filtrage par réseau. (<a href="https://github.com/BRGM/hubeau/issues/63">#63</a>)</li>
-<li>La disponibilité des stations piézométriques via l'API pour une <code>date_recherche</code> donnée peut être inconsistante pour les dates récentes, reflétant un délai dans la publication des données. (<a href="https://github.com/BRGM/hubeau/issues/93">#93</a>)</li>
-<li>Les données "temps réel" de l'API Piézométrie sont des données brutes issues des capteurs et ne subissent pas de corrections. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)</li>
-<li>Les données du endpoint <code>/chroniques</code> de l'API Piézométrie sont des données agrégées et peuvent être corrigées (ex: dérive de capteur, nouveau nivellement du repère de mesure). (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)</li>
-<li>La banque ADES est la source des données alimentant le endpoint <code>/chroniques</code> de l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)</li>
-<li>Les données du endpoint <code>/chroniques</code> sont agrégées sur une journée, retenant généralement la valeur maximale du niveau NGF (valeur minimale de la profondeur), mais cela peut varier selon les points d'eau. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)</li>
-<li>Les corrections et l'agrégation des données piézométriques sont réalisées par les producteurs de données avant transmission à la banque ADES. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)</li>
-<li>Les chroniques de niveaux de nappe (piézométrie) ne sont pas toujours disponibles en temps réel et peuvent apparaître dans l'API avec un certain décalage après la date de mesure. (<a href="https://github.com/BRGM/hubeau/issues/116">#116</a>)</li>
-<li>Le paramètre <code>code_bss</code> est utilisé pour identifier les stations de piézométrie et récupérer leurs chroniques. (<a href="https://github.com/BRGM/hubeau/issues/116">#116</a>)</li>
-<li>Le paramètre <code>code_bss</code> identifie un ouvrage (piézomètre) dans les données de piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)</li>
-<li>Les données de piézométrie peuvent être filtrées par une plage de dates via les paramètres <code>date_debut_mesure</code> et <code>date_fin_mesure</code>. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)</li>
-<li>Le champ <code>niveau_nappe_eau</code> représente le niveau de la nappe d'eau. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)</li>
-<li>Le service web ADES (Accès aux Données sur les Eaux Souterraines) offre une fonctionnalité de synchronisation des points d'eau et mesures basée sur une date de mise à jour. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
-<li>La synchronisation par date de mise à jour est essentielle pour récupérer uniquement les différences et les corrections apportées aux données sans télécharger l'intégralité du jeu de données. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
-<li>Les données environnementales peuvent être corrigées après leur première publication ('date de production'), nécessitant un mécanisme de mise à jour efficace. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
-<li>Une pratique courante pour contourner l'absence de filtre est de requêter toutes les données d'une période (ex: dernière année) mensuellement, ce qui est sous-optimal. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
-<li>Le paramètre code_bss est utilisé pour filtrer les chroniques piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>Les endpoints 'stations' permettent de lister les points de mesure selon des critères comme la masse d'eau ou le département. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)</li>
-<li>Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Les chroniques en temps réel sont des séries de mesures piézométriques continues dans le temps. (<a href="https://github.com/BRGM/hubeau/issues/140">#140</a>)</li>
-<li>Les données piézométriques peuvent être filtrées géographiquement pour des bassins spécifiques, comme le bassin de la Vilaine, en utilisant le paramètre <code>bbox</code>. (<a href="https://github.com/BRGM/hubeau/issues/144">#144</a>)</li>
-<li>Les données de piézométrie incluent des informations comme le <code>code_bss</code> (identifiant du piézomètre), la <code>date_mesure</code> et la <code>profondeur_nappe</code>. (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>)</li>
-<li>Un cas d'usage courant est de vouloir récupérer la dernière mesure pour une liste de piézomètres. (<a href="https://github.com/BRGM/hubeau/issues/163">#163</a>)</li>
-<li>Les données de piézométrie incluent des champs comme <code>timestamp_mesure</code> (horodatage de la mesure), <code>niveau_nappe_eau</code> (niveau de la nappe d'eau) et <code>date_mesure</code> (date de la mesure). (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)</li>
-<li>Les stations de mesure des niveaux de nappe sont identifiées par un <code>code_bss</code> (ex: <code>07548X0009/F</code>). (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)</li>
-<li><code>code_bss</code> est un code national de station (ancien code BSS) pour les piézomètres. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
-<li><code>bss_id</code> est un autre identifiant pour les piézomètres. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
-<li>Il est possible d'interroger jusqu'à 200 <code>code_bss</code> en les séparant par une virgule dans la requête. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
-<li>Le projet SUBLIM utilise les données des API Hub'Eau Hydrométrie et Piézométrie pour simuler le débit des cours d'eau et les niveaux piézométriques via des réseaux de neurones artificiels. (<a href="https://github.com/BRGM/hubeau/issues/203">#203</a>)</li>
-<li>SUBLIM est un service de prévision hydrologique automatisé à l'échelle du territoire métropolitain. (<a href="https://github.com/BRGM/hubeau/issues/203">#203</a>)</li>
-<li>Les données Hub'Eau sont combinées avec des données météorologiques historiques (ERA5) et prévisionnelles (CEP/ECMWF 0.25°) pour la modélisation hydrologique. (<a href="https://github.com/BRGM/hubeau/issues/203">#203</a>)</li>
-<li>Le service SUBLIM visualise les données historiques (2 ans maximum) et les prévisions au pas de temps journalier pour la majorité des stations hydrologiques et piézométriques en temps réel. (<a href="https://github.com/BRGM/hubeau/issues/203">#203</a>)</li>
-<li>Le site SUBLIM permet d'accéder à la qualité de prévision des modèles (entraînement et utilisation) et à des indicateurs comme la tendance des prévisions à 10 jours. (<a href="https://github.com/BRGM/hubeau/issues/203">#203</a>)</li>
-<li>Le bss_id est l'identifiant BSS officiel des points d'eau en vigueur depuis 2016. (<a href="https://github.com/BRGM/hubeau/issues/207">#207</a>)</li>
-<li>Il existe un ancien code BSS qui n'est plus le code officiel des points d'eau pour les points de piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/207">#207</a>)</li>
-<li>Les anciens codes BSS (ex: 00471X0095/PZ2013) sont composés d'un indice (les 10 premiers caractères) et d'une désignation. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
-<li>Seul l'indice (les 10 premiers caractères) des codes BSS est utile pour l'identification unique d'un point piézométrique. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
-<li>La désignation des codes BSS n'est pas toujours stockée dans les bases de données et n'est pas pertinente pour l'identification unique. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
-<li>Les nouveaux codes BSS (ex: BSS000EBLL) sont des codes uniques et n'incluent pas de désignation. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
-<li>Les codes de réseau (ex: 0102400001) sont des identifiants pertinents pour la piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/230">#230</a>)</li>
 <li>Les utilisateurs de l'API Piézométrie de Hub'Eau risquent de rater des données, souvent les plus récentes, s'ils ne compensent pas le comportement du paramètre <code>date_fin_mesure</code>. (<a href="https://github.com/BRGM/hubeau/issues/259">#259</a>)</li>
 <li>Les mesures piézométriques peuvent être enregistrées à différentes heures de la journée, pas seulement à 00h00. (<a href="https://github.com/BRGM/hubeau/issues/259">#259</a>)</li>
 <li>Il est proposé de modifier le filtrage temporel pour qu'il s'appuie sur la colonne <code>date_mesure</code> (date sans heure) et soit inclusif aux bornes. (<a href="https://github.com/BRGM/hubeau/issues/259">#259</a>)</li>
+<li>L'API Piézométrie fournit actuellement des libellés textuels longs pour certains champs (ex: statut, qualification) sans les codes numériques ou mnémoniques correspondants. (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>)</li>
+<li>L'ajout de codes courts pour ces champs permettrait de réduire le volume de données exportées et d'accélérer les extractions. (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>)</li>
+<li>Il est possible de limiter les champs exportés via le paramètre 'fields'. (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>)</li>
 <li>Les données de chronique piézométrique incluent des champs comme 'mode_obtention', 'statut', 'qualification', 'code_continuite', 'nom_continuite', 'code_producteur', 'nom_producteur', 'code_nature_mesure', 'nom_nature_mesure'. (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>)</li>
 <li>Les codes de qualification (0, 1, 2, 3, 4) et de statut (1 à 4 ou mnémoniques comme Brute, NV1) sont définis par les nomenclatures du SANDRE. (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>)</li>
 <li>Les nomenclatures SANDRE pour le statut (urn:sandre:donnees:416) et la qualification (urn:sandre:donnees:414) des données sont des références clés pour les données sur l'eau en France. (<a href="https://github.com/BRGM/hubeau/issues/260">#260</a>)</li>
 </ul>
-<h2 id="problèmes-connus">Problèmes connus</h2>
+<h3 id="historique-des-problèmes-résolus">Historique des problèmes résolus</h3>
 <ul>
-<li>L'API Piézométrie (niveaux_nappes) avait un endpoint <code>chroniques.csv</code> dont le <code>produces</code> indiquait un format binaire/stream (CSV) mais référençait un schéma d'objet (<code>Chronique_pi_zom_trique</code>), causant une erreur de génération de client. (<a href="https://github.com/BRGM/hubeau/issues/19">#19</a>)</li>
-<li>L'API <code>/niveaux_nappes/chroniques</code> ne supporte pas le paramètre <code>bss_id</code> (nouveau code BSS) et retourne une erreur "code BSS ne peut pas être null". (<a href="https://github.com/BRGM/hubeau/issues/49">#49</a>)</li>
-<li>Il existe un bug où la 'date_fin_mesure' retournée par l'API niveaux_nappes/stations peut être obsolète par rapport aux données réelles des chroniques. (<a href="https://github.com/BRGM/hubeau/issues/59">#59</a>)</li>
-<li>L'API Hub'Eau présente des bugs connus, mentionnés dans les issues #72 et #74. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>L'endpoint <code>niveaux_nappes/chroniques</code> de l'API Piézométrie retournait une réponse vide sans erreur lors de requêtes multiples sur le paramètre <code>code_bss</code>. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)</li>
-<li>Le problème de l'endpoint <code>niveaux_nappes/chroniques</code> avec les requêtes multiples <code>code_bss</code> a été résolu. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)</li>
-<li>Le problème était contourné en incluant "date_mesure" dans le paramètre "fields" en plus de "timestamp_mesure". (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)</li>
-<li>La valeur par défaut du paramètre <code>size</code> est de 5000 pour l'API Hub'Eau, tandis qu'elle est de 20 dans la console de test. (<a href="https://github.com/BRGM/hubeau/issues/180">#180</a>)</li>
-<li>Les API Hydrométrie et Piézométrie ont retourné une erreur 500 et étaient indisponibles. (<a href="https://github.com/BRGM/hubeau/issues/184">#184</a>)</li>
+<li>~~L'opération <code>qualite_nappes/stations</code> de l'API Qualité des nappes permet de récupérer des informations détaillées sur un point d'eau à partir de son code BSS. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~L'API Qualité des nappes fournit des informations complètes sur les points d'eau de type qualitomètre, incluant des données géographiques, administratives et hydrogéologiques (ex: masses d'eau, entités BDLISA). (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~L'API Piézométrie fournissait, au moment de l'issue, moins d'informations sur les points d'eau (notamment les masses d'eau) que l'API Qualité des nappes. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~Un code BSS (BSS_ID) identifie un point d'eau souterraine et peut être utilisé pour interroger ses caractéristiques. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~Les points d'eau souterraine sont associés à des masses d'eau (codes_masse_eau_rap, codes_masse_eau_edl) et des entités hydrogéologiques BDLISA. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~Les données de qualité des eaux souterraines proviennent de la base ADES. (<a href="https://github.com/BRGM/hubeau/issues/10">#10</a>)~~</li>
+<li>~~La spécification Swagger des APIs Hub'Eau contenait des propriétés "allowEmptyValues: false" non conformes à la spécification Swagger, empêchant la génération de clients API. (<a href="https://github.com/BRGM/hubeau/issues/19">#19</a>)~~</li>
+<li>~~L'API Piézométrie (niveaux_nappes) avait un endpoint <code>chroniques.csv</code> dont le <code>produces</code> indiquait un format binaire/stream (CSV) mais référençait un schéma d'objet (<code>Chronique_pi_zom_trique</code>), causant une erreur de génération de client. (<a href="https://github.com/BRGM/hubeau/issues/19">#19</a>)~~</li>
+<li>~~Les noms d'objets dans la spécification Swagger (ex: "Résultat d'une rêquete sur les chroniques") n'étaient pas optimaux pour la génération de code, rendant le code client potentiellement "douteux". (<a href="https://github.com/BRGM/hubeau/issues/19">#19</a>)~~</li>
+<li>~~L'API Piézométrie (niveaux_nappes) fournit des données de chroniques (séries temporelles) pour les niveaux de nappe. (<a href="https://github.com/BRGM/hubeau/issues/19">#19</a>)~~</li>
+<li>~~Avant le 23 avril 2019, l'API Piézométrie pouvait présenter des retards ou des manques de données par rapport à la base ADES. (<a href="https://github.com/BRGM/hubeau/issues/22">#22</a>)~~</li>
+<li>~~Depuis le 23 avril 2019, l'API Piézométrie est synchronisée avec ADES, fournissant l'intégralité des données piézométriques avec la même fréquence de mise à jour. (<a href="https://github.com/BRGM/hubeau/issues/22">#22</a>)~~</li>
+<li>~~L'API Piézométrie utilise le paramètre <code>code_bss</code> pour identifier les points d'eau (e.g., 00271X0002/P2). (<a href="https://github.com/BRGM/hubeau/issues/22">#22</a>)~~</li>
+<li>~~ADES (Accès aux Données sur les Eaux Souterraines) est la source de référence pour les données piézométriques en France. (<a href="https://github.com/BRGM/hubeau/issues/22">#22</a>)~~</li>
+<li>~~Les données piézométriques concernent les niveaux de nappe. (<a href="https://github.com/BRGM/hubeau/issues/22">#22</a>)~~</li>
+<li>~~L'opération 'stations' de l'API Piézométrie a été enrichie pour inclure des informations sur les masses d'eau. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)~~</li>
+<li>~~L'API Piézométrie fournit désormais le code, le nom et l'URI de la masse d'eau captée pour chaque piézomètre. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)~~</li>
+<li>~~Les informations sur les masses d'eau fournies par l'API Piézométrie sont basées sur la version 'état des lieux'. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)~~</li>
+<li>~~Les piézomètres peuvent être liés à des 'masses d'eau'. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)~~</li>
+<li>~~L'API 'qualité des nappes' intégrait déjà la liaison aux masses d'eau. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)~~</li>
+<li>~~La liaison entre les entités BD LISA et les masses d'eau était historiquement prévue à partir de l'état des lieux 2019. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)~~</li>
+<li>~~Des données de liaison entre les masses d'eau de 'rapportage' et les piézomètres sont disponibles dans la base de données Waterbase Quantity de l'EEA (données remontées par la France pour la Directive Cadre sur l'Eau). (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)~~</li>
+<li>~~Dans la base Waterbase Quantity, 'waterBodyIdentifier' représente un code de masse d'eau et 'monitoringSiteIdentifier' un code de piézomètre. (<a href="https://github.com/BRGM/hubeau/issues/29">#29</a>)~~</li>
+<li>~~L'API Piézométrie chroniques ne fournissait pas d'information sur la continuité des courbes, ce qui pouvait fausser l'interprétation des chroniques piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)~~</li>
+<li>~~L'API Piézométrie chroniques a été mise à jour pour inclure l'information sur la continuité des courbes. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)~~</li>
+<li>~~L'API Piézométrie chroniques a été enrichie avec des informations sur le producteur, la nature de la mesure et la profondeur de l'eau par rapport au repère de mesure. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)~~</li>
+<li>~~La documentation du site Hub'Eau (exemples et liste des changements) a été mise à jour pour refléter l'ajout de ces nouveaux champs dans l'API chroniques. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)~~</li>
+<li>~~Les données piézométriques peuvent présenter des ruptures de suivi et des points initiaux multiples, reflétant des suivis irréguliers sur certains sites. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)~~</li>
+<li>~~La valorisation des chroniques piézométriques nécessite de connaître la continuité des courbes pour une interprétation correcte des données. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)~~</li>
+<li>~~Des métadonnées importantes pour les chroniques piézométriques incluent le producteur, la nature de la mesure et la profondeur de l'eau par rapport au repère de mesure. (<a href="https://github.com/BRGM/hubeau/issues/31">#31</a>)~~</li>
+<li>~~L'endpoint <code>chroniques</code> de l'API Piézométrie supporte les paramètres <code>sort</code> (asc/desc), <code>size</code> et <code>fields</code> pour filtrer et ordonner les résultats. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)~~</li>
+<li>~~L'endpoint <code>chroniques_tr</code> (données temps réel) de l'API Piézométrie fournit directement la <code>cote_ngf_repere</code> (altitude NGF du repère de mesure), mais toutes les stations ne disposent pas de données en temps réel. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)~~</li>
+<li>~~L'endpoint <code>stations</code> de l'API Piézométrie fournit l'<code>altitude_station</code> (altitude du sol au niveau du piézomètre). (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)~~</li>
+<li>~~Des informations détaillées sur les piézomètres, y compris l'historique des altitudes des repères de mesure, sont accessibles via le lien <code>urn_bss</code> fourni par Hub'Eau, qui mène au portail ADES, puis à la 'Fiche BSSEAU'. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)~~</li>
+<li>~~<code>niveau_nappe_eau</code> dans l'API Piézométrie est exprimé en mètres NGF (Nivellement Général de la France), représentant l'altitude de la nappe par rapport au niveau de la mer. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)~~</li>
+<li>~~<code>profondeur_nappe</code> dans l'API Piézométrie est exprimée en mètres par rapport à un repère de mesure spécifique (ex: sol, haut du tube piézométrique, margelle du puits). (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)~~</li>
+<li>~~La relation entre les champs est <code>niveau_nappe_eau = altitude_repere - profondeur_nappe</code>, où <code>altitude_repere</code> est l'altitude NGF du repère de mesure. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)~~</li>
+<li>~~L'<code>altitude_repere</code> peut varier dans le temps pour un même piézomètre (ex: suite à des travaux ou changements de pratiques de mesure). (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)~~</li>
+<li>~~La précision des mesures de <code>profondeur_nappe</code> est de l'ordre du centimètre, tandis que la précision des altitudes (NGF) est de l'ordre du mètre. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)~~</li>
+<li>~~Pour connaître l'<code>altitude_repere</code> exacte d'une mesure, il faut consulter la 'Fiche BSSEAU' via ADES ou la calculer avec <code>altitude_repere = niveau_nappe_eau + profondeur_nappe</code>. (<a href="https://github.com/BRGM/hubeau/issues/34">#34</a>)~~</li>
+<li>~~L'API Piézométrie de Hub'Eau fournit les informations de continuité des chroniques via les champs <code>code_continuite</code> et <code>nom_continuite</code>. (<a href="https://github.com/BRGM/hubeau/issues/43">#43</a>)~~</li>
+<li>~~Pour récupérer les informations de continuité, il est nécessaire de spécifier les champs <code>code_continuite</code> et <code>nom_continuite</code> dans la requête API. (<a href="https://github.com/BRGM/hubeau/issues/43">#43</a>)~~</li>
+<li>~~Le démonstrateur Hub'Eau (visualiseur en ligne) ne gère pas et n'affiche pas les informations de continuité des chroniques piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/43">#43</a>)~~</li>
+<li>~~Les chroniques piézométriques peuvent présenter des ruptures de continuité, qui sont des informations importantes pour l'analyse des données. (<a href="https://github.com/BRGM/hubeau/issues/43">#43</a>)~~</li>
+<li>~~Le site ADES (ades.eaufrance.fr) est une source de référence pour les chroniques piézométriques et affiche les informations de continuité. (<a href="https://github.com/BRGM/hubeau/issues/43">#43</a>)~~</li>
+<li>~~L'API niveaux_nappes/stations utilise une information de "période d'activité" pour filtrer les stations par date_recherche. (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)~~</li>
+<li>~~L'information de "période d'activité" des stations n'est pas rafraîchie très fréquemment dans l'API Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)~~</li>
+<li>~~Un délai de rafraîchissement de 1 à 2 mois pour l'information de "période d'activité" des stations a été constaté. (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)~~</li>
+<li>~~Des requêtes avec date_recherche trop proche de la date actuelle peuvent retourner moins de résultats que prévu à cause du délai de rafraîchissement de la "période d'activité". (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)~~</li>
+<li>~~La "période d'activité" est un critère important pour la recherche de stations piézométriques actives à une date donnée. (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)~~</li>
+<li>~~Il existe un décalage temporel entre l'activité réelle d'une station piézométrique et la mise à jour de sa "période d'activité" dans les données de l'API. (<a href="https://github.com/BRGM/hubeau/issues/50">#50</a>)~~</li>
+<li>~~Le démonstrateur Hub'Eau pour la piézométrie présente des graphiques d'évolution des données et des liens vers les détails des points de mesure. (<a href="https://github.com/BRGM/hubeau/issues/54">#54</a>)~~</li>
+<li>~~L'affichage des données piézométriques sur des écrans de faible résolution (ex: 1366x768) peut nécessiter des adaptations (ex: suppression de graphiques) pour garantir l'accessibilité des informations essentielles comme les liens de détail. (<a href="https://github.com/BRGM/hubeau/issues/54">#54</a>)~~</li>
+<li>~~L'API Hub'Eau Piézométrie supporte les requêtes Cross-Origin (CORS). (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)~~</li>
+<li>~~L'en-tête <code>access-control-allow-origin: *</code> est inclus dans les réponses de l'API Hub'Eau, permettant l'accès depuis n'importe quelle origine. (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)~~</li>
+<li>~~Les requêtes vers l'API Hub'Eau sont servies via Cloudflare. (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)~~</li>
+<li>~~Un blocage de requête Cross-Origin avec l'API Hub'Eau est plus probablement dû à une implémentation client (ex: exécution asynchrone) qu'à un manque de support CORS côté serveur. (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)~~</li>
+<li>~~L'API Piézométrie fournit des données sur la chronique du niveau des nappes. (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)~~</li>
+<li>~~L'endpoint <code>/api/v1/niveaux_nappes/stations</code> permet de récupérer des informations sur les stations de mesure des niveaux de nappes. (<a href="https://github.com/BRGM/hubeau/issues/61">#61</a>)~~</li>
+<li>~~Le BRGM fournit un exemple d'appel de l'API Hub'Eau avec R pour les données piézométriques, disponible sur GitHub à l'adresse https://github.com/BRGM/hubeau/blob/master/code_examples/Trac%C3%A9%20d'une%20chronique%20pi%C3%A9zom%C3%A9trique%20avec%20R.ipynb. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Le BRGM prévoit de publier d'autres exemples de code R pour l'API Hub'Eau sur son dépôt GitHub à l'adresse https://github.com/BRGM/hubeau/tree/master/code_examples. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Un package R nommé <code>hubeau</code> est développé par INRAE pour interroger les APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> inclut une fonction générique d'interrogation et des fonctions spécifiques par API/opération, retournant les résultats sous forme de data.frame. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> prend en charge initialement les APIs 'Prélèvements en eau' et 'Indicateurs des services'. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> est disponible sur GitHub à l'adresse https://github.com/inrae/hubeau et sa documentation à https://inrae.github.io/hubeau/. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~L'API Hub'Eau présente des bugs connus, mentionnés dans les issues #72 et #74. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Les données "temps réel" de l'API Piézométrie sont brutes, non corrigées et proviennent directement des capteurs. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)~~</li>
+<li>~~La profondeur temporelle des données "temps réel" de l'API Piézométrie n'est actuellement pas limitée, mais une limitation à 1 an est envisagée. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)~~</li>
+<li>~~Les données du endpoint <code>/chroniques</code> de l'API Piézométrie sont agrégées et peuvent être corrigées. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)~~</li>
+<li>~~Hub'Eau se synchronise une fois par jour avec la banque ADES pour alimenter le endpoint <code>/chroniques</code> de l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)~~</li>
+<li>~~La fréquence de remontée des données par les producteurs vers ADES peut varier, entraînant des délais dans la disponibilité des données récentes pour le endpoint <code>/chroniques</code>. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)~~</li>
+<li>~~Les données "temps réel" de l'API Piézométrie sont des données brutes issues des capteurs et ne subissent pas de corrections. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)~~</li>
+<li>~~Les données du endpoint <code>/chroniques</code> de l'API Piézométrie sont des données agrégées et peuvent être corrigées (ex: dérive de capteur, nouveau nivellement du repère de mesure). (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)~~</li>
+<li>~~La banque ADES est la source des données alimentant le endpoint <code>/chroniques</code> de l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)~~</li>
+<li>~~Les données du endpoint <code>/chroniques</code> sont agrégées sur une journée, retenant généralement la valeur maximale du niveau NGF (valeur minimale de la profondeur), mais cela peut varier selon les points d'eau. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)~~</li>
+<li>~~Les corrections et l'agrégation des données piézométriques sont réalisées par les producteurs de données avant transmission à la banque ADES. (<a href="https://github.com/BRGM/hubeau/issues/96">#96</a>)~~</li>
+<li>~~L'API Piézométrie (endpoint <code>niveaux_nappes/chroniques</code>) peut ne pas renvoyer immédiatement les dernières mesures disponibles en raison de délais de transmission des données. (<a href="https://github.com/BRGM/hubeau/issues/116">#116</a>)~~</li>
+<li>~~Les chroniques de niveaux de nappe (piézométrie) ne sont pas toujours disponibles en temps réel et peuvent apparaître dans l'API avec un certain décalage après la date de mesure. (<a href="https://github.com/BRGM/hubeau/issues/116">#116</a>)~~</li>
+<li>~~Le paramètre <code>code_bss</code> est utilisé pour identifier les stations de piézométrie et récupérer leurs chroniques. (<a href="https://github.com/BRGM/hubeau/issues/116">#116</a>)~~</li>
+<li>~~L'endpoint <code>niveaux_nappes/chroniques</code> de l'API Piézométrie retournait une réponse vide sans erreur lors de requêtes multiples sur le paramètre <code>code_bss</code>. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)~~</li>
+<li>~~L'endpoint <code>niveaux_nappes/chroniques</code> fonctionnait correctement pour une requête sur un seul <code>code_bss</code>. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)~~</li>
+<li>~~L'endpoint <code>niveaux_nappes/chronique_tr</code> de l'API Piézométrie fonctionnait correctement pour une liste de <code>code_bss</code>. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)~~</li>
+<li>~~Le problème de l'endpoint <code>niveaux_nappes/chroniques</code> avec les requêtes multiples <code>code_bss</code> a été résolu. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)~~</li>
+<li>~~Le paramètre <code>code_bss</code> identifie un ouvrage (piézomètre) dans les données de piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)~~</li>
+<li>~~Les données de piézométrie peuvent être filtrées par une plage de dates via les paramètres <code>date_debut_mesure</code> et <code>date_fin_mesure</code>. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)~~</li>
+<li>~~Le champ <code>niveau_nappe_eau</code> représente le niveau de la nappe d'eau. (<a href="https://github.com/BRGM/hubeau/issues/130">#130</a>)~~</li>
+<li>~~L'API Hub'Eau ne traitait pas correctement les paramètres de requête avec plusieurs valeurs séparées par des virgules (ex: code_bss=val1,val2) pour l'endpoint niveaux_nappes/chroniques de l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~Ce dysfonctionnement était une régression suite à une migration technique réalisée en décembre 2022. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~La même anomalie affectait l'endpoint <em>analyses</em> de l'API Qualité des nappes d'eau souterraines et les endpoints 'stations' de diverses APIs. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~Une solution de contournement temporaire était d'effectuer des appels API séparés pour chaque valeur unitaire. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~L'anomalie a été corrigée en mars 2023, et la recherche avec plusieurs valeurs séparées par des virgules est de nouveau fonctionnelle. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~Le paramètre code_bss est utilisé pour filtrer les chroniques piézométriques. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~Les endpoints 'stations' permettent de lister les points de mesure selon des critères comme la masse d'eau ou le département. (<a href="https://github.com/BRGM/hubeau/issues/132">#132</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le paramètre <code>bbox</code> de l'API Piézométrie (endpoint <code>/niveaux_nappes/stations</code>) doit être fourni comme une seule chaîne de caractères avec les quatre coordonnées (min_lon,min_lat,max_lon,max_lat) séparées par des virgules. (<a href="https://github.com/BRGM/hubeau/issues/144">#144</a>)~~</li>
+<li>~~L'utilisation de paramètres séparés comme <code>bbox1</code>, <code>bbox2</code>, <code>bbox3</code>, <code>bbox4</code> pour définir une boîte englobante n'est pas supportée par l'API Piézométrie et peut entraîner le retour de toutes les données nationales. (<a href="https://github.com/BRGM/hubeau/issues/144">#144</a>)~~</li>
+<li>~~Les données piézométriques peuvent être filtrées géographiquement pour des bassins spécifiques, comme le bassin de la Vilaine, en utilisant le paramètre <code>bbox</code>. (<a href="https://github.com/BRGM/hubeau/issues/144">#144</a>)~~</li>
+<li>~~Avant le correctif, l'utilisation du paramètre "fields" sur l'endpoint "niveaux_nappes/chroniques" avec "timestamp_mesure" seul pouvait retourner des valeurs nulles pour "timestamp_mesure". (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)~~</li>
+<li>~~Le problème était contourné en incluant "date_mesure" dans le paramètre "fields" en plus de "timestamp_mesure". (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)~~</li>
+<li>~~Un correctif a été déployé : le champ "timestamp_mesure" est désormais correctement valorisé indépendamment de la présence du champ "date_mesure" lors de l'utilisation du paramètre "fields" sur l'endpoint "niveaux_nappes/chroniques". (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)~~</li>
+<li>~~L'endpoint concerné est <code>/api/v1/niveaux_nappes/chroniques</code>. (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)~~</li>
+<li>~~Le paramètre <code>fields</code> permet de sélectionner les champs à retourner dans la réponse de l'API. (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)~~</li>
+<li>~~Les données de piézométrie incluent des champs comme <code>timestamp_mesure</code> (horodatage de la mesure), <code>niveau_nappe_eau</code> (niveau de la nappe d'eau) et <code>date_mesure</code> (date de la mesure). (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)~~</li>
+<li>~~Les stations de mesure des niveaux de nappe sont identifiées par un <code>code_bss</code> (ex: <code>07548X0009/F</code>). (<a href="https://github.com/BRGM/hubeau/issues/178">#178</a>)~~</li>
+<li>~~Les API Hydrométrie et Piézométrie ont retourné une erreur 500 et étaient indisponibles. (<a href="https://github.com/BRGM/hubeau/issues/184">#184</a>)~~</li>
+<li>~~Un dysfonctionnement a affecté l'ensemble des API Hub'Eau, les rendant momentanément indisponibles. (<a href="https://github.com/BRGM/hubeau/issues/184">#184</a>)~~</li>
+<li>~~Les API Hub'Eau ont été rétablies et sont de nouveau disponibles. (<a href="https://github.com/BRGM/hubeau/issues/184">#184</a>)~~</li>
+<li>~~Le projet SUBLIM utilise les données des API Hub'Eau Hydrométrie et Piézométrie pour simuler le débit des cours d'eau et les niveaux piézométriques via des réseaux de neurones artificiels. (<a href="https://github.com/BRGM/hubeau/issues/203">#203</a>)~~</li>
+<li>~~SUBLIM est un service de prévision hydrologique automatisé à l'échelle du territoire métropolitain. (<a href="https://github.com/BRGM/hubeau/issues/203">#203</a>)~~</li>
+<li>~~Les données Hub'Eau sont combinées avec des données météorologiques historiques (ERA5) et prévisionnelles (CEP/ECMWF 0.25°) pour la modélisation hydrologique. (<a href="https://github.com/BRGM/hubeau/issues/203">#203</a>)~~</li>
+<li>~~Le service SUBLIM visualise les données historiques (2 ans maximum) et les prévisions au pas de temps journalier pour la majorité des stations hydrologiques et piézométriques en temps réel. (<a href="https://github.com/BRGM/hubeau/issues/203">#203</a>)~~</li>
+<li>~~Le site SUBLIM permet d'accéder à la qualité de prévision des modèles (entraînement et utilisation) et à des indicateurs comme la tendance des prévisions à 10 jours. (<a href="https://github.com/BRGM/hubeau/issues/203">#203</a>)~~</li>
 </ul>
-<hr />
-<h2 id="issues-sources">Issues sources</h2>
+<h3 id="issues-sources">Issues sources</h3>
 <ul>
 <li><strong>#10</strong> caractéristiques hydrogéologiques  — L'API Qualité des nappes permet de récupérer des informations hydrogéologiques détaillées pour un code BSS, incluant les masses d'eau, contrairement à l'API Piézométrie qui était plus limitée à l'époque de l'issue. <code>[résolu]</code></li>
 <li><strong>#19</strong> [Toutes APIs] Multiples erreurs lors de la génération d'un client à partir de la documentation Swagger — Des erreurs dans la spécification Swagger des APIs Hub'Eau, notamment des propriétés non conformes et des noms d'objets inadaptés, empêchaient la génération correcte de clients API, particulièrement pour l'API Piézométrie. <code>[résolu]</code></li>
@@ -313,6 +324,7 @@
 <li><strong>#259</strong> [API piezométrie] param date_fin_mesure au comportement pas comme attendu — Le paramètre <code>date_fin_mesure</code> de l'API Piézométrie de Hub'Eau présente un comportement incohérent et souvent exclusif basé sur le timestamp, entraînant la perte de données pour les utilisateurs et nécessitant une modification pour filtrer sur la date seule de manière inclusive. <code>[en_cours]</code></li>
 <li><strong>#260</strong> [API piezométrie] Ajout des CODES en plus des libellés des champs qualifiant les données — L'API Piézométrie ne fournit que les libellés longs pour certains champs de données (ex: statut, qualification), et une demande a été faite pour ajouter les codes correspondants (selon les nomenclatures SANDRE) afin de réduire le volume des exports et d'améliorer la performance. <code>[en_cours]</code></li>
 </ul>
+</details>
         </article>
 
         <footer class="footer">
@@ -321,7 +333,36 @@
         </footer>
     </main>
 
+    <!-- Chatbot toggle button -->
+    <button class="chatbot-toggle" id="chatbotToggle" aria-label="Ouvrir le chatbot">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+
+    <!-- Chatbot panel -->
+    <div class="chatbot-panel" id="chatbotPanel">
+        <div class="chatbot-header">
+            <div class="chatbot-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Hub'Eau Assistant
+            </div>
+            <button class="chatbot-close" id="chatbotClose">&times;</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg chat-msg-bot">
+                <div class="chat-bubble">Bonjour ! Posez-moi une question sur les APIs Hub'Eau. Je cherche dans la base de connaissances pour vous r&eacute;pondre.</div>
+            </div>
+        </div>
+        <div class="chatbot-status" id="chatbotStatus" style="display:none;"></div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" placeholder="Posez votre question..." autocomplete="off">
+            <button class="chatbot-send" id="chatbotSend">Envoyer</button>
+        </div>
+    </div>
+
     <script src="search.js"></script>
+    <script src="chatbot.js"></script>
     <script>
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');

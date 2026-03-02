@@ -68,98 +68,109 @@
 
         <article class="content">
             <h1 id="prélèvements-en-eau">Prélèvements en eau</h1>
-<h2 id="particularités-techniques">Particularités techniques</h2>
+<blockquote>
+<p>13 issues analysées</p>
+</blockquote>
+<h2 id="guide">Guide</h2>
+<h3 id="comportement-actuel">Comportement actuel</h3>
+<p>L'API Hub'Eau "Prélèvements en eau" est désormais stable en version v1, accessible via les URLs <code>/api/v1/</code>. Elle permet de récupérer des informations détaillées sur les ouvrages de prélèvement (<code>/referentiel/ouvrages</code>) et leurs chroniques de prélèvements (<code>/chroniques</code>). Les ouvrages sont identifiés par un <code>code_ouvrage</code> et incluent des coordonnées géographiques (longitude, latitude). L'opération <code>chroniques</code> fournit le nom de l'ouvrage, son identifiant local, le point de prélèvement référent et les noms des plans d'eau, avec une codification simplifiée des usages. Le <code>code_bss_point_eau</code> est disponible dans les résultats de prélèvement. Les données sont mises à jour mensuellement et le format GeoJSON est supporté pour les chroniques.</p>
+<h3 id="pièges-à-éviter">Pièges à éviter</h3>
+<p>L'API retourne une erreur HTTP 400 si le produit des paramètres <code>page * size</code> dépasse 20 000 enregistrements, avec un message d'erreur générique "requête incorrecte" dans la documentation Swagger, ce qui peut être trompeur (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>). Pour des raisons de confidentialité, le code SIRET de l'établissement exploitant un ouvrage n'est pas diffusé, car il ne s'agit pas d'une donnée ouverte de la BNPE (<a href="https://github.com/BRGM/hubeau/issues/37">#37</a>). De même, les coordonnées des points de prélèvement et ouvrages liés à l'Alimentation en Eau Potable (AEP) sont floutées au centroïde de la commune (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>). L'interrogation par codes communes est délicate en raison du millésime non spécifié du référentiel BNPE, risquant de manquer des ouvrages liés à des codes obsolètes (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>).</p>
+<h3 id="bonnes-pratiques">Bonnes pratiques</h3>
+<p>Pour contourner la limite de 20 000 enregistrements (<code>page * size</code>), fragmentez vos requêtes en utilisant des plages de codes de départements, une méthode recommandée pour récupérer les données d'ouvrages (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>). Le champ <code>count</code> de la première page peut aider à anticiper un dépassement de cette limite (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>). Pour les utilisateurs R, le package <code>hubeau</code> (disponible sur le CRAN et GitHub <code>https://github.com/inrae/hubeau</code>) simplifie l'interrogation de l'API "Prélèvements en eau" avec des fonctions dédiées et retourne les résultats sous forme de data.frame (#62, #137). Des exemples de code R sont également disponibles sur le dépôt GitHub du BRGM (<code>https://github.com/BRGM/hubeau/tree/master/code_examples</code>) (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>).</p>
+<h3 id="contexte-métier">Contexte métier</h3>
+<p>L'API "Prélèvements en eau" s'appuie sur les données de la Banque Nationale des Prélèvements en Eau (BNPE) (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>). Un ouvrage de prélèvement peut regrouper plusieurs points de prélèvement, ce qui explique pourquoi le <code>code_bss_point_eau</code> est une information spécifique à un point et ne peut être remonté au niveau de l'ouvrage (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>). Le <code>code_ouvrage</code> (ex: OPR0000065205) est l'identifiant unique d'une structure de prélèvement (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>). Le <code>code_entite_hydrogeo</code> est utilisé pour caractériser le type d'entité hydrogéologique, comme SOUT pour les prélèvements souterrains (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>).</p>
+<hr />
+<details>
+<summary><strong>Archive détaillée</strong> — Tous les faits bruts extraits des issues</summary>
+<h3 id="faits-actuels">Faits actuels</h3>
 <ul>
-<li>L'utilisation du filtre <code>fields</code> sur l'API Prélèvements en eau (version vbeta) pouvait entraîner la perte de certaines informations, notamment les coordonnées géographiques (longitude, latitude), qui devenaient nulles. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)</li>
-<li>La propriété <code>fields</code> était expérimentale et instable dans la version vbeta de l'API Prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)</li>
-<li>Les URLs de l'API ont évolué de <code>/api/vbeta/</code> à <code>/api/v1/</code>. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)</li>
-<li>L'API Prélèvements en eau a connu une longue phase beta avant de passer en version 1 (production). (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)</li>
-<li>L'opération 'chroniques' de l'API Prélèvements en eau inclut désormais le nom de l'ouvrage de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)</li>
-<li>Les coordonnées géographiques sont disponibles pour les points de prélèvement et les ouvrages. (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)</li>
-<li>La codification des usages a été simplifiée dans l'API Prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)</li>
-<li>Les ouvrages de prélèvement incluent désormais l'identifiant local (code producteur), le point de prélèvement référent et les noms des plans d'eau (hors BD Carthage). (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)</li>
-<li>Le champ <code>libelle_precision_coord</code> était toujours null pour l'opération <code>/vbeta/prelevements/referentiel/points_prelevement</code> de l'API Prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)</li>
-<li>Dans la version beta de l'API Prélèvements en eau, les champs <code>libelle_precision_coord</code> étaient inutiles car toutes les coordonnées étaient fictives. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)</li>
 <li>L'API Prélèvements en eau ne fournit pas le code SIRET de l'établissement exploitant l'ouvrage. (<a href="https://github.com/BRGM/hubeau/issues/37">#37</a>)</li>
-<li>L'API Prélèvements en eau est passée de version bêta à v1 stable en juin 2021. (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)</li>
-<li>Le passage à la v1 de l'API Prélèvements en eau a inclus une actualisation des données. (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)</li>
-<li>La v1 de l'API Prélèvements en eau apporte les coordonnées géographiques des ouvrages et points de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)</li>
-<li>La v1 de l'API Prélèvements en eau assure une mise à jour mensuelle des données. (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)</li>
-<li>Des informations complémentaires sur la v1 de l'API Prélèvements en eau sont disponibles sur la page d'actualités Hub'Eau (https://hubeau.eaufrance.fr/news/api-prelevements-en-eau-passage-en-v1). (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)</li>
-<li>Le champ code_entite_hydrogeo n'est pas correctement renseigné dans l'API Prélèvements en eau (endpoint ouvrages) pour le type SOUT dans la version beta. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)</li>
-<li>Le champ code_entite_hydrogeo sera corrigé dans la version définitive de l'API Prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)</li>
-<li>Le code_bss_point_eau est présent dans les résultats d'un prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)</li>
-<li>Le code_bss_point_eau ne peut pas être remonté au niveau de l'ouvrage car un ouvrage peut avoir plusieurs points de prélèvement, chacun avec son propre code_bss_point_eau. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)</li>
-<li>Le BRGM fournit un exemple d'appel de l'API Hub'Eau avec R pour les données piézométriques, disponible sur GitHub à l'adresse https://github.com/BRGM/hubeau/blob/master/code_examples/Trac%C3%A9%20d'une%20chronique%20pi%C3%A9zom%C3%A9trique%20avec%20R.ipynb. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>Le BRGM prévoit de publier d'autres exemples de code R pour l'API Hub'Eau sur son dépôt GitHub à l'adresse https://github.com/BRGM/hubeau/tree/master/code_examples. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>Un package R nommé <code>hubeau</code> est développé par INRAE pour interroger les APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>Le package R <code>hubeau</code> inclut une fonction générique d'interrogation et des fonctions spécifiques par API/opération, retournant les résultats sous forme de data.frame. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>Le package R <code>hubeau</code> prend en charge initialement les APIs 'Prélèvements en eau' et 'Indicateurs des services'. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>Le package R <code>hubeau</code> est disponible sur GitHub à l'adresse https://github.com/inrae/hubeau et sa documentation à https://inrae.github.io/hubeau/. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
+<li>Le code SIRET de l'établissement exploitant un ouvrage de prélèvement n'est pas une donnée ouverte et n'est pas diffusé par BNPE ni par Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/37">#37</a>)</li>
+<li>L'API Prélèvements retourne un code HTTP 400 si le produit des paramètres <code>page * size</code> dépasse 20 000, avec un message d'erreur indiquant cette limite. (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>)</li>
 <li>La limite de 20 000 enregistrements (<code>page * size</code>) est mentionnée dans la section "Limitations" de la documentation de l'API Prélèvements. (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>)</li>
 <li>Le champ <code>count</code> de la première page de résultats peut être utilisé pour détecter si une requête dépassera la limite de 20 000 enregistrements. (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>)</li>
 <li>La documentation Swagger de l'API Prélèvements décrit un code 400 comme une "requête incorrecte", ce qui est imprécis pour le cas de dépassement de la limite <code>page * size</code>. (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>)</li>
 <li>Un contournement pour la limite de 20 000 enregistrements consiste à fragmenter les requêtes en utilisant des plages de codes communes. (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>)</li>
-<li>Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le même appel API fonctionnait la semaine précédant le 07/07/2025. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)</li>
-<li>Lors d'une période d'instabilité de l'endpoint <code>/prelevements/chroniques</code>, l'ajout du paramètre <code>fields</code> (ex: <code>fields=code_ouvrage,annee,volume</code>) pouvait servir de contournement pour obtenir des résultats. (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)</li>
-<li>L'endpoint <code>/prelevements/chroniques</code> est désormais stable et ne nécessite plus la spécification du paramètre <code>fields</code>. (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)</li>
-<li>Cette anomalie affectait certaines APIs Hub'Eau lors de requêtes demandant l'ensemble des champs. (<a href="https://github.com/BRGM/hubeau/issues/274">#274</a>)</li>
-<li>L'anomalie a été résolue, et l'interrogation de l'API Prélèvements en eau sans le paramètre <code>fields</code> est de nouveau fonctionnelle. (<a href="https://github.com/BRGM/hubeau/issues/274">#274</a>)</li>
-</ul>
-<h2 id="informations-métier">Informations métier</h2>
-<ul>
-<li>L'API Prélèvements en eau permet de récupérer des informations sur les ouvrages (structures) de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)</li>
-<li>Les ouvrages sont identifiés par un <code>code_ouvrage</code> (ex: OPR0000065205). (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)</li>
-<li>Les coordonnées géographiques (longitude, latitude) sont des informations importantes associées aux ouvrages. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)</li>
-<li>Les coordonnées des points de prélèvement et des ouvrages liés à l'Alimentation en Eau Potable (AEP) sont floutées au centroïde de la commune pour des raisons de confidentialité. (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)</li>
-<li>Les coordonnées des points de prélèvement dans la version beta de l'API Prélèvements en eau étaient fictives. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)</li>
-<li>Le champ <code>libelle_precision_coord</code> est lié à la précision des coordonnées réelles. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)</li>
-<li>Le code SIRET de l'établissement exploitant un ouvrage de prélèvement n'est pas une donnée ouverte et n'est pas diffusé par BNPE ni par Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/37">#37</a>)</li>
-<li>Avant la v1, l'API Prélèvements en eau avait des données moins complètes (nombre d'ouvrages, millésimes) que le jeu de données data.eaufrance.fr (ex: 6872 ouvrages vs 8508 pour Pays de la Loire, millésimes s'arrêtant à 2016 alors que l'AELB fournissait 2019). (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)</li>
-<li>La v1 de l'API Prélèvements en eau contient les mêmes données que celles de la BNPE (Banque Nationale des Prélèvements en Eau). (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)</li>
-<li>Un ouvrage peut être composé de plusieurs points de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)</li>
-<li>Le code_bss_point_eau est une information spécifique à un point de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)</li>
-<li>Le type SOUT (Souterrain) est associé au code_entite_hydrogeo. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)</li>
-<li>L'API Prélèvements en eau dispose d'un référentiel des ouvrages (<code>/referentiel/ouvrages</code>) liés aux prélèvements. (<a href="https://github.com/BRGM/hubeau/issues/71">#71</a>)</li>
 <li>L'API Prélèvements utilise le référentiel des communes/départements de la BNPE, dont le millésime n'est pas spécifié. (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>)</li>
 <li>Interroger l'API Prélèvements par codes communes est délicat en raison du risque de rater des ouvrages liés à des codes obsolètes. (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>)</li>
 <li>L'interrogation par codes départements est une méthode recommandée pour récupérer les données d'ouvrages de l'API Prélèvements. (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>)</li>
-<li>Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>L'API "Prélèvements en eau" permet de récupérer les chroniques de prélèvements. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)</li>
-<li>Les données de prélèvements peuvent être filtrées par année et par code de département. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)</li>
-<li>Le format GeoJSON est supporté pour les chroniques de prélèvements. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)</li>
-<li>L'endpoint <code>/prelevements/chroniques</code> permet d'accéder aux données chroniques de prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)</li>
-<li>Les données de prélèvements en eau peuvent être filtrées par <code>bbox</code> (zone géographique), <code>annee</code> (année), <code>code_departement</code> (code du département). (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)</li>
-<li>Des champs comme <code>code_ouvrage</code>, <code>annee</code>, <code>volume</code> sont disponibles pour les données de prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)</li>
-<li>Les données de prélèvements chroniques de l'API Hub'Eau incluent des informations détaillées sur l'ouvrage (code, nom, URI, coordonnées, commune, département), l'année, le volume, l'usage, les statuts et qualifications du volume, le statut et mode d'obtention de l'instruction, le caractère écrasant du prélèvement, et le producteur de la donnée. (<a href="https://github.com/BRGM/hubeau/issues/274">#274</a>)</li>
 </ul>
-<h2 id="problèmes-connus">Problèmes connus</h2>
+<h3 id="historique-des-problèmes-résolus">Historique des problèmes résolus</h3>
 <ul>
-<li>Une solution temporaire pour contourner le problème était de ne pas utiliser le filtre <code>fields</code> et de récupérer l'ensemble des champs. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)</li>
-<li>Le problème a été résolu avec le passage de l'API Prélèvements en eau à la version v1. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)</li>
-<li>Un bug sur les codes des entités hydrogéologiques a été corrigé dans l'API Prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)</li>
-<li>L'opération <code>/vbeta/prelevements/referentiel/ouvrages</code> de l'API Prélèvements en eau n'était pas affectée par le problème du champ <code>libelle_precision_coord</code> null. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)</li>
-<li>Le bug du champ <code>libelle_precision_coord</code> null a été corrigé lors du passage de l'API Prélèvements en eau de la version beta à la version v1. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)</li>
-<li>L'API Hub'Eau présente des bugs connus, mentionnés dans les issues #72 et #74. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)</li>
-<li>L'endpoint <code>/api/v1/prelevements/referentiel/ouvrages</code> de l'API Prélèvements en eau a rencontré un bug où il retournait <code>count 0</code> (aucune donnée). (<a href="https://github.com/BRGM/hubeau/issues/71">#71</a>)</li>
-<li>Le bug de l'endpoint <code>/api/v1/prelevements/referentiel/ouvrages</code> a été corrigé. (<a href="https://github.com/BRGM/hubeau/issues/71">#71</a>)</li>
-<li>L'API Prélèvements retourne un code HTTP 400 si le produit des paramètres <code>page * size</code> dépasse 20 000, avec un message d'erreur indiquant cette limite. (<a href="https://github.com/BRGM/hubeau/issues/136">#136</a>)</li>
-<li>L'API Hub'Eau <code>/api/v1/prelevements/chroniques</code> a retourné une "internal server error" (erreur 500) le 07/07/2025. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)</li>
-<li>L'erreur s'est produite pour une requête incluant les paramètres <code>annee=2018</code>, <code>code_departement=28</code> et <code>format=geojson</code>. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)</li>
-<li>L'endpoint <code>/prelevements/chroniques</code> de l'API Prélèvements en eau a connu des périodes d'indisponibilité ou d'instabilité, retournant des erreurs 500. (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)</li>
-<li>L'API Prélèvements en eau (endpoint chroniques) a temporairement renvoyé une erreur 500 lors de requêtes ne spécifiant pas le paramètre <code>fields</code>. (<a href="https://github.com/BRGM/hubeau/issues/274">#274</a>)</li>
-<li>Un contournement temporaire consistait à utiliser le paramètre <code>fields</code> en listant explicitement les champs désirés pour éviter l'erreur 500. (<a href="https://github.com/BRGM/hubeau/issues/274">#274</a>)</li>
+<li>~~L'utilisation du filtre <code>fields</code> sur l'API Prélèvements en eau (version vbeta) pouvait entraîner la perte de certaines informations, notamment les coordonnées géographiques (longitude, latitude), qui devenaient nulles. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)~~</li>
+<li>~~La propriété <code>fields</code> était expérimentale et instable dans la version vbeta de l'API Prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)~~</li>
+<li>~~Une solution temporaire pour contourner le problème était de ne pas utiliser le filtre <code>fields</code> et de récupérer l'ensemble des champs. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)~~</li>
+<li>~~Le problème a été résolu avec le passage de l'API Prélèvements en eau à la version v1. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)~~</li>
+<li>~~Les URLs de l'API ont évolué de <code>/api/vbeta/</code> à <code>/api/v1/</code>. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)~~</li>
+<li>~~L'API Prélèvements en eau permet de récupérer des informations sur les ouvrages (structures) de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)~~</li>
+<li>~~Les ouvrages sont identifiés par un <code>code_ouvrage</code> (ex: OPR0000065205). (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)~~</li>
+<li>~~Les coordonnées géographiques (longitude, latitude) sont des informations importantes associées aux ouvrages. (<a href="https://github.com/BRGM/hubeau/issues/25">#25</a>)~~</li>
+<li>~~L'API Prélèvements en eau a connu une longue phase beta avant de passer en version 1 (production). (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)~~</li>
+<li>~~L'opération 'chroniques' de l'API Prélèvements en eau inclut désormais le nom de l'ouvrage de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)~~</li>
+<li>~~Les coordonnées géographiques sont disponibles pour les points de prélèvement et les ouvrages. (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)~~</li>
+<li>~~La codification des usages a été simplifiée dans l'API Prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)~~</li>
+<li>~~Un bug sur les codes des entités hydrogéologiques a été corrigé dans l'API Prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)~~</li>
+<li>~~Les ouvrages de prélèvement incluent désormais l'identifiant local (code producteur), le point de prélèvement référent et les noms des plans d'eau (hors BD Carthage). (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)~~</li>
+<li>~~Les coordonnées des points de prélèvement et des ouvrages liés à l'Alimentation en Eau Potable (AEP) sont floutées au centroïde de la commune pour des raisons de confidentialité. (<a href="https://github.com/BRGM/hubeau/issues/26">#26</a>)~~</li>
+<li>~~Le champ <code>libelle_precision_coord</code> était toujours null pour l'opération <code>/vbeta/prelevements/referentiel/points_prelevement</code> de l'API Prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)~~</li>
+<li>~~L'opération <code>/vbeta/prelevements/referentiel/ouvrages</code> de l'API Prélèvements en eau n'était pas affectée par le problème du champ <code>libelle_precision_coord</code> null. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)~~</li>
+<li>~~Le bug du champ <code>libelle_precision_coord</code> null a été corrigé lors du passage de l'API Prélèvements en eau de la version beta à la version v1. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)~~</li>
+<li>~~Dans la version beta de l'API Prélèvements en eau, les champs <code>libelle_precision_coord</code> étaient inutiles car toutes les coordonnées étaient fictives. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)~~</li>
+<li>~~Les coordonnées des points de prélèvement dans la version beta de l'API Prélèvements en eau étaient fictives. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)~~</li>
+<li>~~Le champ <code>libelle_precision_coord</code> est lié à la précision des coordonnées réelles. (<a href="https://github.com/BRGM/hubeau/issues/27">#27</a>)~~</li>
+<li>~~L'API Prélèvements en eau est passée de version bêta à v1 stable en juin 2021. (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)~~</li>
+<li>~~Le passage à la v1 de l'API Prélèvements en eau a inclus une actualisation des données. (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)~~</li>
+<li>~~La v1 de l'API Prélèvements en eau apporte les coordonnées géographiques des ouvrages et points de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)~~</li>
+<li>~~La v1 de l'API Prélèvements en eau assure une mise à jour mensuelle des données. (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)~~</li>
+<li>~~Des informations complémentaires sur la v1 de l'API Prélèvements en eau sont disponibles sur la page d'actualités Hub'Eau (https://hubeau.eaufrance.fr/news/api-prelevements-en-eau-passage-en-v1). (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)~~</li>
+<li>~~Avant la v1, l'API Prélèvements en eau avait des données moins complètes (nombre d'ouvrages, millésimes) que le jeu de données data.eaufrance.fr (ex: 6872 ouvrages vs 8508 pour Pays de la Loire, millésimes s'arrêtant à 2016 alors que l'AELB fournissait 2019). (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)~~</li>
+<li>~~La v1 de l'API Prélèvements en eau contient les mêmes données que celles de la BNPE (Banque Nationale des Prélèvements en Eau). (<a href="https://github.com/BRGM/hubeau/issues/38">#38</a>)~~</li>
+<li>~~Le champ code_entite_hydrogeo n'est pas correctement renseigné dans l'API Prélèvements en eau (endpoint ouvrages) pour le type SOUT dans la version beta. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)~~</li>
+<li>~~Le champ code_entite_hydrogeo sera corrigé dans la version définitive de l'API Prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)~~</li>
+<li>~~Le code_bss_point_eau est présent dans les résultats d'un prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)~~</li>
+<li>~~Le code_bss_point_eau ne peut pas être remonté au niveau de l'ouvrage car un ouvrage peut avoir plusieurs points de prélèvement, chacun avec son propre code_bss_point_eau. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)~~</li>
+<li>~~Un ouvrage peut être composé de plusieurs points de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)~~</li>
+<li>~~Le code_bss_point_eau est une information spécifique à un point de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)~~</li>
+<li>~~Le type SOUT (Souterrain) est associé au code_entite_hydrogeo. (<a href="https://github.com/BRGM/hubeau/issues/39">#39</a>)~~</li>
+<li>~~Le BRGM fournit un exemple d'appel de l'API Hub'Eau avec R pour les données piézométriques, disponible sur GitHub à l'adresse https://github.com/BRGM/hubeau/blob/master/code_examples/Trac%C3%A9%20d'une%20chronique%20pi%C3%A9zom%C3%A9trique%20avec%20R.ipynb. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Le BRGM prévoit de publier d'autres exemples de code R pour l'API Hub'Eau sur son dépôt GitHub à l'adresse https://github.com/BRGM/hubeau/tree/master/code_examples. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Un package R nommé <code>hubeau</code> est développé par INRAE pour interroger les APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> inclut une fonction générique d'interrogation et des fonctions spécifiques par API/opération, retournant les résultats sous forme de data.frame. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> prend en charge initialement les APIs 'Prélèvements en eau' et 'Indicateurs des services'. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> est disponible sur GitHub à l'adresse https://github.com/inrae/hubeau et sa documentation à https://inrae.github.io/hubeau/. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~L'API Hub'Eau présente des bugs connus, mentionnés dans les issues #72 et #74. (<a href="https://github.com/BRGM/hubeau/issues/62">#62</a>)~~</li>
+<li>~~L'endpoint <code>/api/v1/prelevements/referentiel/ouvrages</code> de l'API Prélèvements en eau a rencontré un bug où il retournait <code>count 0</code> (aucune donnée). (<a href="https://github.com/BRGM/hubeau/issues/71">#71</a>)~~</li>
+<li>~~Le bug de l'endpoint <code>/api/v1/prelevements/referentiel/ouvrages</code> a été corrigé. (<a href="https://github.com/BRGM/hubeau/issues/71">#71</a>)~~</li>
+<li>~~L'API Prélèvements en eau dispose d'un référentiel des ouvrages (<code>/referentiel/ouvrages</code>) liés aux prélèvements. (<a href="https://github.com/BRGM/hubeau/issues/71">#71</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~L'API Hub'Eau <code>/api/v1/prelevements/chroniques</code> a retourné une "internal server error" (erreur 500) le 07/07/2025. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)~~</li>
+<li>~~L'erreur s'est produite pour une requête incluant les paramètres <code>annee=2018</code>, <code>code_departement=28</code> et <code>format=geojson</code>. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)~~</li>
+<li>~~Le même appel API fonctionnait la semaine précédant le 07/07/2025. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)~~</li>
+<li>~~L'API "Prélèvements en eau" permet de récupérer les chroniques de prélèvements. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)~~</li>
+<li>~~Les données de prélèvements peuvent être filtrées par année et par code de département. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)~~</li>
+<li>~~Le format GeoJSON est supporté pour les chroniques de prélèvements. (<a href="https://github.com/BRGM/hubeau/issues/241">#241</a>)~~</li>
+<li>~~L'endpoint <code>/prelevements/chroniques</code> de l'API Prélèvements en eau a connu des périodes d'indisponibilité ou d'instabilité, retournant des erreurs 500. (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)~~</li>
+<li>~~Lors d'une période d'instabilité de l'endpoint <code>/prelevements/chroniques</code>, l'ajout du paramètre <code>fields</code> (ex: <code>fields=code_ouvrage,annee,volume</code>) pouvait servir de contournement pour obtenir des résultats. (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)~~</li>
+<li>~~L'endpoint <code>/prelevements/chroniques</code> est désormais stable et ne nécessite plus la spécification du paramètre <code>fields</code>. (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)~~</li>
+<li>~~L'endpoint <code>/prelevements/chroniques</code> permet d'accéder aux données chroniques de prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)~~</li>
+<li>~~Les données de prélèvements en eau peuvent être filtrées par <code>bbox</code> (zone géographique), <code>annee</code> (année), <code>code_departement</code> (code du département). (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)~~</li>
+<li>~~Des champs comme <code>code_ouvrage</code>, <code>annee</code>, <code>volume</code> sont disponibles pour les données de prélèvements en eau. (<a href="https://github.com/BRGM/hubeau/issues/249">#249</a>)~~</li>
+<li>~~L'API Prélèvements en eau (endpoint chroniques) a temporairement renvoyé une erreur 500 lors de requêtes ne spécifiant pas le paramètre <code>fields</code>. (<a href="https://github.com/BRGM/hubeau/issues/274">#274</a>)~~</li>
+<li>~~Cette anomalie affectait certaines APIs Hub'Eau lors de requêtes demandant l'ensemble des champs. (<a href="https://github.com/BRGM/hubeau/issues/274">#274</a>)~~</li>
+<li>~~Un contournement temporaire consistait à utiliser le paramètre <code>fields</code> en listant explicitement les champs désirés pour éviter l'erreur 500. (<a href="https://github.com/BRGM/hubeau/issues/274">#274</a>)~~</li>
+<li>~~L'anomalie a été résolue, et l'interrogation de l'API Prélèvements en eau sans le paramètre <code>fields</code> est de nouveau fonctionnelle. (<a href="https://github.com/BRGM/hubeau/issues/274">#274</a>)~~</li>
+<li>~~Les données de prélèvements chroniques de l'API Hub'Eau incluent des informations détaillées sur l'ouvrage (code, nom, URI, coordonnées, commune, département), l'année, le volume, l'usage, les statuts et qualifications du volume, le statut et mode d'obtention de l'instruction, le caractère écrasant du prélèvement, et le producteur de la donnée. (<a href="https://github.com/BRGM/hubeau/issues/274">#274</a>)~~</li>
 </ul>
-<hr />
-<h2 id="issues-sources">Issues sources</h2>
+<h3 id="issues-sources">Issues sources</h3>
 <ul>
 <li><strong>#25</strong> [API Prélèvements en eau] - Erreur lors de la récupération des ouvrages — L'API Prélèvements en eau (vbeta) présentait un bug où le filtre <code>fields</code> causait la perte des coordonnées géographiques des ouvrages, problème résolu avec le passage de l'API à la version v1. <code>[résolu]</code></li>
 <li><strong>#26</strong> [API Prélèvement en eau] nom de l'ouvrage dans les chroniques — L'API Hub'Eau Prélèvements en eau est passée en version 1, intégrant le nom de l'ouvrage dans les chroniques, les coordonnées géographiques (floutées pour l'AEP), une simplification des usages, et des identifiants supplémentaires pour les ouvrages. <code>[résolu]</code></li>
@@ -175,6 +186,7 @@
 <li><strong>#249</strong> [API Prélèvements en eau] endpoint "chroniques": Erreur 500 sur toutes les requêtes — L'endpoint <code>/prelevements/chroniques</code> de l'API Prélèvements en eau a rencontré des instabilités récurrentes provoquant des erreurs 500, avec un contournement temporaire via le paramètre <code>fields</code>, avant une résolution finale. <code>[résolu]</code></li>
 <li><strong>#274</strong> [API Prélèvements en eau] get prelevements chroniques -&gt; Error 500 — L'API Prélèvements en eau a rencontré et résolu une erreur 500 sur l'endpoint chroniques lorsque le paramètre <code>fields</code> n'était pas spécifié, avec un contournement temporaire disponible. <code>[résolu]</code></li>
 </ul>
+</details>
         </article>
 
         <footer class="footer">
@@ -183,7 +195,36 @@
         </footer>
     </main>
 
+    <!-- Chatbot toggle button -->
+    <button class="chatbot-toggle" id="chatbotToggle" aria-label="Ouvrir le chatbot">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+
+    <!-- Chatbot panel -->
+    <div class="chatbot-panel" id="chatbotPanel">
+        <div class="chatbot-header">
+            <div class="chatbot-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Hub'Eau Assistant
+            </div>
+            <button class="chatbot-close" id="chatbotClose">&times;</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg chat-msg-bot">
+                <div class="chat-bubble">Bonjour ! Posez-moi une question sur les APIs Hub'Eau. Je cherche dans la base de connaissances pour vous r&eacute;pondre.</div>
+            </div>
+        </div>
+        <div class="chatbot-status" id="chatbotStatus" style="display:none;"></div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" placeholder="Posez votre question..." autocomplete="off">
+            <button class="chatbot-send" id="chatbotSend">Envoyer</button>
+        </div>
+    </div>
+
     <script src="search.js"></script>
+    <script src="chatbot.js"></script>
     <script>
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');

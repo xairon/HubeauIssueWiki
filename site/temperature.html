@@ -68,65 +68,73 @@
 
         <article class="content">
             <h1 id="température-des-cours-deau">Température des cours d'eau</h1>
-<h2 id="particularités-techniques">Particularités techniques</h2>
+<blockquote>
+<p>8 issues analysées</p>
+</blockquote>
+<h2 id="guide">Guide</h2>
+<h3 id="comportement-actuel">Comportement actuel</h3>
+<p>L'API "Température des cours d'eau" offre deux endpoints principaux : <code>/api/v1/temperature/chronique</code> pour accéder aux mesures et <code>/api/v1/temperature/station</code> pour les informations sur les stations (#110, #124). Les données sont disponibles en formats JSON et CSV. Chaque mesure inclut des attributs détaillés comme le code et libellé du paramètre, la date et heure de mesure (avec distinction AM/PM), le résultat, l'unité et la qualification (#6, #18). L'endpoint <code>/station</code> permet de filtrer les résultats par <code>code_departement</code> (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>). La pagination par défaut utilise un <code>size</code> de 1 000 résultats par page, et les réponses d'erreur sont structurées avec des champs <code>code</code>, <code>message</code> et <code>field_errors</code> (#91, #236).</p>
+<h3 id="pièges-à-éviter">Pièges à éviter</h3>
+<p>La principale limitation est la non-récence des données : les plus récentes datent de 2021, car de nombreuses stations de mesure ont cessé leur activité autour de 2013 (<a href="https://github.com/BRGM/hubeau/issues/110">#110</a>). La pagination est un point de vigilance : la multiplication <code>page</code> * <code>size</code> ne doit pas dépasser 20 000 résultats, et la taille maximale du paramètre <code>size</code> est de 20 000. L'API peut générer des liens "next" avec un <code>size</code> par défaut de 1 000, ce qui peut entraîner des erreurs si la page suivante dépasse la limite globale (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>). De plus, l'export de données historiques via le site Naïades, bien qu'une alternative, peut contenir des dates incorrectes en fin de fichier (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>).</p>
+<h3 id="bonnes-pratiques">Bonnes pratiques</h3>
+<p>Pour une intégration facilitée en R, utilisez le package <code>hubeau</code> (disponible sur le CRAN), qui permet de requêter l'API Température des cours d'eau et d'autres APIs Hub'Eau avec une syntaxe simplifiée (<code>get_temperature_chronique(...)</code>) et est bien documenté (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>). Lors de requêtes paginées, spécifiez toujours le paramètre <code>size</code> explicitement et surveillez la limite de 20 000 résultats pour éviter les erreurs et les comportements inattendus (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>). Soyez conscient de la fraîcheur des données : les informations les plus récentes datent de 2021, ce qui peut impacter la pertinence pour des analyses contemporaines (<a href="https://github.com/BRGM/hubeau/issues/110">#110</a>).</p>
+<h3 id="contexte-métier">Contexte métier</h3>
+<p>Les données de température des cours d'eau proviennent principalement du système d'information sur l'eau Naïades. Elles sont enrichies d'attributs de qualification et d'unité essentiels pour une interprétation hydrologique précise (#6, #18). Il est important de noter que le manque de données récentes (post-2021) est dû à l'arrêt progressif de nombreuses stations de mesure de température des cours d'eau autour de 2013, reflétant une évolution dans la stratégie de suivi des températures des cours d'eau (<a href="https://github.com/BRGM/hubeau/issues/110">#110</a>).</p>
+<hr />
+<details>
+<summary><strong>Archive détaillée</strong> — Tous les faits bruts extraits des issues</summary>
+<h3 id="faits-actuels">Faits actuels</h3>
 <ul>
-<li>Avant le 15/06/2018, l'opération <code>chronique.csv</code> de l'API Température des cours d'eau ne retournait que les 10 premiers champs, laissant les 9 champs suivants (ex: <code>code_parametre</code>, <code>resultat</code>, <code>libelle_qualification</code>) vides. (<a href="https://github.com/BRGM/hubeau/issues/6">#6</a>)</li>
-<li>La version JSON de l'opération <code>chronique</code> de l'API Température des cours d'eau retournait correctement tous les champs, contrairement à la version CSV. (<a href="https://github.com/BRGM/hubeau/issues/6">#6</a>)</li>
-<li>L'API <code>temperature/chronique</code> a retourné des mesures avec des dates futures (ex: 2045/2046). (<a href="https://github.com/BRGM/hubeau/issues/21">#21</a>)</li>
 <li>L'API Température des cours d'eau retourne des données, mais les plus récentes datent de 2021. (<a href="https://github.com/BRGM/hubeau/issues/110">#110</a>)</li>
 <li>L'endpoint <code>https://hubeau.eaufrance.fr/api/v1/temperature/chronique</code> peut être utilisé pour consulter les données de température. (<a href="https://github.com/BRGM/hubeau/issues/110">#110</a>)</li>
-<li>La route <code>/api/v1/temperature/station</code> de l'API de température des cours d'eau supporte des paramètres tels que <code>code_departement</code>, <code>size</code>, <code>exact_count</code>, <code>format</code> et <code>pretty</code>. (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>)</li>
-<li>Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>La taille maximale autorisée pour le paramètre <code>size</code> est 20 000. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
-<li>Un maximum de 20 000 valeurs de retour peut être récupéré, quelle que soit la taille de la page. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
-<li>Le paramètre <code>size</code> par défaut est 1 000 si non spécifié. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
-<li>Si le paramètre <code>size</code> est omis dans l'URL, la limite de 20 000 résultats ne semble pas fonctionner comme prévu, permettant d'accéder à un nombre de pages supérieur à la limite implicite. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
-<li>La limitation à 20 000 résultats est une politique générale des API Hub'eau mise en place pour préserver les performances et la disponibilité. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
-</ul>
-<h2 id="informations-métier">Informations métier</h2>
-<ul>
-<li>Les données de température des cours d'eau de l'API Hub'Eau incluent des attributs détaillés tels que le code et libellé du paramètre, la date et heure de mesure, le résultat, l'unité et la qualification de la mesure. (<a href="https://github.com/BRGM/hubeau/issues/6">#6</a>)</li>
-<li>Les champs <code>code_parametre</code>, <code>libelle_parametre</code>, <code>date_mesure_temp</code>, <code>heure_mesure_temp</code>, <code>resultat</code>, <code>code_unite</code>, <code>symbole_unite</code>, <code>code_qualification</code>, <code>libelle_qualification</code> sont des informations essentielles pour l'analyse des chroniques de température. (<a href="https://github.com/BRGM/hubeau/issues/6">#6</a>)</li>
-<li>Les données d'origine de température dans Naiades incluent correctement la distinction AM/PM. (<a href="https://github.com/BRGM/hubeau/issues/18">#18</a>)</li>
-<li>L'API Température des cours d'eau a été mise à jour en juillet 2019 pour inclure 1,3 million de données de 2017, 1 million de 2018 et 80 000 de 2019 (jusqu'au 11 juin). (<a href="https://github.com/BRGM/hubeau/issues/18">#18</a>)</li>
-<li>Des mesures de température contenaient des dates incorrectes (dans le futur). (<a href="https://github.com/BRGM/hubeau/issues/21">#21</a>)</li>
-<li>Plus de 30 000 entrées incorrectes ont été identifiées. (<a href="https://github.com/BRGM/hubeau/issues/21">#21</a>)</li>
-<li>Le problème était potentiellement lié à la station 03047445. (<a href="https://github.com/BRGM/hubeau/issues/21">#21</a>)</li>
 <li>La plupart des données de température des cours d'eau disponibles via Hub'Eau sont anciennes. (<a href="https://github.com/BRGM/hubeau/issues/110">#110</a>)</li>
 <li>De nombreuses stations de mesure de température des cours d'eau ont été arrêtées autour de 2013, expliquant le manque de données récentes. (<a href="https://github.com/BRGM/hubeau/issues/110">#110</a>)</li>
 <li>Les utilisateurs recherchent activement des sources de données plus récentes pour la température de l'eau en France. (<a href="https://github.com/BRGM/hubeau/issues/110">#110</a>)</li>
-<li>Les données de température des cours d'eau peuvent être filtrées par code départemental (ex: 45). (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>)</li>
-<li>Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
-<li>Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>La multiplication des paramètres <code>page</code> * <code>size</code> ne peut pas dépasser 20 000 pour l'API Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
+<li>La taille maximale autorisée pour le paramètre <code>size</code> est 20 000. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
+<li>Un maximum de 20 000 valeurs de retour peut être récupéré, quelle que soit la taille de la page. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
+<li>Le paramètre <code>size</code> par défaut est 1 000 si non spécifié. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
+<li>L'API ajoute <code>size=1000</code> aux liens "next" dans la réponse JSON, ce qui peut provoquer une erreur si <code>page</code> * <code>size</code> dépasse 20 000 (ex: page 21 avec size 1000). (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
+<li>Si le paramètre <code>size</code> est omis dans l'URL, la limite de 20 000 résultats ne semble pas fonctionner comme prévu, permettant d'accéder à un nombre de pages supérieur à la limite implicite. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
+<li>La limitation à 20 000 résultats est une politique générale des API Hub'eau mise en place pour préserver les performances et la disponibilité. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
 <li>Le site Naïades (naiades.eaufrance.fr) propose un export de données historiques sur les températures des cours d'eau comme alternative à l'API. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
 <li>L'export de données de Naïades peut contenir des dates incorrectes à la fin du fichier. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
 </ul>
-<h2 id="problèmes-connus">Problèmes connus</h2>
+<h3 id="historique-des-problèmes-résolus">Historique des problèmes résolus</h3>
 <ul>
-<li>Le bug concernant les champs manquants dans <code>chronique.csv</code> a été corrigé dans la version beta-1 de l'API Température des cours d'eau, mise en ligne le 15/06/2018. (<a href="https://github.com/BRGM/hubeau/issues/6">#6</a>)</li>
-<li>L'API Température des cours d'eau présentait un bug où l'horodatage des observations ne distinguait pas AM et PM. (<a href="https://github.com/BRGM/hubeau/issues/18">#18</a>)</li>
-<li>Un bug concernant des années erronées dans les données de l'API Température des cours d'eau a été corrigé. (<a href="https://github.com/BRGM/hubeau/issues/18">#18</a>)</li>
-<li>Le bug d'horodatage AM/PM dans l'API Température des cours d'eau a été corrigé lors d'une mise à jour du 26 avril 2019. (<a href="https://github.com/BRGM/hubeau/issues/18">#18</a>)</li>
-<li>Les erreurs de données ont été corrigées lors d'une mise à jour des données (27 avril 2019). (<a href="https://github.com/BRGM/hubeau/issues/21">#21</a>)</li>
-<li>L'API Température des cours d'eau a pu générer une erreur 'Internal server error' pour certaines requêtes. (<a href="https://github.com/BRGM/hubeau/issues/91">#91</a>)</li>
-<li>La réponse d'erreur de l'API inclut les champs 'code', 'message' et 'field_errors'. (<a href="https://github.com/BRGM/hubeau/issues/91">#91</a>)</li>
-<li>L'API de température des cours d'eau a rencontré une erreur HTTP 500 sur la route <code>/api/v1/temperature/station</code>. (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>)</li>
-<li>L'erreur affectait les formats JSON et CSV de l'API de température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>)</li>
-<li>L'API de température des cours d'eau est de nouveau disponible en JSON et CSV après résolution de l'erreur. (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>)</li>
-<li>L'API ajoute <code>size=1000</code> aux liens "next" dans la réponse JSON, ce qui peut provoquer une erreur si <code>page</code> * <code>size</code> dépasse 20 000 (ex: page 21 avec size 1000). (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
+<li>~~Avant le 15/06/2018, l'opération <code>chronique.csv</code> de l'API Température des cours d'eau ne retournait que les 10 premiers champs, laissant les 9 champs suivants (ex: <code>code_parametre</code>, <code>resultat</code>, <code>libelle_qualification</code>) vides. (<a href="https://github.com/BRGM/hubeau/issues/6">#6</a>)~~</li>
+<li>~~La version JSON de l'opération <code>chronique</code> de l'API Température des cours d'eau retournait correctement tous les champs, contrairement à la version CSV. (<a href="https://github.com/BRGM/hubeau/issues/6">#6</a>)~~</li>
+<li>~~Le bug concernant les champs manquants dans <code>chronique.csv</code> a été corrigé dans la version beta-1 de l'API Température des cours d'eau, mise en ligne le 15/06/2018. (<a href="https://github.com/BRGM/hubeau/issues/6">#6</a>)~~</li>
+<li>~~Les données de température des cours d'eau de l'API Hub'Eau incluent des attributs détaillés tels que le code et libellé du paramètre, la date et heure de mesure, le résultat, l'unité et la qualification de la mesure. (<a href="https://github.com/BRGM/hubeau/issues/6">#6</a>)~~</li>
+<li>~~Les champs <code>code_parametre</code>, <code>libelle_parametre</code>, <code>date_mesure_temp</code>, <code>heure_mesure_temp</code>, <code>resultat</code>, <code>code_unite</code>, <code>symbole_unite</code>, <code>code_qualification</code>, <code>libelle_qualification</code> sont des informations essentielles pour l'analyse des chroniques de température. (<a href="https://github.com/BRGM/hubeau/issues/6">#6</a>)~~</li>
+<li>~~L'API Température des cours d'eau présentait un bug où l'horodatage des observations ne distinguait pas AM et PM. (<a href="https://github.com/BRGM/hubeau/issues/18">#18</a>)~~</li>
+<li>~~Un bug concernant des années erronées dans les données de l'API Température des cours d'eau a été corrigé. (<a href="https://github.com/BRGM/hubeau/issues/18">#18</a>)~~</li>
+<li>~~Le bug d'horodatage AM/PM dans l'API Température des cours d'eau a été corrigé lors d'une mise à jour du 26 avril 2019. (<a href="https://github.com/BRGM/hubeau/issues/18">#18</a>)~~</li>
+<li>~~Les données d'origine de température dans Naiades incluent correctement la distinction AM/PM. (<a href="https://github.com/BRGM/hubeau/issues/18">#18</a>)~~</li>
+<li>~~L'API Température des cours d'eau a été mise à jour en juillet 2019 pour inclure 1,3 million de données de 2017, 1 million de 2018 et 80 000 de 2019 (jusqu'au 11 juin). (<a href="https://github.com/BRGM/hubeau/issues/18">#18</a>)~~</li>
+<li>~~L'API <code>temperature/chronique</code> a retourné des mesures avec des dates futures (ex: 2045/2046). (<a href="https://github.com/BRGM/hubeau/issues/21">#21</a>)~~</li>
+<li>~~Les erreurs de données ont été corrigées lors d'une mise à jour des données (27 avril 2019). (<a href="https://github.com/BRGM/hubeau/issues/21">#21</a>)~~</li>
+<li>~~Des mesures de température contenaient des dates incorrectes (dans le futur). (<a href="https://github.com/BRGM/hubeau/issues/21">#21</a>)~~</li>
+<li>~~Plus de 30 000 entrées incorrectes ont été identifiées. (<a href="https://github.com/BRGM/hubeau/issues/21">#21</a>)~~</li>
+<li>~~Le problème était potentiellement lié à la station 03047445. (<a href="https://github.com/BRGM/hubeau/issues/21">#21</a>)~~</li>
+<li>~~L'API Température des cours d'eau a pu générer une erreur 'Internal server error' pour certaines requêtes. (<a href="https://github.com/BRGM/hubeau/issues/91">#91</a>)~~</li>
+<li>~~La réponse d'erreur de l'API inclut les champs 'code', 'message' et 'field_errors'. (<a href="https://github.com/BRGM/hubeau/issues/91">#91</a>)~~</li>
+<li>~~L'API de température des cours d'eau a rencontré une erreur HTTP 500 sur la route <code>/api/v1/temperature/station</code>. (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>)~~</li>
+<li>~~L'erreur affectait les formats JSON et CSV de l'API de température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>)~~</li>
+<li>~~L'API de température des cours d'eau est de nouveau disponible en JSON et CSV après résolution de l'erreur. (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>)~~</li>
+<li>~~La route <code>/api/v1/temperature/station</code> de l'API de température des cours d'eau supporte des paramètres tels que <code>code_departement</code>, <code>size</code>, <code>exact_count</code>, <code>format</code> et <code>pretty</code>. (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>)~~</li>
+<li>~~Les données de température des cours d'eau peuvent être filtrées par code départemental (ex: 45). (<a href="https://github.com/BRGM/hubeau/issues/124">#124</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
+<li>~~Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
 </ul>
-<h2 id="tips-dutilisation">Tips d'utilisation</h2>
-<ul>
-<li>La multiplication des paramètres <code>page</code> * <code>size</code> ne peut pas dépasser 20 000 pour l'API Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/236">#236</a>)</li>
-</ul>
-<hr />
-<h2 id="issues-sources">Issues sources</h2>
+<h3 id="issues-sources">Issues sources</h3>
 <ul>
 <li><strong>#6</strong> [Température] Opération chronique.csv ne retourne pas tous les champs — L'opération <code>chronique.csv</code> de l'API Température des cours d'eau ne retournait pas tous les champs, un bug corrigé dans la version beta-1 du 15/06/2018. <code>[résolu]</code></li>
 <li><strong>#18</strong> [API TEMPERATURE] - horodatage AM PM erroné — L'API Température des cours d'eau a corrigé un bug d'horodatage AM/PM et des erreurs d'années, et a mis à jour ses données pour inclure les années 2017, 2018 et une partie de 2019. <code>[résolu]</code></li>
@@ -137,6 +145,7 @@
 <li><strong>#137</strong> Package R pour requêter les APIs hubeau — Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN, permettant de requêter 10 des 12 APIs Hub'Eau avec une syntaxe simplifiée, et est utilisé par l'OFB pour des rapports mensuels sur l'écoulement des cours d'eau. <code>[résolu]</code></li>
 <li><strong>#236</strong> [API Température des cours d'eau] Problème lié à la pagination de l'API — L'API Température des cours d'eau impose une limite de 20 000 résultats (<code>page</code> * <code>size</code>), mais cette limite est contournable ou mal appliquée si le paramètre <code>size</code> est omis, et l'export alternatif de Naïades présente des problèmes de qualité de données. <code>[en_cours]</code></li>
 </ul>
+</details>
         </article>
 
         <footer class="footer">
@@ -145,7 +154,36 @@
         </footer>
     </main>
 
+    <!-- Chatbot toggle button -->
+    <button class="chatbot-toggle" id="chatbotToggle" aria-label="Ouvrir le chatbot">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+
+    <!-- Chatbot panel -->
+    <div class="chatbot-panel" id="chatbotPanel">
+        <div class="chatbot-header">
+            <div class="chatbot-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Hub'Eau Assistant
+            </div>
+            <button class="chatbot-close" id="chatbotClose">&times;</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg chat-msg-bot">
+                <div class="chat-bubble">Bonjour ! Posez-moi une question sur les APIs Hub'Eau. Je cherche dans la base de connaissances pour vous r&eacute;pondre.</div>
+            </div>
+        </div>
+        <div class="chatbot-status" id="chatbotStatus" style="display:none;"></div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" placeholder="Posez votre question..." autocomplete="off">
+            <button class="chatbot-send" id="chatbotSend">Envoyer</button>
+        </div>
+    </div>
+
     <script src="search.js"></script>
+    <script src="chatbot.js"></script>
     <script>
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');

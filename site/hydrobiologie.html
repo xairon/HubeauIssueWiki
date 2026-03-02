@@ -68,116 +68,136 @@
 
         <article class="content">
             <h1 id="hydrobiologie">Hydrobiologie</h1>
-<h2 id="particularités-techniques">Particularités techniques</h2>
+<blockquote>
+<p>15 issues analysées</p>
+</blockquote>
+<h2 id="guide">Guide</h2>
+<h3 id="comportement-actuel">Comportement actuel</h3>
+<p>L'API Hub'Eau Hydrobiologie (v1) offre un accès aux données d'indices et de taxons hydrobiologiques, couvrant les poissons, macroinvertébrés, diatomées et macrophytes. Elle intègre exclusivement les données de la version actuelle de Naïades (V1) (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>). Les endpoints <code>/indices</code> et <code>/taxons</code> permettent un filtrage précis par <code>date_debut_prelevement</code>, <code>date_fin_prelevement</code>, <code>code_departement</code>, <code>code_indice</code>, <code>code_station_hydrobio</code> et <code>code_support</code>. Les réponses incluent les champs <code>code_banque_reference</code> et <code>code_operation</code> pour faciliter le suivi des prélèvements (#99, #107). La pagination est essentielle, car la limite de résultats par requête est fixée à 10 000 enregistrements maximum, avec un code 206 (Partial Content) si ce seuil est dépassé (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>). L'API recense environ 20560 stations hydrobiologiques, et les données environnementales ainsi que les informations sur les opérations sont disponibles via la requête <code>taxons</code> (#98, #215).</p>
+<h3 id="pièges-à-éviter">Pièges à éviter</h3>
 <ul>
-<li>L'API Hub'Eau "Poisson" (endpoint <code>/poissons</code>) ne permet pas de récupérer les données d'un poisson par son nom, seulement par son <code>code_espece_poisson</code>. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)</li>
-<li>L'endpoint <code>/code_espece_poisson</code> de l'API "Poisson" permet d'obtenir la liste des correspondances entre codes OFB, codes SANDRE, noms latins et français des espèces. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)</li>
-<li>La future API Hub'Eau "Hydrobiologie" permettra d'interroger les données par le nom de l'espèce. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)</li>
-<li>L'API Référentiel du SANDRE (<code>api.sandre.eaufrance.fr/referentiels/v1/apt.json</code>) peut être utilisée pour faire la correspondance nom-code. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)</li>
-<li>Avec l'API SANDRE, on peut filtrer par nom latin (<code>NomLatinAppelTaxon</code>) pour obtenir le code OFB (sous <code>CodeAlternatifAp</code> où <code>OrgCdAlternatif="ASPE"</code>). (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)</li>
-<li>Avec l'API SANDRE, on peut filtrer par nom commun (<code>//LbNomCommunAppelTaxon</code>) en utilisant une expression XPath dans le paramètre <code>filter</code>. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)</li>
+<li><strong>Données Naïades V0 manquantes</strong> : L'API n'intègre pas les données de Naïades V0, ce qui peut entraîner l'absence de certaines données hydrobiologiques plus anciennes et potentiellement utiles (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>).</li>
+<li><strong>Qualité des données sources</strong> : Malgré des requêtes correctes, des erreurs peuvent persister dans les résultats, comme des indices d'invertébrés incorrectement associés au support des diatomées (code 10) en raison de problèmes dans les données sources Naïades (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>).</li>
+<li><strong>Absence de filtre par date de mise à jour</strong> : Il est impossible de filtrer les données par leur date de dernière modification, obligeant à recharger l'intégralité des jeux de données pour détecter les mises à jour ou corrections (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>).</li>
+<li><strong>Filtrage des champs géographiques vides</strong> : L'API ne permet pas de filtrer les stations dont les champs géographiques (région, département, commune) sont non renseignés, ce qui peut entraîner l'omission d'environ 45 stations lors de requêtes basées sur ces critères (<a href="https://github.com/BRGM/hubeau/issues/215">#215</a>).</li>
+<li><strong>Inconsistance des formats de date</strong> : Le champ <code>date_prelevement</code> présente des formats différents selon le format de sortie (JSON ou GeoJSON) et l'endpoint (<code>taxons</code> ou <code>indices</code>), nécessitant une adaptation du code de parsing (<a href="https://github.com/BRGM/hubeau/issues/247">#247</a>).</li>
+<li><strong>Absence d'endpoint dédié aux opérations</strong> : Bien que le champ <code>code_operation</code> soit présent, il n'existe pas d'endpoint spécifique pour les opérations de prélèvement, limitant l'accès à toutes les informations nécessaires pour recréer une opération complète (#98, #123).</li>
+</ul>
+<h3 id="bonnes-pratiques">Bonnes pratiques</h3>
+<ul>
+<li>Pour interroger les indices de diatomées, utilisez le <code>code_support=10</code> et, pour une meilleure fiabilité, filtrez également par les codes d'indices spécifiques aux diatomées (ex: 5856, 1022, etc.) afin de contourner les erreurs potentielles des données sources (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>).</li>
+<li>Exploitez les champs <code>code_banque_reference</code> et <code>code_operation</code> pour identifier et joindre précisément les résultats à des opérations de prélèvement spécifiques, ce qui est crucial en cas de multiples opérations le même jour sur une station (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>).</li>
+<li>Face à l'absence de filtre par date de mise à jour, pour maintenir vos jeux de données à jour, il est recommandé de requêter périodiquement (par exemple, mensuellement) l'ensemble des données d'une période donnée (par exemple, la dernière année) (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>).</li>
+<li>Si des informations complètes sur les opérations de prélèvement sont nécessaires et ne sont pas disponibles via l'API, complétez vos données en utilisant les exports CSV de Naïades (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>).</li>
+</ul>
+<h3 id="contexte-métier">Contexte métier</h3>
+<p>L'API Hydrobiologie s'appuie sur la base de données nationale Naïades (version V1) pour diffuser des informations sur la qualité biologique des milieux aquatiques (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>). Les données incluent des indices biologiques (comme l'IBG Normalisé pour les invertébrés) et des listes taxonomiques pour divers supports biologiques. Les codes SANDRE sont des référentiels clés : par exemple, le <code>code_support=10</code> est dédié aux diatomées, tandis que le <code>code_support=13</code> concerne les macroinvertébrés (#46, #97). Le champ <code>code_operation</code> est une référence cruciale (<code>RefOperationPrelBio</code> dans Naïades) qui permet de lier les résultats biologiques à une opération de prélèvement spécifique et de réaliser des jointures avec les exports bruts de Naïades (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>). Les données environnementales et les informations sur les opérations sont vitales pour le calcul d'indices complexes comme l'I2M2, souvent dérivés des listes faunistiques (<a href="https://github.com/BRGM/hubeau/issues/98">#98</a>). La qualité des données est intrinsèquement liée aux sources (Naïades), ce qui peut entraîner des incohérences, comme des stations sans informations géographiques complètes ou des erreurs d'affectation d'indices (#46, #215).</p>
+<hr />
+<details>
+<summary><strong>Archive détaillée</strong> — Tous les faits bruts extraits des issues</summary>
+<h3 id="faits-actuels">Faits actuels</h3>
+<ul>
 <li>L'API Hub'Eau Hydrobiologie n'intègre que les données de la version actuelle de Naïades (V1). (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>)</li>
 <li>Les données de Naïades V0 ne sont pas directement accessibles via l'API Hub'Eau Hydrobiologie. (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>)</li>
 <li>Les données manquantes dans Naïades V1 seront automatiquement visibles dans Hub'Eau une fois intégrées à Naïades V1. (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>)</li>
-<li>La requête initiale avec <code>code_support=13</code> pour les diatomées est incorrecte et renvoie des indices invertébrés. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)</li>
-<li>Le paramètre <code>code_support=10</code> doit être utilisé pour interroger les indices de diatomées. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)</li>
-<li>L'endpoint <code>/api/v1/hydrobio/indices</code> permet désormais de filtrer correctement par <code>date_debut_prelevement</code> et <code>date_fin_prelevement</code>. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)</li>
-<li>L'exemple de l'API Hub'Eau Hydrobiologie pour la recherche d'indices biologiques avec le paramètre <code>code_support=13</code> associait incorrectement ce code aux diatomées. (<a href="https://github.com/BRGM/hubeau/issues/97">#97</a>)</li>
+<li>Naïades V0 contient des données hydrobiologiques (hors poisson) qui ne sont pas encore toutes présentes dans Naïades V1. (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>)</li>
+<li>L'intégration des données manquantes dans Naïades V1 dépend de la transmission par les Agences de l'Eau LB et RM. (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>)</li>
+<li>Des données brutes au format CSV et XLS existent dans Naïades V0. (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>)</li>
 <li>Les données environnementales et les informations sur les opérations sont disponibles dans la requête 'taxons' de l'API Hydrobiologie. (<a href="https://github.com/BRGM/hubeau/issues/98">#98</a>)</li>
 <li>Il est suggéré de créer une requête dédiée 'Opérations' pour exposer ces informations de manière plus logique. (<a href="https://github.com/BRGM/hubeau/issues/98">#98</a>)</li>
-<li>L'API Hydrobiologie a été mise à jour en v1 en juillet 2022. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)</li>
-<li>Les champs <code>code_banque_reference</code> et <code>code_operation</code> ont été ajoutés à la réponse de l'API pour les endpoints <code>indices</code> et <code>taxons</code>. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)</li>
-<li>Les champs <code>code_banque_reference</code> et <code>code_operation</code> sont également requêtables sur l'API Hydrobiologie. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)</li>
-<li>Avant cette mise à jour, il était difficile de rattacher une liste taxonomique à l'opération correspondante sans le champ <code>RefOperationPrelBio</code>. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)</li>
-<li>L'API Hub'Eau Hydrobiologie a migré de la version <code>vbeta</code> à la version <code>v1</code>. (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)</li>
-<li>Le paramètre <code>date_debut_prelevement</code> est fonctionnel dans l'API Hub'Eau Hydrobiologie <code>v1</code> pour filtrer les données par date de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)</li>
-<li>La limite de profondeur d'accès aux résultats pour l'API Hydrobiologie est de 10 000 enregistrements maximum. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)</li>
-<li>Cette limite a été réduite de 20 000 à 10 000 enregistrements pour éviter les timeouts de l'API. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)</li>
-<li>La documentation de l'API Hydrobiologie sera mise à jour pour refléter cette nouvelle limite. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)</li>
-<li>L'API peut renvoyer un code 206 (Partial Content) si le nombre total d'enregistrements disponibles dépasse la limite interne de 10 000. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)</li>
+<li>Les exports Naïades hydrobiologie contiennent des données environnementales et des informations sur les opérations. (<a href="https://github.com/BRGM/hubeau/issues/98">#98</a>)</li>
+<li>Ces informations sont indispensables pour les scripts du SEEE, notamment pour le calcul de l'indice I2M2 à partir des listes faunistiques de l'IBG-DCE. (<a href="https://github.com/BRGM/hubeau/issues/98">#98</a>)</li>
 <li>L'API Hydrobiologie ne dispose pas d'un endpoint dédié aux opérations de prélèvement, contrairement à l'API Qualité des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>)</li>
 <li>Un champ "<em>code_operation_prelevement</em>" a été ajouté aux endpoints "indices" et "taxons" de l'API Hydrobiologie. (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>)</li>
 <li>La création d'un endpoint "operations" spécifique ou l'ajout de champs supplémentaires pour les opérations de prélèvement est une évolution envisagée pour la feuille de route 2025-2026 mais non planifiée à ce stade. (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>)</li>
 <li>Les champs initialement demandés pour les exports d'opérations sont : CdPointEauxSurf, CdMethode, CdProducteur, CdPreleveur, CdDeterminateur, CodeSandreRdd, CdStatutResBioOperationPrelBio, CdQualResBioOperationPrelBio, ObjOperationPrelBio. (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>)</li>
-<li>Avant correction, l'endpoint <code>/hydrobio/taxons</code> de l'API Hydrobiologie pouvait retourner des observations de taxons et des indices dupliqués. (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)</li>
-<li>La duplication des taxons et des indices était causée par la présence de conditions environnementales associées à l'opération de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)</li>
-<li>Une nouvelle version de l'API Hydrobiologie a été déployée pour corriger cette anomalie de duplication. (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)</li>
-<li>La correction des doublons a entraîné une diminution du volume de données diffusées par l'API (2 millions d'observations de taxons en moins, 100 000 indices en moins). (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)</li>
+<li>Les champs manquants sont nécessaires et obligatoires pour créer une opération de prélèvement biologique à laquelle des résultats biologiques doivent être rattachés. (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>)</li>
+<li>Les informations clés pour créer une opération de prélèvement biologique ne sont pas toutes disponibles via les APIs "indices" et "taxons" de l'API Hydrobiologie, même avec l'ajout du champ "<em>code_operation_prelevement</em>". (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>)</li>
+<li>Les données d'opérations de prélèvement sont disponibles via des exports CSV depuis Naïades. (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>)</li>
 <li>Les APIs Hub'Eau (notamment Piézométrie, Hydrobiologie, Qualité des cours d'eau, Hydrométrie) ne disposent pas de paramètre de filtre par date de mise à jour des données. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>L'absence de filtre par date de mise à jour oblige les utilisateurs à charger l'intégralité des données pour rester à jour. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>L'API Hydrométrie inclut une 'date de production' dans ses résultats, mais ce paramètre n'est pas utilisable comme filtre de requête. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>L'ajout d'un filtre par date de mise à jour n'est pas prévu à court terme pour l'API Piézométrie. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>L'ajout d'un filtre par date de mise à jour est une évolution identifiée pour l'API Hydrométrie. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
+<li>Le service web ADES (Accès aux Données sur les Eaux Souterraines) offre une fonctionnalité de synchronisation des points d'eau et mesures basée sur une date de mise à jour. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
+<li>La synchronisation par date de mise à jour est essentielle pour récupérer uniquement les différences et les corrections apportées aux données sans télécharger l'intégralité du jeu de données. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
+<li>Les données environnementales peuvent être corrigées après leur première publication ('date de production'), nécessitant un mécanisme de mise à jour efficace. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
+<li>Une pratique courante pour contourner l'absence de filtre est de requêter toutes les données d'une période (ex: dernière année) mensuellement, ce qui est sous-optimal. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>L'API Hydrobiologie ne permet pas de filtrer les stations dont les champs géographiques (ex: code_region) sont vides ou non renseignés via une requête code_region = "" (chaîne vide). (<a href="https://github.com/BRGM/hubeau/issues/215">#215</a>)</li>
 <li>Une requête sur un champ avec une chaîne de texte vide se comporte comme une absence de renseignement de l'argument, ne filtrant pas les valeurs vides. (<a href="https://github.com/BRGM/hubeau/issues/215">#215</a>)</li>
 <li>Il n'est pas possible dans l'état actuel de modifier le comportement de la recherche pour autoriser une valeur chaîne vide ou null comme critère de filtrage. (<a href="https://github.com/BRGM/hubeau/issues/215">#215</a>)</li>
 <li>L'équipe Hub'Eau étudie la possibilité de retourner une valeur générique pour les champs non renseignés afin de permettre leur filtrage ultérieur. (<a href="https://github.com/BRGM/hubeau/issues/215">#215</a>)</li>
 <li>Le nombre total de stations dans l'API Hydrobiologie est d'environ 20560, dépassant le seuil de résultats pour une requête sans critère. (<a href="https://github.com/BRGM/hubeau/issues/215">#215</a>)</li>
-<li>Le champ 'date_prelevement' de l'API Hydrobiologie a un format de date inconsistent selon le format de sortie demandé (JSON ou GeoJSON). (<a href="https://github.com/BRGM/hubeau/issues/247">#247</a>)</li>
-<li>Pour l'endpoint '/hydrobio/taxons', 'date_prelevement' est au format ISO 8601 ('YYYY-MM-DDTHH:MM:SSZ') en JSON et en timestamp Unix millisecondes en GeoJSON. (<a href="https://github.com/BRGM/hubeau/issues/247">#247</a>)</li>
-<li>Pour l'endpoint '/hydrobio/indices', 'date_prelevement' est au format ISO 8601 ('YYYY-MM-DDTHH:MM:SSZ') en JSON et au format 'YYYY-MM-DD' en GeoJSON. (<a href="https://github.com/BRGM/hubeau/issues/247">#247</a>)</li>
-</ul>
-<h2 id="informations-métier">Informations métier</h2>
-<ul>
-<li>L'endpoint <code>/code_espece_poisson</code> répertorie 195 espèces de poissons. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)</li>
-<li>Les codes OFB sont utilisés par l'API Hub'Eau "Poisson" pour identifier les espèces. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)</li>
-<li>La future API Hub'Eau "Hydrobiologie" diffusera des données sur les poissons, les macroinvertébrés, les diatomées et les macrophytes. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)</li>
-<li>Naïades V0 contient des données hydrobiologiques (hors poisson) qui ne sont pas encore toutes présentes dans Naïades V1. (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>)</li>
-<li>L'intégration des données manquantes dans Naïades V1 dépend de la transmission par les Agences de l'Eau LB et RM. (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>)</li>
-<li>Des données brutes au format CSV et XLS existent dans Naïades V0. (<a href="https://github.com/BRGM/hubeau/issues/45">#45</a>)</li>
-<li>Le code SANDRE correct pour le support des diatomées est 10. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)</li>
-<li>Le code SANDRE 13 ne correspond pas aux diatomées pour les indices biologiques. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)</li>
-<li>L'indice biologique 'IBG Normalisé' (code indice : 1000) est un indice d'invertébrés. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)</li>
-<li>Il existe des problèmes de qualité des données dans Naïades où des indices sont affectés à un mauvais code support (ex: indices invertébrés affectés au support diatomées). (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)</li>
-<li>Les codes d'indices 5856, 1022, 1080, 8059, 8060, 1692, 6335 sont des indices spécifiques aux diatomées. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)</li>
-<li>L'API Hydrobiologie fournit des données sur les indices hydrobiologiques. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)</li>
-<li>Les données d'indices hydrobiologiques incluent des informations sur les dates de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)</li>
-<li>Le code SANDRE support <code>13</code> pour les indices biologiques correspond aux macroinvertébrés. (<a href="https://github.com/BRGM/hubeau/issues/97">#97</a>)</li>
-<li>Le code SANDRE support <code>10</code> pour les indices biologiques correspond aux diatomées. (<a href="https://github.com/BRGM/hubeau/issues/97">#97</a>)</li>
-<li>Les exports Naïades hydrobiologie contiennent des données environnementales et des informations sur les opérations. (<a href="https://github.com/BRGM/hubeau/issues/98">#98</a>)</li>
-<li>Ces informations sont indispensables pour les scripts du SEEE, notamment pour le calcul de l'indice I2M2 à partir des listes faunistiques de l'IBG-DCE. (<a href="https://github.com/BRGM/hubeau/issues/98">#98</a>)</li>
-<li>Le champ <code>RefOperationPrelBio</code> (désormais <code>code_operation</code>) est crucial pour différencier les résultats si plusieurs opérations de prélèvement biologique ont été effectuées le même jour sur la même station. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)</li>
-<li>Le champ <code>RefOperationPrelBio</code> est la référence de l’opération de prélèvement dans la banque de référence Naïades. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)</li>
-<li>Ce champ permet d’effectuer une jointure avec les fichiers <code>Operations ResultatsBiologiques</code> et <code>ListesFauneFlore</code> des exports Naïades. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)</li>
-<li>L'API Hydrobiologie permet d'extraire des indices hydrobiologiques en filtrant par département (<code>code_departement</code>) et par type d'indice (<code>code_indice</code>). (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)</li>
-<li>Les données disponibles via l'API Hydrobiologie incluent des champs comme <code>code_indice</code>, <code>code_station_hydrobio</code>, <code>date_prelevement</code>, <code>resultat_indice</code>, <code>unite_indice</code>, <code>code_departement</code>, <code>code_support</code>, <code>libelle_support</code>, <code>code_qualification</code>. (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)</li>
-<li>L'API <code>hydrobio/taxons</code> permet d'accéder aux données de taxons hydrobiologiques. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)</li>
-<li>Les données hydrobiologiques peuvent être filtrées par <code>code_station_hydrobio</code>. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)</li>
-<li>Les champs manquants sont nécessaires et obligatoires pour créer une opération de prélèvement biologique à laquelle des résultats biologiques doivent être rattachés. (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>)</li>
-<li>Les informations clés pour créer une opération de prélèvement biologique ne sont pas toutes disponibles via les APIs "indices" et "taxons" de l'API Hydrobiologie, même avec l'ajout du champ "<em>code_operation_prelevement</em>". (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>)</li>
-<li>Les données d'opérations de prélèvement sont disponibles via des exports CSV depuis Naïades. (<a href="https://github.com/BRGM/hubeau/issues/123">#123</a>)</li>
-<li>Certaines données d'hydrobiologie diffusées par l'API proviennent de la base d'origine "Aspe". (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)</li>
-<li>La duplication des données dans l'API pouvait entraîner des totaux d'effectifs incorrects pour les taxons (ex: 13 anguilles affichées comme 26). (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)</li>
-<li>Le <code>code_appel_taxon</code> 2038 correspond aux anguilles. (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)</li>
-<li>Le service web ADES (Accès aux Données sur les Eaux Souterraines) offre une fonctionnalité de synchronisation des points d'eau et mesures basée sur une date de mise à jour. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
-<li>La synchronisation par date de mise à jour est essentielle pour récupérer uniquement les différences et les corrections apportées aux données sans télécharger l'intégralité du jeu de données. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
-<li>Les données environnementales peuvent être corrigées après leur première publication ('date de production'), nécessitant un mécanisme de mise à jour efficace. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
-<li>Une pratique courante pour contourner l'absence de filtre est de requêter toutes les données d'une période (ex: dernière année) mensuellement, ce qui est sous-optimal. (<a href="https://github.com/BRGM/hubeau/issues/131">#131</a>)</li>
 <li>Environ 45 stations sur 20560 dans l'API Hydrobiologie ont des champs géographiques (code_region, code_departement, code_commune, code_cours_eau, code_masse_eau) non renseignés. (<a href="https://github.com/BRGM/hubeau/issues/215">#215</a>)</li>
 <li>Parmi les stations avec des champs géographiques non renseignés, certaines sont géolocalisées en France et d'autres à l'étranger (Suisse, Espagne). (<a href="https://github.com/BRGM/hubeau/issues/215">#215</a>)</li>
 <li>Certaines stations avec des champs géographiques non renseignés sont positionnées sur des communes ayant disparu suite à une fusion. (<a href="https://github.com/BRGM/hubeau/issues/215">#215</a>)</li>
 <li>Boucler sur les codes région ne permet pas de récupérer toutes les stations, car celles avec des codes région vides sont omises (environ 45 stations manquantes). (<a href="https://github.com/BRGM/hubeau/issues/215">#215</a>)</li>
+<li>Le champ 'date_prelevement' de l'API Hydrobiologie a un format de date inconsistent selon le format de sortie demandé (JSON ou GeoJSON). (<a href="https://github.com/BRGM/hubeau/issues/247">#247</a>)</li>
+<li>Pour l'endpoint '/hydrobio/taxons', 'date_prelevement' est au format ISO 8601 ('YYYY-MM-DDTHH:MM:SSZ') en JSON et en timestamp Unix millisecondes en GeoJSON. (<a href="https://github.com/BRGM/hubeau/issues/247">#247</a>)</li>
+<li>Pour l'endpoint '/hydrobio/indices', 'date_prelevement' est au format ISO 8601 ('YYYY-MM-DDTHH:MM:SSZ') en JSON et au format 'YYYY-MM-DD' en GeoJSON. (<a href="https://github.com/BRGM/hubeau/issues/247">#247</a>)</li>
 </ul>
-<h2 id="problèmes-connus">Problèmes connus</h2>
+<h3 id="historique-des-problèmes-résolus">Historique des problèmes résolus</h3>
 <ul>
-<li>Même avec <code>code_support=10</code>, environ 10% des résultats peuvent être des indices d'invertébrés en raison d'erreurs dans les données sources. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)</li>
-<li>Les erreurs de données proviennent des sources (Naïades) et ne peuvent pas être corrigées directement par Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)</li>
-<li>L'API Hydrobiologie en version vbeta renvoyait une erreur 'Internal server error' lors de l'utilisation des paramètres <code>date_debut_prelevement</code> ou <code>date_fin_prelevement</code> sur l'endpoint <code>/indices</code>. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)</li>
-<li>Les dates de prélèvement retournées par l'API Hydrobiologie (vbeta) sans filtre de date étaient au format date/heure au lieu de date seule, ce qui était potentiellement lié au bug de filtrage. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)</li>
-<li>Le bug a été corrigé lors du passage de l'API Hydrobiologie de la version <code>vbeta</code> à la version <code>v1</code>. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)</li>
-<li>L'API Hydrobiologie peut retourner des erreurs 500 (erreur interne du serveur). (<a href="https://github.com/BRGM/hubeau/issues/106">#106</a>)</li>
-<li>L'API Hydrobiologie peut retourner des erreurs 406 (Not Acceptable), notamment lors de requêtes pour des formats spécifiques comme CSV. (<a href="https://github.com/BRGM/hubeau/issues/106">#106</a>)</li>
-<li>Des problèmes d'inaccessibilité du serveur de l'API Hydrobiologie sont récurrents, mais la situation se rétablit généralement après quelques minutes ou heures. (<a href="https://github.com/BRGM/hubeau/issues/106">#106</a>)</li>
-<li>L'API Hub'Eau Hydrobiologie en version <code>vbeta</code> rencontrait un bug (erreur 500) lors de l'utilisation du paramètre <code>date_debut_prelevement</code>. (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)</li>
-<li>Le bug lié au paramètre <code>date_debut_prelevement</code> a été corrigé dans la version <code>v1</code> de l'API Hydrobiologie. (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)</li>
+<li>~~L'API Hub'Eau "Poisson" (endpoint <code>/poissons</code>) ne permet pas de récupérer les données d'un poisson par son nom, seulement par son <code>code_espece_poisson</code>. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)~~</li>
+<li>~~L'endpoint <code>/code_espece_poisson</code> de l'API "Poisson" permet d'obtenir la liste des correspondances entre codes OFB, codes SANDRE, noms latins et français des espèces. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)~~</li>
+<li>~~Le code à utiliser dans l'endpoint <code>/poissons</code> est le code OFB (champ "code") et non le code SANDRE (champ "code_taxon"). (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)~~</li>
+<li>~~La future API Hub'Eau "Hydrobiologie" permettra d'interroger les données par le nom de l'espèce. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)~~</li>
+<li>~~L'API Référentiel du SANDRE (<code>api.sandre.eaufrance.fr/referentiels/v1/apt.json</code>) peut être utilisée pour faire la correspondance nom-code. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)~~</li>
+<li>~~Avec l'API SANDRE, on peut filtrer par nom latin (<code>NomLatinAppelTaxon</code>) pour obtenir le code OFB (sous <code>CodeAlternatifAp</code> où <code>OrgCdAlternatif="ASPE"</code>). (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)~~</li>
+<li>~~Avec l'API SANDRE, on peut filtrer par nom commun (<code>//LbNomCommunAppelTaxon</code>) en utilisant une expression XPath dans le paramètre <code>filter</code>. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)~~</li>
+<li>~~L'endpoint <code>/code_espece_poisson</code> répertorie 195 espèces de poissons. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)~~</li>
+<li>~~Les codes OFB sont utilisés par l'API Hub'Eau "Poisson" pour identifier les espèces. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)~~</li>
+<li>~~La future API Hub'Eau "Hydrobiologie" diffusera des données sur les poissons, les macroinvertébrés, les diatomées et les macrophytes. (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)~~</li>
+<li>~~La requête initiale avec <code>code_support=13</code> pour les diatomées est incorrecte et renvoie des indices invertébrés. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)~~</li>
+<li>~~Le paramètre <code>code_support=10</code> doit être utilisé pour interroger les indices de diatomées. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)~~</li>
+<li>~~Même avec <code>code_support=10</code>, environ 10% des résultats peuvent être des indices d'invertébrés en raison d'erreurs dans les données sources. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)~~</li>
+<li>~~Pour obtenir uniquement les indices de diatomées, il est recommandé de filtrer par les codes d'indices spécifiques (ex: <code>code_indice=5856,1022,1080,8059,8060,1692,6335</code>). (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)~~</li>
+<li>~~Les erreurs de données proviennent des sources (Naïades) et ne peuvent pas être corrigées directement par Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)~~</li>
+<li>~~Le code SANDRE correct pour le support des diatomées est 10. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)~~</li>
+<li>~~Le code SANDRE 13 ne correspond pas aux diatomées pour les indices biologiques. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)~~</li>
+<li>~~L'indice biologique 'IBG Normalisé' (code indice : 1000) est un indice d'invertébrés. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)~~</li>
+<li>~~Il existe des problèmes de qualité des données dans Naïades où des indices sont affectés à un mauvais code support (ex: indices invertébrés affectés au support diatomées). (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)~~</li>
+<li>~~Les codes d'indices 5856, 1022, 1080, 8059, 8060, 1692, 6335 sont des indices spécifiques aux diatomées. (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)~~</li>
+<li>~~L'API Hydrobiologie en version vbeta renvoyait une erreur 'Internal server error' lors de l'utilisation des paramètres <code>date_debut_prelevement</code> ou <code>date_fin_prelevement</code> sur l'endpoint <code>/indices</code>. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)~~</li>
+<li>~~Les dates de prélèvement retournées par l'API Hydrobiologie (vbeta) sans filtre de date étaient au format date/heure au lieu de date seule, ce qui était potentiellement lié au bug de filtrage. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)~~</li>
+<li>~~Le bug a été corrigé lors du passage de l'API Hydrobiologie de la version <code>vbeta</code> à la version <code>v1</code>. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)~~</li>
+<li>~~L'endpoint <code>/api/v1/hydrobio/indices</code> permet désormais de filtrer correctement par <code>date_debut_prelevement</code> et <code>date_fin_prelevement</code>. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)~~</li>
+<li>~~L'API Hydrobiologie fournit des données sur les indices hydrobiologiques. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)~~</li>
+<li>~~Les données d'indices hydrobiologiques incluent des informations sur les dates de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/81">#81</a>)~~</li>
+<li>~~L'exemple de l'API Hub'Eau Hydrobiologie pour la recherche d'indices biologiques avec le paramètre <code>code_support=13</code> associait incorrectement ce code aux diatomées. (<a href="https://github.com/BRGM/hubeau/issues/97">#97</a>)~~</li>
+<li>~~Le code SANDRE support <code>13</code> pour les indices biologiques correspond aux macroinvertébrés. (<a href="https://github.com/BRGM/hubeau/issues/97">#97</a>)~~</li>
+<li>~~Le code SANDRE support <code>10</code> pour les indices biologiques correspond aux diatomées. (<a href="https://github.com/BRGM/hubeau/issues/97">#97</a>)~~</li>
+<li>~~L'API Hydrobiologie a été mise à jour en v1 en juillet 2022. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)~~</li>
+<li>~~Les champs <code>code_banque_reference</code> et <code>code_operation</code> ont été ajoutés à la réponse de l'API pour les endpoints <code>indices</code> et <code>taxons</code>. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)~~</li>
+<li>~~Les champs <code>code_banque_reference</code> et <code>code_operation</code> sont également requêtables sur l'API Hydrobiologie. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)~~</li>
+<li>~~Avant cette mise à jour, il était difficile de rattacher une liste taxonomique à l'opération correspondante sans le champ <code>RefOperationPrelBio</code>. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)~~</li>
+<li>~~Le champ <code>RefOperationPrelBio</code> (désormais <code>code_operation</code>) est crucial pour différencier les résultats si plusieurs opérations de prélèvement biologique ont été effectuées le même jour sur la même station. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)~~</li>
+<li>~~Le champ <code>RefOperationPrelBio</code> est la référence de l’opération de prélèvement dans la banque de référence Naïades. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)~~</li>
+<li>~~Ce champ permet d’effectuer une jointure avec les fichiers <code>Operations ResultatsBiologiques</code> et <code>ListesFauneFlore</code> des exports Naïades. (<a href="https://github.com/BRGM/hubeau/issues/99">#99</a>)~~</li>
+<li>~~L'API Hydrobiologie peut retourner des erreurs 500 (erreur interne du serveur). (<a href="https://github.com/BRGM/hubeau/issues/106">#106</a>)~~</li>
+<li>~~L'API Hydrobiologie peut retourner des erreurs 406 (Not Acceptable), notamment lors de requêtes pour des formats spécifiques comme CSV. (<a href="https://github.com/BRGM/hubeau/issues/106">#106</a>)~~</li>
+<li>~~Des problèmes d'inaccessibilité du serveur de l'API Hydrobiologie sont récurrents, mais la situation se rétablit généralement après quelques minutes ou heures. (<a href="https://github.com/BRGM/hubeau/issues/106">#106</a>)~~</li>
+<li>~~L'API Hub'Eau Hydrobiologie en version <code>vbeta</code> rencontrait un bug (erreur 500) lors de l'utilisation du paramètre <code>date_debut_prelevement</code>. (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)~~</li>
+<li>~~L'API Hub'Eau Hydrobiologie a migré de la version <code>vbeta</code> à la version <code>v1</code>. (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)~~</li>
+<li>~~Le bug lié au paramètre <code>date_debut_prelevement</code> a été corrigé dans la version <code>v1</code> de l'API Hydrobiologie. (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)~~</li>
+<li>~~Le paramètre <code>date_debut_prelevement</code> est fonctionnel dans l'API Hub'Eau Hydrobiologie <code>v1</code> pour filtrer les données par date de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)~~</li>
+<li>~~L'API Hydrobiologie permet d'extraire des indices hydrobiologiques en filtrant par département (<code>code_departement</code>) et par type d'indice (<code>code_indice</code>). (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)~~</li>
+<li>~~Les données disponibles via l'API Hydrobiologie incluent des champs comme <code>code_indice</code>, <code>code_station_hydrobio</code>, <code>date_prelevement</code>, <code>resultat_indice</code>, <code>unite_indice</code>, <code>code_departement</code>, <code>code_support</code>, <code>libelle_support</code>, <code>code_qualification</code>. (<a href="https://github.com/BRGM/hubeau/issues/107">#107</a>)~~</li>
+<li>~~La limite de profondeur d'accès aux résultats pour l'API Hydrobiologie est de 10 000 enregistrements maximum. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)~~</li>
+<li>~~Cette limite a été réduite de 20 000 à 10 000 enregistrements pour éviter les timeouts de l'API. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)~~</li>
+<li>~~La documentation de l'API Hydrobiologie sera mise à jour pour refléter cette nouvelle limite. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)~~</li>
+<li>~~L'API peut renvoyer un code 206 (Partial Content) si le nombre total d'enregistrements disponibles dépasse la limite interne de 10 000. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)~~</li>
+<li>~~L'API <code>hydrobio/taxons</code> permet d'accéder aux données de taxons hydrobiologiques. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)~~</li>
+<li>~~Les données hydrobiologiques peuvent être filtrées par <code>code_station_hydrobio</code>. (<a href="https://github.com/BRGM/hubeau/issues/109">#109</a>)~~</li>
+<li>~~Avant correction, l'endpoint <code>/hydrobio/taxons</code> de l'API Hydrobiologie pouvait retourner des observations de taxons et des indices dupliqués. (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)~~</li>
+<li>~~La duplication des taxons et des indices était causée par la présence de conditions environnementales associées à l'opération de prélèvement. (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)~~</li>
+<li>~~Une nouvelle version de l'API Hydrobiologie a été déployée pour corriger cette anomalie de duplication. (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)~~</li>
+<li>~~La correction des doublons a entraîné une diminution du volume de données diffusées par l'API (2 millions d'observations de taxons en moins, 100 000 indices en moins). (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)~~</li>
+<li>~~Certaines données d'hydrobiologie diffusées par l'API proviennent de la base d'origine "Aspe". (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)~~</li>
+<li>~~La duplication des données dans l'API pouvait entraîner des totaux d'effectifs incorrects pour les taxons (ex: 13 anguilles affichées comme 26). (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)~~</li>
+<li>~~Le <code>code_appel_taxon</code> 2038 correspond aux anguilles. (<a href="https://github.com/BRGM/hubeau/issues/129">#129</a>)~~</li>
 </ul>
-<h2 id="tips-dutilisation">Tips d'utilisation</h2>
-<ul>
-<li>Le code à utiliser dans l'endpoint <code>/poissons</code> est le code OFB (champ "code") et non le code SANDRE (champ "code_taxon"). (<a href="https://github.com/BRGM/hubeau/issues/33">#33</a>)</li>
-<li>Pour obtenir uniquement les indices de diatomées, il est recommandé de filtrer par les codes d'indices spécifiques (ex: <code>code_indice=5856,1022,1080,8059,8060,1692,6335</code>). (<a href="https://github.com/BRGM/hubeau/issues/46">#46</a>)</li>
-</ul>
-<hr />
-<h2 id="issues-sources">Issues sources</h2>
+<h3 id="issues-sources">Issues sources</h3>
 <ul>
 <li><strong>#33</strong> Récupération données poisson depuis son nom — L'API Hub'Eau "Poisson" ne permet pas de rechercher par nom d'espèce mais uniquement par code OFB, nécessitant l'utilisation de l'endpoint <code>/code_espece_poisson</code> ou de l'API SANDRE pour la correspondance nom-code, en attendant la future API Hydrobiologie. <code>[résolu]</code></li>
 <li><strong>#45</strong> [API HYDROBIOLOGIE]_données Naïades V0 — L'API Hub'Eau Hydrobiologie n'intègre que les données de Naïades V1, expliquant l'absence de certaines données de Naïades V0 qui seront progressivement intégrées à Naïades V1 puis à Hub'Eau. <code>[information]</code></li>
@@ -195,6 +215,7 @@
 <li><strong>#215</strong> [API Hydrobiologie] champs code_region vides — L'API Hydrobiologie ne permet pas de filtrer les stations avec des champs géographiques vides, ce qui entraîne une perte de données lors des requêtes par région et nécessite une évolution de l'API pour gérer ces cas. <code>[en_cours]</code></li>
 <li><strong>#247</strong> [API Hydrobiologie] Inconsistence du format de date_prelevement selon le format json/geojson — L'API Hydrobiologie de Hub'Eau présente des formats de date_prelevement inconsistants entre les formats de sortie JSON et GeoJSON pour les endpoints taxons et indices. <code>[en_cours]</code></li>
 </ul>
+</details>
         </article>
 
         <footer class="footer">
@@ -203,7 +224,36 @@
         </footer>
     </main>
 
+    <!-- Chatbot toggle button -->
+    <button class="chatbot-toggle" id="chatbotToggle" aria-label="Ouvrir le chatbot">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+
+    <!-- Chatbot panel -->
+    <div class="chatbot-panel" id="chatbotPanel">
+        <div class="chatbot-header">
+            <div class="chatbot-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Hub'Eau Assistant
+            </div>
+            <button class="chatbot-close" id="chatbotClose">&times;</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg chat-msg-bot">
+                <div class="chat-bubble">Bonjour ! Posez-moi une question sur les APIs Hub'Eau. Je cherche dans la base de connaissances pour vous r&eacute;pondre.</div>
+            </div>
+        </div>
+        <div class="chatbot-status" id="chatbotStatus" style="display:none;"></div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" placeholder="Posez votre question..." autocomplete="off">
+            <button class="chatbot-send" id="chatbotSend">Envoyer</button>
+        </div>
+    </div>
+
     <script src="search.js"></script>
+    <script src="chatbot.js"></script>
     <script>
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');
