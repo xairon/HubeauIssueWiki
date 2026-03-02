@@ -1,4 +1,4 @@
-"""Shared configuration for IssueRAG pipeline."""
+"""Shared configuration for HubEau KB pipeline."""
 
 import os
 from pathlib import Path

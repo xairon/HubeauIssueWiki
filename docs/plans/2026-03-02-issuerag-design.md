@@ -1,4 +1,4 @@
-# IssueRAG — Design Document
+# HubEau KB — Design Document
 
 ## Objectif
 
@@ -30,7 +30,7 @@ fetch_issues.py → raw_data/ (JSON) → extract_facts.py (Claude) → wiki/ (Ma
 ## Structure du projet
 
 ```
-IssueRAG/
+hubeau-kb/
 ├── fetch_issues.py          # Étape 1 : récupère les issues GitHub
 ├── extract_facts.py         # Étape 2 : extraction des faits via Claude
 ├── generate_wiki.py         # Étape 3 : génère le wiki markdown

@@ -1,10 +1,10 @@
-# IssueRAG
+# HubEau KB
 
 Un outil d'extraction structurée des issues GitHub du projet [Hub'Eau](https://hubeau.eaufrance.fr/) (BRGM) pour générer une base de connaissances technique et métier sur les APIs de données hydrologiques françaises.
 
 ## Vue d'ensemble
 
-**IssueRAG** est un pipeline de recherche qui transforme les issues GitHub du projet [BRGM/hubeau](https://github.com/BRGM/hubeau) en une base de connaissances structurée. Le projet extrait automatiquement des faits techniques et du domaine des issues à l'aide du modèle Gemini 2.5 Flash, puis génère une wiki markdown organisée par API et un site web statique accessible via GitHub Pages.
+**HubEau KB** est un pipeline de recherche qui transforme les issues GitHub du projet [BRGM/hubeau](https://github.com/BRGM/hubeau) en une base de connaissances structurée. Le projet extrait automatiquement des faits techniques et du domaine des issues à l'aide du modèle Gemini 2.5 Flash, puis génère une wiki markdown organisée par API et un site web statique accessible via GitHub Pages.
 
 ## Comment ça fonctionne
 
@@ -36,7 +36,7 @@ GitHub Issues → Facts Extraction → Markdown Wiki → Static Website
 1. Clonez le dépôt
 ```bash
 git clone <url-du-repo>
-cd IssueRAG
+cd hubeau-kb
 ```
 
 2. Installez les dépendances
@@ -73,7 +73,7 @@ Ou exécutez chaque étape individuellement selon vos besoins.
 ## Structure du projet
 
 ```
-IssueRAG/
+hubeau-kb/
 ├── fetch_issues.py          # Récupère les issues via l'API GitHub
 ├── extract_facts.py         # Extrait les faits via Gemini LLM
 ├── generate_wiki.py         # Génère la wiki markdown

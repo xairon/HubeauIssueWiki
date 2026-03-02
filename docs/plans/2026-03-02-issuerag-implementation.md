@@ -1,4 +1,4 @@
-# IssueRAG Implementation Plan
+# HubEau KB Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -39,7 +39,7 @@ venv/
 **Step 3: Create config.py**
 
 ```python
-"""Shared configuration for IssueRAG pipeline."""
+"""Shared configuration for HubEau KB pipeline."""
 
 import os
 from pathlib import Path
@@ -694,5 +694,5 @@ python generate_wiki.py
 
 ```bash
 git add -A
-git commit -m "feat: complete IssueRAG pipeline — fetch, extract, generate wiki"
+git commit -m "feat: complete HubEau KB pipeline — fetch, extract, generate wiki"
 ```
