@@ -4,8 +4,8 @@
   // --- Config ---
   var EMBEDDINGS_URL = "embeddings.json";
   var TOP_K = 5;
-  var HF_GEN_MODEL = "mistralai/Mistral-7B-Instruct-v0.3";
-  var HF_GEN_URL = "https://router.huggingface.co/hf-inference/models/" + HF_GEN_MODEL;
+  var HF_GEN_URL = "https://router.huggingface.co/cerebras/v1/chat/completions";
+  var HF_GEN_MODEL = "llama3.1-8b";
   var HF_TOKEN_STORAGE = "hubeau_kb_hf_token";
 
   // --- State ---
@@ -214,20 +214,22 @@
     return dot / (Math.sqrt(nA) * Math.sqrt(nB) + 1e-8);
   }
 
-  // --- LLM generation via HuggingFace Inference ---
+  // --- LLM generation via HuggingFace Router (OpenAI-compatible) ---
   function generateAnswer(query, results) {
     var contextParts = results.map(function (r) {
       return "[" + r.api + " - " + r.section + "] " + r.text;
     });
 
-    var prompt =
-      "<s>[INST] Tu es un assistant expert sur les APIs Hub'Eau " +
+    var systemPrompt =
+      "Tu es un assistant expert sur les APIs Hub'Eau " +
       "(plateforme de donnees ouvertes sur l'eau en France, par le BRGM). " +
       "Reponds en francais de maniere concise et utile. " +
       "Base ta reponse UNIQUEMENT sur le contexte fourni. " +
-      "Si le contexte ne contient pas l'information, dis-le clairement.\n\n" +
+      "Si le contexte ne contient pas l'information, dis-le clairement.";
+
+    var userMsg =
       "Contexte:\n" + contextParts.join("\n\n") +
-      "\n\nQuestion: " + query + " [/INST]";
+      "\n\nQuestion: " + query;
 
     return fetch(HF_GEN_URL, {
       method: "POST",
@@ -236,23 +238,16 @@
         "Authorization": "Bearer " + hfToken,
       },
       body: JSON.stringify({
-        inputs: prompt,
-        parameters: {
-          max_new_tokens: 500,
-          temperature: 0.3,
-          return_full_text: false,
-        },
+        model: HF_GEN_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMsg },
+        ],
+        max_tokens: 500,
+        temperature: 0.3,
       }),
     })
       .then(function (resp) {
-        if (resp.status === 503) {
-          return resp.json().then(function (data) {
-            var wait = data.estimated_time || 30;
-            throw new Error(
-              "Le modele charge (" + Math.round(wait) + "s). Reessayez dans un instant."
-            );
-          });
-        }
         if (!resp.ok) {
           return resp.text().then(function (t) {
             throw new Error("API error " + resp.status + ": " + t);
@@ -262,10 +257,8 @@
       })
       .then(function (data) {
         var answer = "";
-        if (Array.isArray(data) && data[0] && data[0].generated_text) {
-          answer = data[0].generated_text.trim();
-        } else if (data.generated_text) {
-          answer = data.generated_text.trim();
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+          answer = data.choices[0].message.content.trim();
         } else {
           answer = "Pas de reponse generee.";
         }
