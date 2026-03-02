@@ -3,7 +3,25 @@
 import json
 from collections import defaultdict
 
+import unicodedata
+
 from config import EXTRACTED_DIR, HUBEAU_APIS, MIN_RELEVANCE, WIKI_DIR
+
+
+def normalize_api_name(name: str) -> str:
+    """Normalize API name to match canonical names in HUBEAU_APIS."""
+    # Build a lookup: lowercased + stripped accents → canonical name
+    def strip_accents(s: str) -> str:
+        return "".join(
+            c for c in unicodedata.normalize("NFD", s)
+            if unicodedata.category(c) != "Mn"
+        )
+
+    name_key = strip_accents(name.strip().lower())
+    for canonical in HUBEAU_APIS:
+        if strip_accents(canonical.lower()) == name_key:
+            return canonical
+    return name
 
 
 def load_all_facts() -> list[dict]:
@@ -25,6 +43,7 @@ def group_by_api(facts: list[dict]) -> dict[str, list[dict]]:
         if isinstance(apis, str):
             apis = [apis]
         for api in apis:
+            api = normalize_api_name(api)
             grouped[api].append(fact)
     return dict(grouped)
 

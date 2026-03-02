@@ -1,7 +1,6 @@
 """Fetch all issues and comments from BRGM/hubeau GitHub repo."""
 
 import json
-import sys
 import time
 
 import httpx
