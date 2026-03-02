@@ -1,5 +1,7 @@
 pages:
   stage: deploy
+  tags:
+    - hubeau
   script:
     - mkdir -p public
     - cp -r site/* public/
