@@ -1,8 +1,6 @@
 # IssueRAG
 
-[![GitHub Pages](https://github.com/BRGM/hubeau/actions/workflows/pages.yml/badge.svg)](https://pages.github.com/)
-
-Un outil de scraping et d'extraction structurée des problèmes GitHub du projet Hub'Eau (BRGM) avec génération d'une base de connaissances accessible.
+Un outil d'extraction structurée des issues GitHub du projet [Hub'Eau](https://hubeau.eaufrance.fr/) (BRGM) pour générer une base de connaissances technique et métier sur les APIs de données hydrologiques françaises.
 
 ## Vue d'ensemble
 
@@ -37,8 +35,8 @@ GitHub Issues → Facts Extraction → Markdown Wiki → Static Website
 
 1. Clonez le dépôt
 ```bash
-git clone https://github.com/BRGM/hubeau.git
-cd hubeau/issuerag
+git clone <url-du-repo>
+cd IssueRAG
 ```
 
 2. Installez les dépendances
@@ -92,9 +90,8 @@ IssueRAG/
 
 ## Dépendances
 
-- `httpx` — Client HTTP asynchrone pour la récupération d'issues
-- `markdown` — Génération et manipulation de markdown
-- `google-generativeai` — Intégration Gemini LLM
+- `httpx` — Client HTTP pour l'API GitHub et l'API Gemini
+- `markdown` — Conversion Markdown → HTML pour le site statique
 
 ## Crédits
 
