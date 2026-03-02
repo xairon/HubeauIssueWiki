@@ -141,6 +141,10 @@ def convert_md_to_html(filepath: str):
         html,
     )
 
+    # Post-process: rewrite .md links to .html for the static site
+    html = re.sub(r'href="([^"]+)\.md"', r'href="\1.html"', html)
+    html = re.sub(r'href="([^"]+)\.md#', r'href="\1.html#', html)
+
     return html, toc, title
 
 
