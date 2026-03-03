@@ -1,4 +1,4 @@
-"""Pre-compute embeddings for wiki content using local Ollama.
+"""Pre-compute embeddings for wiki content + raw facts using local Ollama.
 
 Uses nomic-embed-text (768 dims) via Ollama.
 Requires "search_document: " prefix at build time and "search_query: " prefix at query time.
@@ -7,16 +7,86 @@ Requires "search_document: " prefix at build time and "search_query: " prefix at
 import json
 import os
 import re
+import unicodedata
 
 import httpx
 
 import ollama_utils
-from config import OLLAMA_EMBED_MODEL
+from config import EXTRACTED_DIR, HUBEAU_APIS, MIN_RELEVANCE, OLLAMA_EMBED_MODEL
 
 WIKI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "wiki")
 SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
 BATCH_SIZE = 32  # texts per Ollama call
+
+# --- API name aliases for normalization ---
+HUBEAU_API_ALIASES = {
+    "qualite des nappes d'eau souterraines": "Qualité des nappes",
+    "qualité des nappes d'eau souterraines": "Qualité des nappes",
+    "qualite des nappes d eau souterraines": "Qualité des nappes",
+    "hydro": "Hydrométrie",
+    "api hydro": "Hydrométrie",
+    "api hydrométrie": "Hydrométrie",
+    "api hydrometrie": "Hydrométrie",
+    "api piézométrie": "Piézométrie",
+    "api piezometrie": "Piézométrie",
+    "api qualité des cours d'eau": "Qualité des cours d'eau",
+    "api qualite des cours d'eau": "Qualité des cours d'eau",
+    "api poisson": "Poisson",
+    "api poissons": "Poisson",
+    "poissons": "Poisson",
+    "api température": "Température des cours d'eau",
+    "api temperature": "Température des cours d'eau",
+    "température": "Température des cours d'eau",
+    "temperature": "Température des cours d'eau",
+    "api écoulement": "Écoulement des cours d'eau",
+    "api ecoulement": "Écoulement des cours d'eau",
+    "écoulement": "Écoulement des cours d'eau",
+    "ecoulement": "Écoulement des cours d'eau",
+    "api hydrobiologie": "Hydrobiologie",
+    "api prélèvements": "Prélèvements en eau",
+    "api prelevements": "Prélèvements en eau",
+    "prélèvements": "Prélèvements en eau",
+    "prelevements": "Prélèvements en eau",
+    "eaux littorales": "Surveillance des eaux littorales",
+    "api eaux littorales": "Surveillance des eaux littorales",
+    "indicateurs services": "Indicateurs des services",
+    "api indicateurs services": "Indicateurs des services",
+    "api phytopharmaceutiques": "Phytopharmaceutiques",
+    "général": "Général",
+    "general": "Général",
+    "api qualité de l'eau potable": "Qualité de l'eau potable",
+    "api qualite de l'eau potable": "Qualité de l'eau potable",
+    "eau potable": "Qualité de l'eau potable",
+    "qualité eau potable": "Qualité de l'eau potable",
+    "qualite eau potable": "Qualité de l'eau potable",
+}
+
+
+def _strip_accents(s: str) -> str:
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s)
+        if unicodedata.category(c) != "Mn"
+    )
+
+
+def normalize_api_name(name: str) -> str:
+    """Normalize API name to match canonical names in HUBEAU_APIS."""
+    name_lower = name.strip().lower()
+    name_key = _strip_accents(name_lower)
+
+    # Check aliases first (both with and without accents)
+    if name_lower in HUBEAU_API_ALIASES:
+        return HUBEAU_API_ALIASES[name_lower]
+    if name_key in HUBEAU_API_ALIASES:
+        return HUBEAU_API_ALIASES[name_key]
+
+    # Check canonical names
+    for canonical in HUBEAU_APIS:
+        if _strip_accents(canonical.lower()) == name_key:
+            return canonical
+
+    return name
 
 
 def chunk_section(text: str) -> list[str]:
@@ -93,6 +163,7 @@ def extract_sections(filepath: str) -> list[dict]:
     """Extract sections from a wiki markdown file.
 
     Returns list of {text, api, section, url}.
+    Now includes archive content (inside <details> blocks).
     """
     with open(filepath, encoding="utf-8") as f:
         lines = f.readlines()
@@ -102,7 +173,6 @@ def extract_sections(filepath: str) -> list[dict]:
     current_section = ""
     current_text_lines = []
     api_name = basename
-    in_details = False
 
     for line in lines:
         stripped = line.strip()
@@ -113,18 +183,10 @@ def extract_sections(filepath: str) -> list[dict]:
             api_name = h1.group(1).strip()
             continue
 
-        # Track details block
-        if stripped.startswith("<details"):
-            in_details = True
-            continue
-        if stripped.startswith("</details>"):
-            in_details = False
+        # Skip details/summary HTML tags but NOT their content
+        if stripped.startswith("<details") or stripped.startswith("</details>"):
             continue
         if stripped.startswith("<summary") or stripped.startswith("</summary"):
-            continue
-
-        # Skip archive section (inside details) for embeddings
-        if in_details:
             continue
 
         # Detect sections
@@ -171,11 +233,86 @@ def extract_sections(filepath: str) -> list[dict]:
     return sections
 
 
+def load_fact_chunks() -> list[dict]:
+    """Load raw facts from extracted/*_facts.json and create embeddable chunks.
+
+    Each technical/business fact becomes an enriched chunk.
+    Each issue summary also becomes a chunk.
+    Only includes facts with pertinence >= MIN_RELEVANCE.
+    """
+    chunks = []
+
+    for filepath in sorted(EXTRACTED_DIR.glob("*_facts.json")):
+        data = json.loads(filepath.read_text(encoding="utf-8"))
+
+        if data.get("pertinence", 0) < MIN_RELEVANCE:
+            continue
+
+        issue_num = data.get("issue_number", "?")
+        issue_title = data.get("issue_title", "")
+        apis = data.get("api_concernee", ["Général"])
+        if isinstance(apis, str):
+            apis = [apis]
+
+        # Normalize all API names
+        apis = [normalize_api_name(a) for a in apis]
+
+        for api_name in apis:
+            slug = HUBEAU_APIS.get(api_name, api_name.lower().replace(" ", "_").replace("'", ""))
+
+            # Technical facts
+            for f in data.get("faits_techniques", []):
+                text, statut = _extract_fact_text(f)
+                if text:
+                    chunk_text = f"Issue #{issue_num}: {issue_title}. [Technique, {statut}] {text}"
+                    chunks.append({
+                        "text": chunk_text,
+                        "api": api_name,
+                        "section": f"Issue #{issue_num}",
+                        "url": f"{slug}.html",
+                        "source": "fact",
+                    })
+
+            # Business facts
+            for f in data.get("faits_metier", []):
+                text, statut = _extract_fact_text(f)
+                if text:
+                    chunk_text = f"Issue #{issue_num}: {issue_title}. [Métier, {statut}] {text}"
+                    chunks.append({
+                        "text": chunk_text,
+                        "api": api_name,
+                        "section": f"Issue #{issue_num}",
+                        "url": f"{slug}.html",
+                        "source": "fact",
+                    })
+
+            # Issue summary
+            resume = data.get("resume", "")
+            if resume:
+                chunk_text = f"Issue #{issue_num}: {issue_title}. [Résumé] {resume}"
+                chunks.append({
+                    "text": chunk_text,
+                    "api": api_name,
+                    "section": f"Issue #{issue_num}",
+                    "url": f"{slug}.html",
+                    "source": "fact",
+                })
+
+    return chunks
+
+
+def _extract_fact_text(f) -> tuple[str, str]:
+    """Extract (text, statut) from a fact entry (dict or string)."""
+    if isinstance(f, dict):
+        return f.get("fait", ""), f.get("statut", "information")
+    return f, "information"
+
+
 def main():
     os.makedirs(SITE_DIR, exist_ok=True)
 
-    # Collect all chunks from wiki files
-    all_chunks = []
+    # --- Collect wiki chunks ---
+    wiki_chunks = []
     md_files = sorted(
         f for f in os.listdir(WIKI_DIR)
         if f.endswith(".md") and f != "index.md"
@@ -189,14 +326,23 @@ def main():
             text = section["text"]
             chunks = chunk_section(text)
             for chunk in chunks:
-                all_chunks.append({
+                wiki_chunks.append({
                     "text": chunk,
                     "api": section["api"],
                     "section": section["section"],
                     "url": section["url"],
+                    "source": "wiki",
                 })
 
-    print(f"Extracted {len(all_chunks)} chunks from {len(md_files)} files")
+    print(f"Extracted {len(wiki_chunks)} wiki chunks from {len(md_files)} files")
+
+    # --- Collect fact chunks ---
+    fact_chunks = load_fact_chunks()
+    print(f"Extracted {len(fact_chunks)} fact chunks from extracted/")
+
+    # --- Combine ---
+    all_chunks = wiki_chunks + fact_chunks
+    print(f"Total: {len(all_chunks)} chunks to embed")
 
     # Compute embeddings in batches via Ollama
     print(f"Computing embeddings via Ollama ({OLLAMA_EMBED_MODEL})...")

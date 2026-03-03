@@ -34,20 +34,20 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
                 </span>
             </a>
-            <a href="general.html"><span class="api-name">Général</span><span class="issue-count">21</span></a>
-<a href="hydrobiologie.html"><span class="api-name">Hydrobiologie</span><span class="issue-count">15</span></a>
-<a href="hydrometrie.html"><span class="api-name">Hydrométrie</span><span class="issue-count">87</span></a>
-<a href="indicateurs_services.html"><span class="api-name">Indicateurs des services</span><span class="issue-count">10</span></a>
-<a href="phytopharmaceutiques.html"><span class="api-name">Phytopharmaceutiques</span><span class="issue-count">3</span></a>
-<a href="piezometrie.html"><span class="api-name">Piézométrie</span><span class="issue-count">33</span></a>
+            <a href="hydrobiologie.html"><span class="api-name">Hydrobiologie</span><span class="issue-count">14</span></a>
+<a href="hydrometrie.html"><span class="api-name">Hydrométrie</span><span class="issue-count">85</span></a>
+<a href="indicateurs_services.html"><span class="api-name">Indicateurs des services</span><span class="issue-count">9</span></a>
+<a href="phytopharmaceutiques.html"><span class="api-name">Phytopharmaceutiques</span><span class="issue-count">2</span></a>
+<a href="piezometrie.html"><span class="api-name">Piézométrie</span><span class="issue-count">31</span></a>
 <a href="poisson.html"><span class="api-name">Poisson</span><span class="issue-count">17</span></a>
-<a href="prelevements.html"><span class="api-name">Prélèvements en eau</span><span class="issue-count">13</span></a>
+<a href="prelevements.html"><span class="api-name">Prélèvements en eau</span><span class="issue-count">12</span></a>
 <a href="qualite_eau_potable.html"><span class="api-name">Qualité de l'eau potable</span><span class="issue-count">17</span></a>
-<a href="qualite_cours_eau.html"><span class="api-name">Qualité des cours d'eau</span><span class="issue-count">31</span></a>
-<a href="qualite_nappes.html"><span class="api-name">Qualité des nappes</span><span class="issue-count">22</span></a>
+<a href="qualite_cours_eau.html"><span class="api-name">Qualité des cours d'eau</span><span class="issue-count">28</span></a>
+<a href="qualite_nappes.html"><span class="api-name">Qualité des nappes</span><span class="issue-count">20</span></a>
 <a href="eaux_littorales.html" class="active"><span class="api-name">Surveillance des eaux littorales</span><span class="issue-count">3</span></a>
-<a href="temperature.html"><span class="api-name">Température des cours d'eau</span><span class="issue-count">8</span></a>
+<a href="temperature.html"><span class="api-name">Température des cours d'eau</span><span class="issue-count">10</span></a>
 <a href="ecoulement.html"><span class="api-name">Écoulement des cours d'eau</span><span class="issue-count">8</span></a>
+<a href="general.html"><span class="api-name">Général</span><span class="issue-count">19</span></a>
         </div>
         <div class="sidebar-footer-text">
             Base de connaissances
@@ -73,46 +73,46 @@
 </blockquote>
 <h2 id="guide">Guide</h2>
 <h3 id="comportement-actuel">Comportement actuel</h3>
-<p>L'API Hub'Eau "Surveillance des eaux littorales" est principalement conçue pour la diffusion des données de contaminants chimiques. Elle intègre désormais les données du réseau ROCCH (Réseau d'Observation de la Contamination Chimique du milieu marin) - Volet Matière vivante (code 0000000178) (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>). Le paramètre <code>libelle_lieusurv</code> est disponible pour effectuer des recherches par nom de lieu de surveillance (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>). L'API a été mise à jour et ne diffuse plus les données obsolètes du réseau RNO (0000000020), interrompu depuis 2008 (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>).</p>
+<p>L'API Surveillance des eaux littorales fournit des données via des endpoints structurés, principalement en format JSON. La pagination est appliquée pour les requêtes volumineuses. Les paramètres clés incluent les codes SANDRE (ex. 0000000104, 0000000105) et les thèmes de données (ex. contaminants chimiques). Les données du réseau ROCCH (code 0000000178) sont désormais accessibles, remplacant l'ancien réseau RNO (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>).  </p>
 <h3 id="pièges-à-éviter">Pièges à éviter</h3>
-<p>L'API ne fournit pas l'intégralité des données historiques de la base Quadrige, se concentrant exclusivement sur les contaminants chimiques (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>). Les données de surveillance des eaux littorales qui ne relèvent pas de cette thématique ne sont pas accessibles via l'API et nécessitent l'utilisation de l'outil Surval pour leur consultation ou téléchargement (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>). De plus, les wildcards <code>*</code> ne sont pas supportées pour le paramètre <code>libelle_lieusurv</code> (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>), ce qui limite les recherches floues par libellé.</p>
+<p>Les wildcards * ne sont pas supportés dans les champs de type libellé (ex. libelle_lieusurv), limitant les recherches flexibles (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>). L'API ne propose pas l'accès à l'ensemble des données historiques de Quadrige, uniquement celles liées aux contaminants chimiques (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>). Ces limitations peuvent entraîner des résultats incomplets si les utilisateurs ne s'alignent pas sur les codes SANDRE ou les thèmes de données.  </p>
 <h3 id="bonnes-pratiques">Bonnes pratiques</h3>
-<p>Pour des recherches efficaces, privilégiez les correspondances exactes pour les paramètres de type 'libellé', comme <code>libelle_lieusurv</code>, étant donné l'absence de support des wildcards (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>). Si votre besoin concerne des données de surveillance des eaux littorales autres que les contaminants chimiques, orientez-vous directement vers l'outil Surval de l'Ifremer, qui offre un accès complet à l'historique des données de Quadrige (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>).</p>
+<p>Utilisez des codes SANDRE exacts pour les requêtes, et filtrez par thème (ex. contaminants) pour maximiser la pertinence des résultats. Pour les recherches par libellé, privilégiez les termes complets ou les codes associés. Vérifiez régulièrement les mises à jour des codes SANDRE, car certains anciens (ex. 0800000025) sont obsolètes (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>).  </p>
 <h3 id="contexte-métier">Contexte métier</h3>
-<p>Les données de surveillance des eaux littorales proviennent de la base Quadrige de l'Ifremer (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>). Il est crucial de comprendre l'évolution des réseaux : le réseau RNO (0000000020) a été interrompu en 2008 et remplacé par le ROCCH (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>). Les codes SANDRE associés au ROCCH ont également évolué, le code 0800000025 étant obsolète au profit des codes 0000000105 (volet Sédiments) et 0000000104 (volet Eau), tandis que le réseau 0000000178 représente spécifiquement le volet Matière vivante du ROCCH (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>). Les APIs Hub'Eau distinguent généralement les champs de recherche par 'libellé' et par 'code' (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>).</p>
+<p>Les codes SANDRE identifient les réseaux et stations de surveillance. Le réseau RNO (Matière vivante) a été remplacé par ROCCH (code 0000000178) en 2008. Les données de contaminants chimiques sont structurées via des codes spécifiques (ex. 0000000104 pour l'eau). Comprendre ces codes permet d'interpréter correctement les résultats de l'API.  </p>
+<h3 id="évolutions-récentes">Évolutions récentes</h3>
+<ul>
+<li><strong>2024-06-07</strong> : L'API limite l'accès aux données historiques de Quadrige aux seuls contaminants chimiques (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>).  </li>
+<li><strong>2022-07-05</strong> : Les wildcards * restent partiellement supportés pour les codes hydrométriques, mais pas pour les libellés (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>).  </li>
+<li><strong>2021-12-14</strong> : Mise à jour des codes SANDRE pour intégrer ROCCH et corriger les données associées à RNO (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>).  </li>
+</ul>
+<h3 id="historique-notable">Historique notable</h3>
+<ul>
+<li><strong>2021-12-14</strong> : Correction de l'erreur de diffusion des données liées au réseau RNO, remplacé par ROCCH (code 0000000178) (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>).  </li>
+<li><strong>2021-12-14</strong> : Intégration des données du réseau ROCCH via les codes SANDRE 0000000104 et 0000000105, conformément aux recommandations de l'IFREMER (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>).</li>
+</ul>
 <hr />
 <details>
-<summary><strong>Archive détaillée</strong> — Tous les faits bruts extraits des issues</summary>
+<p><summary><strong>Archive détaillée</strong> — Tous les faits bruts extraits des issues</summary></p>
 <h3 id="faits-actuels">Faits actuels</h3>
 <ul>
-<li>L'utilisation de wildcards <code>*</code> dans les paramètres de recherche n'est pas systématiquement implémentée dans les APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>)</li>
-<li>Les wildcards sont disponibles dans certains champs de type code (par exemple, les codes entités de l'API Hydrométrie). (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>)</li>
-<li>Les wildcards ne sont pas supportées pour le paramètre <code>libelle_lieusurv</code> de l'API Surveillance des eaux littorales. (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>)</li>
-<li>Les APIs Hub'Eau distinguent les champs de type 'libellé' et 'code' pour les paramètres de recherche. (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>)</li>
-<li>Le paramètre <code>libelle_lieusurv</code> permet de rechercher des lieux de surveillance dans l'API Surveillance des eaux littorales. (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>)</li>
+<li>Le réseau RNO (Matière vivante) a été interrompu en 2008 et remplacé par ROCCH, dont les données sont désormais associées au code SANDRE 0000000178. (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)</li>
+<li>Les codes SANDRE 0000000104 (Eau) et 0000000105 (Sédiments) remplacent le code obsolète 0800000025 pour le ROCCH. (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)</li>
+<li>Les wildcards * ne sont pas systématiquement implémentés dans les champs de recherche de l'API Surveillance des eaux littorales, notamment pour le paramètre libelle_lieusurv. (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>)</li>
+<li>Les wildcards * sont disponibles dans certains champs de type code de l'API Hydrométrie (ex. codes entités). (<a href="https://github.com/BRGM/hubeau/issues/101">#101</a>)</li>
+<li>L'API Surveillance des eaux littorales ne diffuse que les données de Quadrige liées aux 'Contaminants chimiques', et non toutes les données historiques disponibles. (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>)</li>
+<li>Les données historiques pour certains lieux de surveillance (ex. 60007272) ne sont pas accessibles via l'API Hub'eau car elles ne relèvent pas de la thématique 'Contaminants chimiques'. (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>)</li>
 </ul>
 <h3 id="historique-des-problèmes-résolus">Historique des problèmes résolus</h3>
 <ul>
-<li>~~L'API Surveillance des eaux littorales diffusait des données récentes (2021) pour le réseau RNO (code 0000000020) qui est interrompu depuis 2008. (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)~~</li>
-<li>~~L'API Surveillance des eaux littorales ne diffuse plus de données associées au réseau 0000000020 (RNO). (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)~~</li>
-<li>~~L'API Surveillance des eaux littorales inclut dorénavant les données du réseau 0000000178 (ROCCH - Volet Matière vivante) pour les contaminants chimiques. (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)~~</li>
-<li>~~Le réseau RNO (Réseau National d'Observation de la qualité du milieu marin - Matière vivante, code 0000000020) est interrompu depuis 2008. (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)~~</li>
-<li>~~Le réseau RNO a été remplacé par le réseau ROCCH (Réseau d’Observation de la Contamination Chimique du milieu marin, code 0800000025). (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)~~</li>
-<li>~~Le code SANDRE 0800000025 (ROCCH) est obsolète et doit être remplacé par 0000000105 (volet Sédiments) et 0000000104 (volet Eau). (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)~~</li>
-<li>~~Le réseau 0000000178 correspond au Réseau d'Observation de la Contamination Chimique du milieu marin (ROCCH) - Volet Matière vivante. (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)~~</li>
-<li>~~L'API Hub'eau Surveillance des eaux littorales ne fournit pas toutes les données historiques de Quadrige, se limitant principalement aux contaminants chimiques. (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>)~~</li>
-<li>~~Les données de surveillance des eaux littorales qui ne sont pas des contaminants chimiques ne sont pas disponibles via l'API Hub'eau. (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>)~~</li>
-<li>~~Pour accéder aux données de surveillance des eaux littorales hors du périmètre des contaminants chimiques, il est nécessaire d'utiliser les téléchargements de l'outil Surval. (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>)~~</li>
-<li>~~Les données de surveillance des eaux littorales sont issues de la base Quadrige de l'Ifremer. (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>)~~</li>
-<li>~~L'API Hub'eau Surveillance des eaux littorales couvre principalement la thématique des Contaminants chimiques. (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>)~~</li>
-<li>~~L'outil Surval permet de visualiser les données de surveillance des eaux littorales et d'identifier la catégorie des analyses (ex: absence de catégorie 'Contaminants'). (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>)~~</li>
-<li>~~Le lieu de surveillance 60007272 (Surval) contient des données historiques de 1991 à 2011 qui ne sont pas des contaminants chimiques. (<a href="https://github.com/BRGM/hubeau/issues/175">#175</a>)~~</li>
+<li>~~L'API Surveillance du Littoral a corrigé la diffusion de données associées au réseau obsolète 0000000020 (RNO) après mise à jour des données. (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)~~</li>
+<li>~~Les données de contaminants chimiques incluent désormais le réseau 0000000178 (ROCCH - Volet Matière vivante) conformément aux recommandations de l'IFREMER. (<a href="https://github.com/BRGM/hubeau/issues/65">#65</a>)~~</li>
 </ul>
 <h3 id="issues-sources">Issues sources</h3>
 <ul>
-<li><strong>#65</strong> [API Surveillance du littoral] — L'API Surveillance des eaux littorales a été mise à jour pour corriger la diffusion de données obsolètes du réseau RNO (0000000020) et intègre désormais les données de contaminants chimiques du réseau ROCCH (0000000178), clarifiant les codes SANDRE associés. <code>[résolu]</code></li>
-<li><strong>#101</strong> Utilisation de Wildcards * dans les recherches (un classic) — Les wildcards <code>*</code> ne sont pas systématiquement supportées dans les APIs Hub'Eau, étant limitées à certains champs de type code comme les codes entités de l'API Hydrométrie, mais non disponibles pour les libellés. <code>[information]</code></li>
-<li><strong>#175</strong> [API Surveillance des eaux littorales] Récupération des données Quadrige - Historique — L'API Hub'eau Surveillance des eaux littorales ne diffuse qu'une partie des données de Quadrige, principalement les contaminants chimiques, et les données hors de ce périmètre doivent être consultées via l'outil Surval. <code>[résolu]</code></li>
+<li><strong>#65</strong> [API Surveillance du littoral] (2021-12-14) — L'API Surveillance du Littoral a corrigé une erreur de diffusion de données associées à un réseau obsolète et intègre désormais les données du réseau ROCCH via un nouveau code SANDRE.</li>
+<li><strong>#101</strong> Utilisation de Wildcards * dans les recherches (un classic) (2022-07-05) — Les wildcards * sont partiellement supportés dans certaines APIs de Hub'Eau, notamment pour les codes hydrométriques mais pas pour les libellés de lieux de surveillance littorale.</li>
+<li><strong>#175</strong> [API Surveillance des eaux littorales] Récupération des données Quadrige - Historique (2024-06-07) — L'API Surveillance des eaux littorales ne propose pas l'accès à l'ensemble des données historiques de Quadrige, uniquement celles liées aux contaminants chimiques.</li>
 </ul>
 </details>
         </article>
@@ -137,7 +137,12 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 Hub'Eau Assistant
             </div>
-            <button class="chatbot-close" id="chatbotClose">&times;</button>
+            <div class="chatbot-header-actions">
+                <button class="chatbot-clear" id="chatbotClear" title="Effacer la conversation">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+                <button class="chatbot-close" id="chatbotClose">&times;</button>
+            </div>
         </div>
         <div class="chatbot-messages" id="chatbotMessages">
             <div class="chat-msg chat-msg-bot">

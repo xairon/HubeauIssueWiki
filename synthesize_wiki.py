@@ -12,6 +12,7 @@ import ollama_utils
 from config import (
     EXTRACTED_DIR,
     HUBEAU_APIS,
+    HUBEAU_API_ALIASES,
     MIN_RELEVANCE,
     OLLAMA_BIG_MODEL,
     WIKI_DIR,
@@ -68,17 +69,32 @@ Règles :
 
 
 def normalize_api_name(name: str) -> str:
-    """Normalize API name to match canonical names in HUBEAU_APIS."""
+    """Normalize API name to match canonical names in HUBEAU_APIS.
+
+    Checks aliases first, then canonical names.
+    Both checks are accent-insensitive and case-insensitive.
+    """
     def strip_accents(s: str) -> str:
         return "".join(
             c for c in unicodedata.normalize("NFD", s)
             if unicodedata.category(c) != "Mn"
         )
-    name_key = strip_accents(name.strip().lower())
+
+    name_stripped = name.strip()
+    name_lower = name_stripped.lower()
+    name_key = strip_accents(name_lower)
+
+    # Check aliases (case-insensitive + accent-insensitive)
+    for alias, canonical in HUBEAU_API_ALIASES.items():
+        if name_lower == alias.lower() or name_key == strip_accents(alias.lower()):
+            return canonical
+
+    # Check canonical names
     for canonical in HUBEAU_APIS:
         if strip_accents(canonical.lower()) == name_key:
             return canonical
-    return name
+
+    return name_stripped
 
 
 def load_all_facts() -> list[dict]:
@@ -233,7 +249,7 @@ def render_api_page(api_name: str, guide_text: str, facts: list[dict]) -> str:
 
 
 def render_index(api_groups: dict[str, list[dict]]) -> str:
-    """Render the wiki index page."""
+    """Render the wiki index page. Sorts APIs alphabetically with Général last."""
     lines = [
         "# Hub'Eau — Base de connaissances\n",
         "Guide pratique et archive des connaissances extraites des issues GitHub de [BRGM/hubeau](https://github.com/BRGM/hubeau/issues).\n",
@@ -241,7 +257,10 @@ def render_index(api_groups: dict[str, list[dict]]) -> str:
         "## APIs\n",
     ]
 
-    for api_name in sorted(api_groups.keys()):
+    # Sort with "Général" last
+    api_names = sorted(api_groups.keys(), key=lambda n: (n == "Général", n))
+
+    for api_name in api_names:
         slug = HUBEAU_APIS.get(api_name, api_name.lower().replace(" ", "_").replace("'", ""))
         count = len(api_groups[api_name])
         lines.append(f"- [{api_name}]({slug}.md) ({count} issues)")
@@ -282,6 +301,15 @@ def main() -> None:
     index_path = WIKI_DIR / "index.md"
     index_path.write_text(render_index(api_groups), encoding="utf-8")
     print(f"  Generated index.md")
+
+    # Clean up orphan .md files that don't correspond to any canonical API
+    canonical_slugs = set(HUBEAU_APIS.values())
+    canonical_slugs.add("index")
+    for md_file in WIKI_DIR.glob("*.md"):
+        slug = md_file.stem
+        if slug not in canonical_slugs:
+            md_file.unlink()
+            print(f"  Removed orphan: {md_file.name}")
 
     print(f"\nDone. Wiki v2 generated in {WIKI_DIR}/")
 

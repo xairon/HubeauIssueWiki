@@ -598,6 +598,26 @@ details > h3, details > h4 {
     gap: 8px;
 }
 
+.chatbot-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chatbot-clear {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,.5);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    transition: color .15s;
+    border-radius: 4px;
+}
+
+.chatbot-clear:hover { color: #fff; background: rgba(255,255,255,.1); }
+
 .chatbot-close {
     background: none;
     border: none;

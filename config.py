@@ -38,5 +38,34 @@ HUBEAU_APIS = {
     "Général": "general",
 }
 
+# Aliases for non-canonical API names (LLM sometimes generates these)
+HUBEAU_API_ALIASES = {
+    "Qualité des nappes d'eau souterraines": "Qualité des nappes",
+    "Qualite des nappes d'eau souterraines": "Qualité des nappes",
+    "Hydro": "Hydrométrie",
+    "API Hydro": "Hydrométrie",
+    "API Hydrométrie": "Hydrométrie",
+    "API Piézométrie": "Piézométrie",
+    "API Qualité des cours d'eau": "Qualité des cours d'eau",
+    "API Poisson": "Poisson",
+    "Poissons": "Poisson",
+    "API Poissons": "Poisson",
+    "API Température": "Température des cours d'eau",
+    "Température": "Température des cours d'eau",
+    "API Écoulement": "Écoulement des cours d'eau",
+    "Écoulement": "Écoulement des cours d'eau",
+    "API Hydrobiologie": "Hydrobiologie",
+    "API Prélèvements": "Prélèvements en eau",
+    "Prélèvements": "Prélèvements en eau",
+    "Eaux littorales": "Surveillance des eaux littorales",
+    "API Eaux littorales": "Surveillance des eaux littorales",
+    "Indicateurs services": "Indicateurs des services",
+    "API Indicateurs services": "Indicateurs des services",
+    "API Phytopharmaceutiques": "Phytopharmaceutiques",
+    "API Qualité de l'eau potable": "Qualité de l'eau potable",
+    "Eau potable": "Qualité de l'eau potable",
+    "Qualité eau potable": "Qualité de l'eau potable",
+}
+
 # Minimum relevance score to include a fact in the wiki
 MIN_RELEVANCE = 2

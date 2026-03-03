@@ -293,7 +293,12 @@ def render_page(body_html: str, title: str, apis: list, active_slug: str) -> str
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 Hub'Eau Assistant
             </div>
-            <button class="chatbot-close" id="chatbotClose">&times;</button>
+            <div class="chatbot-header-actions">
+                <button class="chatbot-clear" id="chatbotClear" title="Effacer la conversation">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+                <button class="chatbot-close" id="chatbotClose">&times;</button>
+            </div>
         </div>
         <div class="chatbot-messages" id="chatbotMessages">
             <div class="chat-msg chat-msg-bot">
@@ -933,6 +938,26 @@ details > h3, details > h4 {
     align-items: center;
     gap: 8px;
 }
+
+.chatbot-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chatbot-clear {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,.5);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    transition: color .15s;
+    border-radius: 4px;
+}
+
+.chatbot-clear:hover { color: #fff; background: rgba(255,255,255,.1); }
 
 .chatbot-close {
     background: none;

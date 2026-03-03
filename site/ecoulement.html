@@ -34,20 +34,20 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
                 </span>
             </a>
-            <a href="general.html"><span class="api-name">Général</span><span class="issue-count">21</span></a>
-<a href="hydrobiologie.html"><span class="api-name">Hydrobiologie</span><span class="issue-count">15</span></a>
-<a href="hydrometrie.html"><span class="api-name">Hydrométrie</span><span class="issue-count">87</span></a>
-<a href="indicateurs_services.html"><span class="api-name">Indicateurs des services</span><span class="issue-count">10</span></a>
-<a href="phytopharmaceutiques.html"><span class="api-name">Phytopharmaceutiques</span><span class="issue-count">3</span></a>
-<a href="piezometrie.html"><span class="api-name">Piézométrie</span><span class="issue-count">33</span></a>
+            <a href="hydrobiologie.html"><span class="api-name">Hydrobiologie</span><span class="issue-count">14</span></a>
+<a href="hydrometrie.html"><span class="api-name">Hydrométrie</span><span class="issue-count">85</span></a>
+<a href="indicateurs_services.html"><span class="api-name">Indicateurs des services</span><span class="issue-count">9</span></a>
+<a href="phytopharmaceutiques.html"><span class="api-name">Phytopharmaceutiques</span><span class="issue-count">2</span></a>
+<a href="piezometrie.html"><span class="api-name">Piézométrie</span><span class="issue-count">31</span></a>
 <a href="poisson.html"><span class="api-name">Poisson</span><span class="issue-count">17</span></a>
-<a href="prelevements.html"><span class="api-name">Prélèvements en eau</span><span class="issue-count">13</span></a>
+<a href="prelevements.html"><span class="api-name">Prélèvements en eau</span><span class="issue-count">12</span></a>
 <a href="qualite_eau_potable.html"><span class="api-name">Qualité de l'eau potable</span><span class="issue-count">17</span></a>
-<a href="qualite_cours_eau.html"><span class="api-name">Qualité des cours d'eau</span><span class="issue-count">31</span></a>
-<a href="qualite_nappes.html"><span class="api-name">Qualité des nappes</span><span class="issue-count">22</span></a>
+<a href="qualite_cours_eau.html"><span class="api-name">Qualité des cours d'eau</span><span class="issue-count">28</span></a>
+<a href="qualite_nappes.html"><span class="api-name">Qualité des nappes</span><span class="issue-count">20</span></a>
 <a href="eaux_littorales.html"><span class="api-name">Surveillance des eaux littorales</span><span class="issue-count">3</span></a>
-<a href="temperature.html"><span class="api-name">Température des cours d'eau</span><span class="issue-count">8</span></a>
+<a href="temperature.html"><span class="api-name">Température des cours d'eau</span><span class="issue-count">10</span></a>
 <a href="ecoulement.html" class="active"><span class="api-name">Écoulement des cours d'eau</span><span class="issue-count">8</span></a>
+<a href="general.html"><span class="api-name">Général</span><span class="issue-count">19</span></a>
         </div>
         <div class="sidebar-footer-text">
             Base de connaissances
@@ -73,74 +73,65 @@
 </blockquote>
 <h2 id="guide">Guide</h2>
 <h3 id="comportement-actuel">Comportement actuel</h3>
-<p>L'API "Écoulement des cours d'eau" est désormais en version stable 1.0, accessible via le chemin <code>/api/v1/</code> depuis le 23 mai 2023. Ses données sont mises à jour quotidiennement depuis le 12 avril 2023 (#122, #142). Elle propose des endpoints pour les observations du réseau ONDE, incluant des données pour la Corse, et un endpoint dédié aux informations descriptives des stations hydrométriques (#192, #233). Les observations sont géolocalisées en RGF93 / Lambert 93 et détaillent le cours d'eau, la station, le type d'écoulement et le code de campagne (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>). Il est possible de lier ces données aux entités hydrographiques du Sandre (BD Carthage 2017) via leur service WFS en utilisant les champs <code>uri_cours_eau</code> et <code>code_cours_eau</code> pour extraire le TYPENAME et le CdEntiteHydrographique (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>).</p>
+<p>L'API Écoulement des cours d'eau fournit des données hydrologiques via des endpoints comme <code>observations</code> et <code>stations</code>, en format JSON. La pagination utilise les paramètres <code>page</code> et <code>size</code>, mais le paramètre <code>size</code> influence l'ordre des résultats, pouvant générer des doublons lors de la pagination (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>). Les filtres de date (<code>date_observation_min</code>, <code>date_observation_max</code>) appliquent des opérateurs stricts (&gt; et &lt;) au lieu des opérateurs inclusifs indiqués dans la documentation (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>). La description OpenAPI présente des erreurs de nommage et de typage des paramètres (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>).  </p>
 <h3 id="pièges-à-éviter">Pièges à éviter</h3>
-<p>La description OpenAPI/Swagger de l'API contient des erreurs qui peuvent gêner l'automatisation. Des champs comme <code>Numéro de page</code> et <code>Liste des champs...</code> sont incorrectement nommés et le champ <code>fields</code> devrait être de type <code>[array(string)]</code>. De plus, la description du paramètre <code>size</code> est mal structurée (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>). Concernant l'endpoint <code>observations</code>, les paramètres <code>date_observation_min</code> et <code>date_observation_max</code> utilisent des comparaisons strictes (<code>&gt;</code> et <code>&lt;</code>) au lieu d'inclusives (<code>&gt;=</code> et <code>&lt;=</code>), ce qui empêche de récupérer les observations d'une journée unique si les dates min et max sont identiques (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>). Enfin, l'API peut produire des doublons d'observations lors de la pagination, et l'ordre des résultats n'est pas garanti si le paramètre <code>size</code> est modifié (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>).</p>
+<p>Les filtres de date stricts empêchent la récupération de données pour des dates spécifiques, contrairement à la documentation. La pagination peut produire des doublons, surtout avec des tailles de page non optimisées. La description OpenAPI incorrecte peut induire en erreur les développeurs lors de la conception de requêtes. Pour contourner ces problèmes, vérifiez les opérateurs de filtre, utilisez des tailles de page petites et testez les requêtes avec des outils comme Postman.  </p>
 <h3 id="bonnes-pratiques">Bonnes pratiques</h3>
-<p>Pour faciliter l'intégration et l'analyse des données en R, utilisez le package <code>hubeau</code> (version 0.4.0 disponible sur le CRAN, code source sur GitHub <code>inrae/hubeau</code>). Il permet de requêter 10 des 12 APIs Hub'Eau avec une syntaxe simplifiée <code>get_[API]_[Operation]()</code> et est bien documenté (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>). Pour contourner le problème des dates inclusives/exclusives, si vous souhaitez récupérer les observations du jour J, définissez <code>date_observation_min</code> à J-1 et <code>date_observation_max</code> à J (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>). Pour minimiser les doublons lors de la récupération des observations, privilégiez l'utilisation d'un paramètre <code>_size</code> plus grand ou un ciblage fonctionnel plus précis afin d'éviter la pagination (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>).</p>
+<p>Utilisez le package R <code>hubeau</code> pour accéder à l'API via une syntaxe standardisée, comme <code>get_Ecoulement_observations</code> (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>). Documentez les paramètres de pagination et les filtres de date pour éviter les doublons. Pour les requêtes WFS, utilisez les URI fournis par l'API (<code>uri_cours_eau</code>) et le code <code>code_cours_eau</code> pour identifier les entités hydrographiques (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>).  </p>
 <h3 id="contexte-métier">Contexte métier</h3>
-<p>L'API "Écoulement des cours d'eau" fournit des observations issues du réseau ONDE (Observatoire National des Étiages), un programme essentiel pour le suivi des étiages. Ces observations décrivent l'état de l'écoulement (par exemple, "écoulement visible") et sont associées à des "codes_campagne" spécifiques (#192, #193). Les entités hydrographiques de référence utilisées par Hub'Eau proviennent de la BD Carthage 2017. Le Sandre, référentiel national, gère les identifiants uniques (CdEntiteHydrographique) de ces entités et propose un service WFS pour accéder à leurs données géographiques détaillées (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>).</p>
+<p>Les données proviennent de stations hydrologiques équipées de capteurs, avec des codes BSS (Bassin Sédimentaire) et SANDRE (Système d'Identification des Ressources en Eau) pour identifier les cours d'eau. Les stations sont classées par type (ex: hydrométrique, pluviométrique). Les rapports hydrologiques utilisent ces données pour analyser les débits et les crues.  </p>
+<h3 id="évolutions-récentes">Évolutions récentes</h3>
+<ul>
+<li><strong>2025-05-21 (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</strong> : Les filtres de date restent stricts, malgré les mises à jour de la documentation.  </li>
+<li><strong>2024-10-18 (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</strong> : Les doublons lors de la pagination persistent, avec des impacts sur la reproductibilité.  </li>
+<li><strong>2024-02-26 (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</strong> : Les erreurs de description OpenAPI (noms de paramètres, types) sont toujours en cours de correction.  </li>
+<li><strong>2024-11-05 (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</strong> : La méthode pour retrouver les ressources Sandre via WFS a été résolue.  </li>
+<li><strong>2023-06-06 (<a href="https://github.com/BRGM/hubeau/issues/142">#142</a>)</strong> : La version stable 1.0 de l'API est désormais utilisée (URL <code>/v1</code> au lieu de <code>/vbeta</code>).  </li>
+</ul>
+<h3 id="historique-notable">Historique notable</h3>
+<ul>
+<li><strong>2023-06-06 (<a href="https://github.com/BRGM/hubeau/issues/142">#142</a>)</strong> : Migration vers la version stable 1.0, avec changement d'URL.  </li>
+<li><strong>2023-04-12 (<a href="https://github.com/BRGM/hubeau/issues/122">#122</a>)</strong> : Mise à jour quotidienne des données depuis avril 2023.  </li>
+<li><strong>2025-05-14 (<a href="https://github.com/BRGM/hubeau/issues/233">#233</a>)</strong> : Problème temporaire sur le endpoint <code>stations</code> résolu.  </li>
+<li><strong>2024-11-05 (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</strong> : Correction des paramètres WFS pour accéder à Sandre.</li>
+</ul>
 <hr />
 <details>
-<summary><strong>Archive détaillée</strong> — Tous les faits bruts extraits des issues</summary>
+<p><summary><strong>Archive détaillée</strong> — Tous les faits bruts extraits des issues</summary></p>
 <h3 id="faits-actuels">Faits actuels</h3>
 <ul>
-<li>L'API Écoulement présente des erreurs dans sa description OpenAPI/Swagger. (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
-<li>Le champ <code>Numéro de page</code> est incorrectement nommé dans la description OpenAPI de l'API Écoulement, il s'agit d'une description et non d'un nom de champ. (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
-<li>Le champ <code>Liste des champs...</code> est incorrectement nommé dans la description OpenAPI de l'API Écoulement, il s'agit d'une description et non d'un nom de champ, et devrait être <code>fields</code>. (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
-<li>Le type du champ <code>fields</code> dans la description OpenAPI de l'API Écoulement devrait être <code>[array(string)]</code>. (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
-<li>La description du champ <code>size</code> dans la description OpenAPI de l'API Écoulement est encapsulée incorrectement dans le sous-item "schema". (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
-<li>Le paramètre <code>date_observation_min</code> de l'API Écoulement des cours d'eau (endpoint <code>observations</code>) utilise une comparaison stricte ('&gt;') au lieu de la comparaison inclusive ('&gt;=') documentée. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
-<li>Le paramètre <code>date_observation_max</code> de l'API Écoulement des cours d'eau (endpoint <code>observations</code>) utilise une comparaison stricte ('&lt;') au lieu de la comparaison inclusive ('&lt;=') documentée. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
-<li>Si <code>date_observation_min</code> et <code>date_observation_max</code> sont définis sur la même date, l'API Écoulement des cours d'eau (endpoint <code>observations</code>) ne renvoie aucune observation. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
-<li>Pour récupérer les observations d'une date spécifique (ex: D), il est nécessaire de définir <code>date_observation_min</code> à D-1 et <code>date_observation_max</code> à D. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
-<li>L'API Écoulement des cours d'eau fournit des observations du réseau ONDE (Observatoire National des Étiages). (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
-<li>Des observations ONDE sont disponibles pour la région Corse via l'API Écoulement des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
-<li>L'API ecoulement/observations peut produire des doublons d'observations (features) lors de la pagination, où une même observation apparaît sur différentes pages. (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
-<li>L'ordre des résultats de l'API ecoulement/observations n'est pas garanti comme étant identique lorsque le paramètre 'size' est modifié. (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
-<li>La préconisation pour éviter les doublons est d'utiliser un paramètre '_size' plus grand ou un ciblage fonctionnel plus précis pour éviter la pagination. (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
-<li>Le comportement de doublons n'est pas systématiquement reproductible par l'équipe Hub'eau. (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
-<li>Les observations d'écoulement incluent des détails sur le cours d'eau (ex: 'l'Helpe Mineure', code 'D0130700'), la station (ex: 'L'Helpe mineure à Fourmies', code 'D0137052'), et le type d'écoulement (ex: '1' pour 'Ecoulement visible'). (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
-<li>Les données d'écoulement sont associées à un 'code_campagne'. (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
-<li>Les observations sont géolocalisées avec des coordonnées et des informations de projection (RGF93 / Lambert 93). (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+<li>Le champ 'Numéro de page' dans la description OpenAPI utilise une description au lieu du nom réel du paramètre (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
+<li>Le champ 'Liste des champs...' dans la description OpenAPI utilise une description au lieu du nom réel 'fields' (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
+<li>Le type du paramètre 'fields' est incorrectement déclaré au lieu de [array(string)] (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
+<li>La description du paramètre 'size' est ancrée dans le sous-élément 'schema' au lieu d'être au même niveau que le nom du champ (<a href="https://github.com/BRGM/hubeau/issues/127">#127</a>)</li>
+<li>Le package R 'hubeau' permet de requêter 10 des 12 APIs Hub'Eau via une syntaxe standardisée (<code>get_[API]_[Operation]</code>) (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Le package est disponible sur CRAN et GitHub, avec une documentation incluant des exemples et une vignette (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>L'OFB DR Normandie utilise le package pour générer des rapports mensuels sur l'écoulement des cours d'eau en Bretagne (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Une vignette illustre l'utilisation de l'API 'Écoulement' avec des cartes et graphiques synthétiques (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)</li>
+<li>Les paramètres date_observation_min et date_observation_max appliquent des filtres stricts (&gt; et &lt;) au lieu des opérateurs inclusifs (&gt;= et &lt;=) comme indiqué dans la documentation. (<a href="https://github.com/BRGM/hubeau/issues/192">#192</a>)</li>
+<li>L'API retourne des doublons lors de la pagination (ex. même feature apparaît sur les pages 1 et 2 avec les mêmes données) (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+<li>Le paramètre 'size' influence l'ordre des résultats, ce qui peut créer des incohérences lors de la pagination (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+<li>La station D0137052 (L'Helpe mineure à Fourmies) a des observations dupliquées pour la date 2024-09-26 (<a href="https://github.com/BRGM/hubeau/issues/193">#193</a>)</li>
+<li>Les URI fournis par l'API Hub'Eau (ex: uri_cours_eau) contiennent des informations structurées permettant d'accéder directement aux données Sandre via des services WFS. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)</li>
 </ul>
 <h3 id="historique-des-problèmes-résolus">Historique des problèmes résolus</h3>
 <ul>
-<li>~~Depuis le 12 avril 2023, les données de l'API Écoulement des cours d'eau sont mises à jour de façon quotidienne. (<a href="https://github.com/BRGM/hubeau/issues/122">#122</a>)~~</li>
-<li>~~Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
-<li>~~Le package <code>hubeau</code> permet de requêter 10 des 12 APIs Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
-<li>~~La syntaxe des fonctions de requête du package <code>hubeau</code> est <code>get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
-<li>~~Le package <code>hubeau</code> est documenté avec des exemples d'utilisation et des vignettes. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
-<li>~~Le code source du package <code>hubeau</code> est disponible sur GitHub à l'adresse <code>https://github.com/inrae/hubeau</code>. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
-<li>~~Les éléments descriptifs du package R <code>hubeau</code> ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (<code>https://github.com/BRGM/hubeau/tree/master/re-utilisations</code>) et non sur le site éditorial. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
-<li>~~Le package R <code>hubeau</code> couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
-<li>~~L'OFB DR Normandie utilise le package R <code>hubeau</code> pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
-<li>~~Une vignette du package <code>hubeau</code> propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (<a href="https://github.com/BRGM/hubeau/issues/137">#137</a>)~~</li>
-<li>~~L'API Écoulement des cours d'eau est passée de la version beta à la version stable 1.0 le 23/05/2023. (<a href="https://github.com/BRGM/hubeau/issues/142">#142</a>)~~</li>
-<li>~~La version beta de l'API Écoulement des cours d'eau n'est plus accessible depuis le 26/05/2023. (<a href="https://github.com/BRGM/hubeau/issues/142">#142</a>)~~</li>
-<li>~~Le chemin de l'URL d'interrogation pour l'API Écoulement des cours d'eau a changé de <code>/api/vbeta/</code> à <code>/api/v1/</code>. (<a href="https://github.com/BRGM/hubeau/issues/142">#142</a>)~~</li>
-<li>~~Le champ uri_cours_eau de l'API Hub'Eau Écoulement des cours d'eau contient le TYPENAME (ex: CoursEau_Carthage2017) nécessaire pour interroger le service WFS du Sandre. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)~~</li>
-<li>~~Le TYPENAME peut être extrait de l'URI http://id.eaufrance.fr/{TYPENAME}/{CODE}. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)~~</li>
-<li>~~Le champ code_cours_eau de l'API Hub'Eau correspond au CdEntiteHydrographique utilisé dans le filtre WFS du Sandre. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)~~</li>
-<li>~~L'URL du service WFS du Sandre pour les données géographiques est https://services.sandre.eaufrance.fr/geo/sandre. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)~~</li>
-<li>~~Le format de sortie GeoJSON pour le WFS du Sandre est OUTPUTFORMAT=application/json; subtype=geojson. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)~~</li>
-<li>~~La BD Carthage 2017 (CoursEau_Carthage2017) est un jeu de données de référence pour les entités hydrographiques utilisé par Hub'eau. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)~~</li>
-<li>~~Le Sandre fournit un service WFS pour accéder aux données géographiques des entités hydrographiques. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)~~</li>
-<li>~~Le CdEntiteHydrographique est l'identifiant unique d'une entité hydrographique dans le référentiel Sandre. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)~~</li>
-<li>~~Le endpoint "stations" de l'API "Écoulement des cours d'eau" a été indisponible et ne retournait pas de données du 10 au 14 mai. (<a href="https://github.com/BRGM/hubeau/issues/233">#233</a>)~~</li>
-<li>~~L'anomalie concernant l'indisponibilité du endpoint "stations" de l'API "Écoulement des cours d'eau" a été traitée et le service rétabli le 14 mai. (<a href="https://github.com/BRGM/hubeau/issues/233">#233</a>)~~</li>
-<li>~~L'API "Écoulement des cours d'eau" propose un endpoint dédié ("stations") pour accéder aux informations descriptives des stations hydrométriques. (<a href="https://github.com/BRGM/hubeau/issues/233">#233</a>)~~</li>
+<li>~~Les données de l'API sont mises à jour quotidiennement depuis le 12 avril 2023. (<a href="https://github.com/BRGM/hubeau/issues/122">#122</a>)~~</li>
+<li>~~La version bêta de l'API a été remplacée par la version stable 1.0 le 23 mai 2023. Les URLs doivent utiliser '/v1' au lieu de '/vbeta'. (<a href="https://github.com/BRGM/hubeau/issues/142">#142</a>)~~</li>
+<li>~~Le paramètre TYPENAME dans l'URL WFS est dérivé du nom du jeu de données Sandre (ex: CoursEau_Carthage2017), disponible dans le champ uri_cours_eau de l'API Hub'Eau. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)~~</li>
+<li>~~Le code_cours_eau (ex: M1015000) est utilisé comme filtre dans la requête WFS pour identifier l'entité hydrographique spécifique. (<a href="https://github.com/BRGM/hubeau/issues/194">#194</a>)~~</li>
+<li>~~Le endpoint <em>stations</em> de l'API <em>Écoulement des cours d'eau</em> a connu une interruption de service temporaire, empêchant la récupération des données. (<a href="https://github.com/BRGM/hubeau/issues/233">#233</a>)~~</li>
 </ul>
 <h3 id="issues-sources">Issues sources</h3>
 <ul>
-<li><strong>#122</strong> [API Ecoulement des cours d'eau] Fréquence d'actualisation — L'API Écoulement des cours d'eau est désormais mise à jour quotidiennement depuis le 12 avril 2023, résolvant les retards de publication. <code>[résolu]</code></li>
-<li><strong>#127</strong> [API Ecoulement] Erreurs dans la description openapi — L'issue rapporte plusieurs erreurs dans la description OpenAPI de l'API Écoulement, concernant les noms de paramètres, leurs types et la structure des descriptions, ce qui impacte l'automatisation de la gestion des champs. <code>[en_cours]</code></li>
-<li><strong>#137</strong> Package R pour requêter les APIs hubeau — Le package R <code>hubeau</code> version 0.4.0 est disponible sur le CRAN, permettant de requêter 10 des 12 APIs Hub'Eau avec une syntaxe simplifiée, et est utilisé par l'OFB pour des rapports mensuels sur l'écoulement des cours d'eau. <code>[résolu]</code></li>
-<li><strong>#142</strong> [API Ecoulement des cours d'eau] Passage en version stable — L'API Écoulement des cours d'eau est passée de la version beta à la version stable 1.0 le 23/05/2023, nécessitant la modification du chemin de l'URL de <code>/api/vbeta/</code> à <code>/api/v1/</code>. <code>[résolu]</code></li>
-<li><strong>#192</strong> [API Ecoulement des cours d'eau] observations - erreur sur les champs date_observation_min &amp; date_observation_max — L'API Écoulement des cours d'eau présente une erreur où les paramètres de date <code>date_observation_min</code> et <code>date_observation_max</code> utilisent des comparaisons strictes au lieu d'inclusives, ce qui empêche la récupération correcte des données, notamment pour une période d'une seule journée. <code>[en_cours]</code></li>
-<li><strong>#193</strong> [API Ecoulement des cours d'eau] observations - doublons produits par l'API — L'API Écoulement des cours d'eau peut retourner des doublons d'observations lors de la pagination, et l'ordre des résultats n'est pas stable si le paramètre de taille est modifié. <code>[en_cours]</code></li>
-<li><strong>#194</strong> [API Ecoulement des cours d'eau] Comment retrouver les ressources liées ? — L'API Écoulement des cours d'eau permet de retrouver les données géographiques des cours d'eau via le service WFS du Sandre en utilisant les champs uri_cours_eau et code_cours_eau. <code>[résolu]</code></li>
-<li><strong>#233</strong> [API Ecoulement des cours d'eau] pas de données stations — Le endpoint "stations" de l'API "Écoulement des cours d'eau" a connu une indisponibilité temporaire des données entre le 10 et le 14 mai, mais l'anomalie a été résolue. <code>[résolu]</code></li>
+<li><strong>#122</strong> [API Ecoulement des cours d'eau] Fréquence d'actualisation (2023-04-12) — L'API Écoulement des cours d'eau met à jour ses données quotidiennement depuis avril 2023.</li>
+<li><strong>#127</strong> [API Ecoulement] Erreurs dans la description openapi (2024-02-26) — L'API Écoulement des cours d'eau présente des erreurs dans sa description OpenAPI concernant les noms et types des paramètres de requête.</li>
+<li><strong>#137</strong> Package R pour requêter les APIs hubeau (2023-05-30) — Un package R permettant d'accéder à 10 APIs Hub'Eau a été publié, avec des exemples d'utilisation et une intégration dans des rapports hydrologiques.</li>
+<li><strong>#142</strong> [API Ecoulement des cours d'eau] Passage en version stable (2023-06-06) — L'API Écoulement des cours d'eau a migré de la version bêta à la version stable 1.0 en mai 2023, nécessitant une mise à jour des paramètres d'URL pour les utilisateurs.</li>
+<li><strong>#192</strong> [API Ecoulement des cours d'eau] observations - erreur sur les champs date_observation_min &amp; date_observation_max (2025-05-21) — L'API Écoulement des cours d'eau applique des filtres stricts sur les dates contrairement à la documentation, empêchant la récupération de données pour des dates spécifiques.</li>
+<li><strong>#193</strong> [API Ecoulement des cours d'eau] observations - doublons produits par l'API (2024-10-18) — L'API Écoulement des cours d'eau génère des doublons lors de la pagination, affectant la reproductibilité des résultats.</li>
+<li><strong>#194</strong> [API Ecoulement des cours d'eau] Comment retrouver les ressources liées ? (2024-11-05) — L'API Écoulement des cours d'eau fournit des URI permettant d'accéder à des jeux de données Sandre via des requêtes WFS, avec des paramètres dépendant de codes hydrographiques et de noms de jeux de données.</li>
+<li><strong>#233</strong> [API Ecoulement des cours d'eau] pas de données stations (2025-05-14) — Le endpoint <em>stations</em> de l'API Écoulement des cours d'eau a temporairement cessé de fournir des données, mais le problème a été résolu.</li>
 </ul>
 </details>
         </article>
@@ -165,7 +156,12 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 Hub'Eau Assistant
             </div>
-            <button class="chatbot-close" id="chatbotClose">&times;</button>
+            <div class="chatbot-header-actions">
+                <button class="chatbot-clear" id="chatbotClear" title="Effacer la conversation">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+                <button class="chatbot-close" id="chatbotClose">&times;</button>
+            </div>
         </div>
         <div class="chatbot-messages" id="chatbotMessages">
             <div class="chat-msg chat-msg-bot">

@@ -72,7 +72,7 @@ def chat(
     if json_mode:
         payload["format"] = "json"
 
-    resp = client.post(f"{OLLAMA_HOST}/api/chat", json=payload, timeout=600)
+    resp = client.post(f"{OLLAMA_HOST}/api/chat", json=payload, timeout=1200)
     resp.raise_for_status()
     return resp.json()["message"]["content"]
 
