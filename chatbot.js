@@ -2,21 +2,11 @@
   "use strict";
 
   // --- Config ---
-  var EMBEDDINGS_URL = "embeddings.json";
-  var BASE_TOP_K = 5;
-  var MAX_TOP_K = 12;
-  var MIN_SCORE = 0.35;
-  var DEDUP_THRESHOLD = 0.6;
-  var MAX_HISTORY_TURNS = 4; // 4 exchanges = 8 messages
-  var OLLAMA_HOST = window.OLLAMA_HOST || "http://" + window.location.hostname + ":11434";
-  var OLLAMA_CHAT_MODEL = "qwen3.5:4b";
-  var OLLAMA_EMBED_MODEL = "nomic-embed-text";
   var SESSION_KEY = "hubeau_chat_history";
   var SESSION_PANEL_KEY = "hubeau_chat_open";
 
   // --- State ---
-  var embeddings = [];
-  var isReady = false;
+  var isReady = true;
   var isProcessing = false;
   var conversationHistory = []; // {role, content, sources, timestamp}
 
@@ -69,9 +59,6 @@
     panel.classList.toggle("open");
     var isOpen = panel.classList.contains("open");
     savePanelState(isOpen);
-    if (isOpen && !isReady && embeddings.length === 0) {
-      initChatbot();
-    }
     if (isOpen) {
       inputEl.focus();
     }
@@ -126,31 +113,13 @@
     processQuery(query);
   }
 
-  // --- Initialize: load embeddings ---
-  function initChatbot() {
-    showStatus("Chargement de l'index...");
-
-    fetch(EMBEDDINGS_URL)
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        embeddings = data;
-        isReady = true;
-        hideStatus();
-      })
-      .catch(function (err) {
-        console.error("Init error:", err);
-        showStatus("Erreur: " + err.message);
-      });
-  }
-
-  // --- Auto-open if was open + auto-init ---
+  // --- Auto-open if was open ---
   if (loadPanelState()) {
     panel.classList.add("open");
-    initChatbot();
   }
   restoreSession();
 
-  // --- Query processing ---
+  // --- Query processing via backend ---
   function processQuery(query) {
     isProcessing = true;
     sendBtn.disabled = true;
@@ -170,261 +139,91 @@
     messagesEl.appendChild(streamDiv);
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
-    embedQuery(query)
-      .then(function (queryVec) {
-        var results = findSimilarDynamic(queryVec);
-        return streamAnswer(query, results, streamBubble);
-      })
-      .then(function (result) {
-        // Remove streaming div
-        var el = document.getElementById("chatStreaming");
-        if (el) el.remove();
-        // Add final message
-        appendMsg("bot", result.answer, result.sources);
-        isProcessing = false;
-        sendBtn.disabled = false;
+    // Build history for backend (last N turns, role + content only)
+    var historyForBackend = conversationHistory.map(function (h) {
+      return { role: h.role, content: h.content };
+    });
+
+    fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: query, history: historyForBackend }),
+    })
+      .then(function (resp) {
+        if (!resp.ok) {
+          return resp.text().then(function (t) {
+            throw new Error("Erreur serveur " + resp.status + ": " + t);
+          });
+        }
+
+        var reader = resp.body.getReader();
+        var decoder = new TextDecoder();
+        var fullText = "";
+        var buffer = "";
+        var sources = [];
+
+        function processChunk() {
+          return reader.read().then(function (result) {
+            if (result.done) {
+              // Process remaining buffer
+              if (buffer.trim()) {
+                try {
+                  var data = JSON.parse(buffer.trim());
+                  if (data.token) fullText += data.token;
+                  if (data.done) sources = data.sources || [];
+                } catch (e) { /* ignore */ }
+              }
+              return;
+            }
+
+            buffer += decoder.decode(result.value, { stream: true });
+            var lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (var i = 0; i < lines.length; i++) {
+              var line = lines[i].trim();
+              if (!line) continue;
+              try {
+                var data = JSON.parse(line);
+                if (data.error) {
+                  throw new Error(data.error);
+                }
+                if (data.token) {
+                  fullText += data.token;
+                  renderMarkdownIntoBubble(streamBubble, fullText);
+                  messagesEl.scrollTop = messagesEl.scrollHeight;
+                }
+                if (data.done) {
+                  sources = data.sources || [];
+                }
+              } catch (e) { /* malformed line, skip */ }
+            }
+
+            return processChunk();
+          });
+        }
+
+        return processChunk().then(function () {
+          if (!fullText.trim()) fullText = "Pas de reponse generee.";
+
+          // Remove streaming div
+          var el = document.getElementById("chatStreaming");
+          if (el) el.remove();
+          // Add final message
+          appendMsg("bot", fullText.trim(), sources);
+          isProcessing = false;
+          sendBtn.disabled = false;
+        });
       })
       .catch(function (err) {
         var el = document.getElementById("chatStreaming");
         if (el) el.remove();
         console.error("Query error:", err);
         var msg = err.message || "Erreur inconnue";
-        msg += "\nVerifiez qu'Ollama est bien lance (ollama serve).";
         appendMsg("bot", "Erreur: " + msg);
         isProcessing = false;
         sendBtn.disabled = false;
       });
-  }
-
-  // --- Embed query via Ollama ---
-  function embedQuery(text) {
-    return fetch(OLLAMA_HOST + "/api/embed", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: OLLAMA_EMBED_MODEL,
-        input: ["search_query: " + text],
-        keep_alive: 0
-      })
-    })
-      .then(function (r) {
-        if (!r.ok) {
-          return r.text().then(function (t) {
-            throw new Error("Ollama embed error " + r.status + ": " + t);
-          });
-        }
-        return r.json();
-      })
-      .then(function (data) { return data.embeddings[0]; });
-  }
-
-  // --- Dynamic vector search with deduplication ---
-  function findSimilarDynamic(queryVec) {
-    var scored = embeddings.map(function (entry) {
-      return {
-        score: cosineSim(queryVec, entry.embedding),
-        text: entry.text,
-        api: entry.api,
-        section: entry.section,
-        url: entry.url,
-        source: entry.source || "wiki",
-      };
-    });
-    scored.sort(function (a, b) { return b.score - a.score; });
-
-    var selected = [];
-    var selectedTexts = [];
-
-    for (var i = 0; i < scored.length && selected.length < MAX_TOP_K; i++) {
-      var item = scored[i];
-
-      // Stop if below minimum score (after getting BASE_TOP_K)
-      if (selected.length >= BASE_TOP_K && item.score < MIN_SCORE) break;
-      // Hard stop if score is very low
-      if (item.score < 0.2) break;
-
-      // Deduplication: skip fact chunks that overlap too much with already selected wiki chunks
-      if (item.source === "fact" && selectedTexts.length > 0) {
-        var itemWords = getWords(item.text);
-        var dominated = false;
-        for (var j = 0; j < selectedTexts.length; j++) {
-          if (wordOverlap(itemWords, selectedTexts[j]) >= DEDUP_THRESHOLD) {
-            dominated = true;
-            break;
-          }
-        }
-        if (dominated) continue;
-      }
-
-      selected.push(item);
-      selectedTexts.push(getWords(item.text));
-    }
-
-    return selected;
-  }
-
-  function getWords(text) {
-    return text.toLowerCase().replace(/[^\w\s\u00e0\u00e2\u00e4\u00e9\u00e8\u00ea\u00eb\u00ef\u00ee\u00f4\u00f9\u00fb\u00fc\u00ff\u00e7\u0153\u00e6]/g, " ").split(/\s+/).filter(function (w) { return w.length > 2; });
-  }
-
-  function wordOverlap(wordsA, wordsB) {
-    if (wordsA.length === 0) return 0;
-    var setB = {};
-    for (var i = 0; i < wordsB.length; i++) setB[wordsB[i]] = true;
-    var overlap = 0;
-    for (var j = 0; j < wordsA.length; j++) {
-      if (setB[wordsA[j]]) overlap++;
-    }
-    return overlap / wordsA.length;
-  }
-
-  function cosineSim(a, b) {
-    var dot = 0, nA = 0, nB = 0;
-    for (var i = 0; i < a.length; i++) {
-      dot += a[i] * b[i];
-      nA += a[i] * a[i];
-      nB += b[i] * b[i];
-    }
-    return dot / (Math.sqrt(nA) * Math.sqrt(nB) + 1e-8);
-  }
-
-  // --- Build messages for multi-turn ---
-  function buildMessages(query, results) {
-    var contextParts = results.map(function (r) {
-      var tag = r.source === "fact" ? "FAIT BRUT" : r.section;
-      return "[" + r.api + " - " + tag + "] " + r.text;
-    });
-
-    var systemPrompt =
-      "Tu es un assistant expert sur les APIs Hub'Eau " +
-      "(plateforme de donnees ouvertes sur l'eau en France, par le BRGM).\n\n" +
-      "Les 14 APIs Hub'Eau sont :\n" +
-      "- Hydrometrie (debits, hauteurs d'eau)\n" +
-      "- Piezometrie (niveaux des nappes)\n" +
-      "- Qualite des cours d'eau (analyses physico-chimiques)\n" +
-      "- Qualite des nappes (qualite eaux souterraines)\n" +
-      "- Qualite de l'eau potable\n" +
-      "- Poisson (donnees piscicoles)\n" +
-      "- Prelevements en eau\n" +
-      "- Hydrobiologie (IBGN, IBD, indices biologiques)\n" +
-      "- Temperature des cours d'eau\n" +
-      "- Ecoulement des cours d'eau (observations visuelles)\n" +
-      "- Surveillance des eaux littorales\n" +
-      "- Indicateurs des services (eau potable, assainissement)\n" +
-      "- Phytopharmaceutiques (pesticides dans l'eau)\n" +
-      "- General (transverse a toutes les APIs)\n\n" +
-      "Regles :\n" +
-      "- Reponds en francais, de maniere concise et structuree.\n" +
-      "- Base ta reponse UNIQUEMENT sur le contexte fourni et l'historique de conversation.\n" +
-      "- Utilise le formatage markdown : **gras** pour les points cles, `code` pour les parametres/endpoints, ### pour les sous-titres si la reponse est longue, des listes a puces.\n" +
-      "- Cite les numeros d'issues quand c'est pertinent, ex: (#123).\n" +
-      "- Structure ta reponse : d'abord une reponse directe et courte, puis les details si necessaire.\n" +
-      "- Si le contexte ne contient pas l'information, dis-le clairement et suggere ou chercher.\n" +
-      "- Si la question n'est pas liee aux APIs Hub'Eau ou a l'hydrologie, indique poliment que tu ne peux aider que sur ces sujets.\n" +
-      "- Pour les questions de suivi (ex: 'et pour la piezometrie ?'), utilise l'historique de conversation pour comprendre le contexte.\n" +
-      "- Distingue les problemes resolus (passes) des problemes encore en cours.\n" +
-      "- Pour les liens, utilise le format [texte](url).";
-
-    var messages = [{ role: "system", content: systemPrompt }];
-
-    // Add last N turns of conversation history (plain, no RAG context)
-    var historySlice = conversationHistory.slice(-(MAX_HISTORY_TURNS * 2));
-    for (var i = 0; i < historySlice.length; i++) {
-      var h = historySlice[i];
-      messages.push({ role: h.role === "bot" ? "assistant" : h.role, content: h.content });
-    }
-
-    // Current question with RAG context
-    var userMsg =
-      "Contexte (extraits de la base de connaissances):\n" +
-      contextParts.join("\n\n") +
-      "\n\nQuestion: " + query;
-
-    messages.push({ role: "user", content: userMsg });
-
-    return messages;
-  }
-
-  // --- Streaming LLM generation via Ollama native /api/chat ---
-  function streamAnswer(query, results, bubble) {
-    var messages = buildMessages(query, results);
-
-    return fetch(OLLAMA_HOST + "/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: OLLAMA_CHAT_MODEL,
-        messages: messages,
-        stream: true,
-        options: {
-          temperature: 0.3,
-          num_predict: 2048,
-        },
-        keep_alive: 0,
-      }),
-    }).then(function (resp) {
-      if (!resp.ok) {
-        return resp.text().then(function (t) {
-          throw new Error("Ollama API error " + resp.status + ": " + t);
-        });
-      }
-
-      var reader = resp.body.getReader();
-      var decoder = new TextDecoder();
-      var fullText = "";
-      var buffer = "";
-
-      function processChunk() {
-        return reader.read().then(function (result) {
-          if (result.done) {
-            // Process remaining buffer
-            if (buffer.trim()) {
-              try {
-                var data = JSON.parse(buffer.trim());
-                if (data.message && data.message.content) {
-                  fullText += data.message.content;
-                }
-              } catch (e) { /* ignore */ }
-            }
-            return;
-          }
-
-          buffer += decoder.decode(result.value, { stream: true });
-          var lines = buffer.split("\n");
-          buffer = lines.pop() || ""; // Keep incomplete line in buffer
-
-          for (var i = 0; i < lines.length; i++) {
-            var line = lines[i].trim();
-            if (!line) continue;
-            try {
-              var data = JSON.parse(line);
-              if (data.message && data.message.content) {
-                fullText += data.message.content;
-                renderMarkdownIntoBubble(bubble, fullText);
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-              }
-            } catch (e) {
-              // Malformed JSON line, skip
-            }
-          }
-
-          return processChunk();
-        });
-      }
-
-      return processChunk().then(function () {
-        if (!fullText.trim()) fullText = "Pas de reponse generee.";
-
-        var sources = results
-          .filter(function (r) { return r.score > 0.3; })
-          .slice(0, 3)
-          .map(function (r) {
-            return { api: r.api, section: r.section, url: r.url };
-          });
-
-        return { answer: fullText.trim(), sources: sources };
-      });
-    });
   }
 
   // --- Markdown rendering into a bubble ---
@@ -507,20 +306,24 @@
         c.textContent = m[3];
         parent.appendChild(c);
       } else if (m[4] && m[5]) {
-        // Link [text](url)
-        var a = document.createElement("a");
-        a.href = m[5];
-        a.textContent = m[4];
-        a.target = "_blank";
-        a.rel = "noopener";
-        parent.appendChild(a);
+        // Link [text](url) — only allow http(s) to prevent javascript: XSS
+        if (/^https?:\/\//i.test(m[5])) {
+          var a = document.createElement("a");
+          a.href = m[5];
+          a.textContent = m[4];
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          parent.appendChild(a);
+        } else {
+          parent.appendChild(document.createTextNode("[" + m[4] + "](" + m[5] + ")"));
+        }
       } else if (m[6]) {
         // Issue ref (#NNN)
         var issueLink = document.createElement("a");
         issueLink.href = "https://github.com/BRGM/hubeau/issues/" + m[6];
         issueLink.textContent = "#" + m[6];
         issueLink.target = "_blank";
-        issueLink.rel = "noopener";
+        issueLink.rel = "noopener noreferrer";
         parent.appendChild(document.createTextNode("("));
         parent.appendChild(issueLink);
         parent.appendChild(document.createTextNode(")"));
