@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.env
+raw_data/
+extracted/
+wiki/
+site/
+venv/
+.venv/
+.git/
+.gitignore
+.dockerignore
+*.md
+docs/

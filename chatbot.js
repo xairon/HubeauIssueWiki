@@ -4,14 +4,12 @@
   // --- Config ---
   var EMBEDDINGS_URL = "embeddings.json";
   var TOP_K = 5;
-  var HF_GEN_URL = "https://router.huggingface.co/cerebras/v1/chat/completions";
-  var HF_GEN_MODEL = "llama3.1-8b";
-  var HF_TOKEN_STORAGE = "hubeau_kb_hf_token";
+  var OLLAMA_HOST = window.OLLAMA_HOST || "http://localhost:11434";
+  var OLLAMA_CHAT_MODEL = "qwen3.5:4b";
+  var OLLAMA_EMBED_MODEL = "nomic-embed-text";
 
   // --- State ---
   var embeddings = [];
-  var embedder = null;
-  var hfToken = localStorage.getItem(HF_TOKEN_STORAGE) || "";
   var isReady = false;
   var isProcessing = false;
 
@@ -27,7 +25,7 @@
   // --- Toggle panel ---
   toggle.addEventListener("click", function () {
     panel.classList.toggle("open");
-    if (panel.classList.contains("open") && !isReady && !embedder) {
+    if (panel.classList.contains("open") && !isReady && embeddings.length === 0) {
       initChatbot();
     }
     if (panel.classList.contains("open")) {
@@ -51,11 +49,6 @@
     var query = inputEl.value.trim();
     if (!query || isProcessing) return;
 
-    if (!hfToken) {
-      promptForToken();
-      return;
-    }
-
     if (!isReady) {
       showStatus("Chargement en cours, patientez...");
       return;
@@ -66,24 +59,14 @@
     processQuery(query);
   }
 
-  // --- Initialize: load embeddings + Transformers.js ---
+  // --- Initialize: load embeddings ---
   function initChatbot() {
-    if (!hfToken) {
-      promptForToken();
-      return;
-    }
-
-    showStatus("Chargement de l'index et du modele d'embeddings (~120 Mo)...");
+    showStatus("Chargement de l'index...");
 
     fetch(EMBEDDINGS_URL)
       .then(function (r) { return r.json(); })
       .then(function (data) {
         embeddings = data;
-        showStatus("Index charge (" + embeddings.length + " passages). Chargement du modele...");
-        return loadTransformers();
-      })
-      .then(function (pipe) {
-        embedder = pipe;
         isReady = true;
         hideStatus();
       })
@@ -91,61 +74,6 @@
         console.error("Init error:", err);
         showStatus("Erreur: " + err.message);
       });
-  }
-
-  function loadTransformers() {
-    return import(
-      "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.1"
-    ).then(function (mod) {
-      return mod.pipeline("feature-extraction", "Xenova/multilingual-e5-small", {
-        dtype: "fp32",
-      });
-    });
-  }
-
-  function promptForToken() {
-    appendMsg(
-      "bot",
-      "Pour utiliser l'assistant, entrez votre token HuggingFace " +
-      "(gratuit sur huggingface.co/settings/tokens). " +
-      "Le token est stocke localement dans votre navigateur."
-    );
-
-    var keyDiv = document.createElement("div");
-    keyDiv.className = "chat-msg chat-msg-bot";
-
-    var bubble = document.createElement("div");
-    bubble.className = "chat-bubble";
-
-    var keyInput = document.createElement("input");
-    keyInput.type = "password";
-    keyInput.placeholder = "hf_...";
-    keyInput.style.cssText = "width:100%;padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px;margin-bottom:6px;";
-
-    var saveBtn = document.createElement("button");
-    saveBtn.textContent = "Enregistrer";
-    saveBtn.style.cssText = "padding:6px 14px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;";
-
-    saveBtn.addEventListener("click", function () {
-      var key = keyInput.value.trim();
-      if (key) {
-        hfToken = key;
-        localStorage.setItem(HF_TOKEN_STORAGE, key);
-        keyDiv.remove();
-        appendMsg("bot", "Token enregistre. Chargement...");
-        initChatbot();
-      }
-    });
-
-    keyInput.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") saveBtn.click();
-    });
-
-    bubble.appendChild(keyInput);
-    bubble.appendChild(saveBtn);
-    keyDiv.appendChild(bubble);
-    messagesEl.appendChild(keyDiv);
-    messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
   // --- Query processing ---
@@ -169,24 +97,33 @@
         removeTyping();
         console.error("Query error:", err);
         var msg = err.message || "Erreur inconnue";
-        if (msg.indexOf("401") !== -1 || msg.indexOf("403") !== -1) {
-          hfToken = "";
-          localStorage.removeItem(HF_TOKEN_STORAGE);
-          msg = "Token invalide. Rechargez la page et reessayez.";
-        }
+        msg += "\nVerifiez qu'Ollama est bien lance (ollama serve).";
         appendMsg("bot", "Erreur: " + msg);
         isProcessing = false;
         sendBtn.disabled = false;
       });
   }
 
-  // --- Embed query via Transformers.js ---
+  // --- Embed query via Ollama ---
   function embedQuery(text) {
-    return embedder("query: " + text, { pooling: "mean", normalize: true }).then(
-      function (output) {
-        return Array.from(output.data);
-      }
-    );
+    return fetch(OLLAMA_HOST + "/api/embed", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: OLLAMA_EMBED_MODEL,
+        input: ["search_query: " + text],
+        keep_alive: 0
+      })
+    })
+      .then(function (r) {
+        if (!r.ok) {
+          return r.text().then(function (t) {
+            throw new Error("Ollama embed error " + r.status + ": " + t);
+          });
+        }
+        return r.json();
+      })
+      .then(function (data) { return data.embeddings[0]; });
   }
 
   // --- Vector search ---
@@ -214,7 +151,7 @@
     return dot / (Math.sqrt(nA) * Math.sqrt(nB) + 1e-8);
   }
 
-  // --- LLM generation via HuggingFace Router (OpenAI-compatible) ---
+  // --- LLM generation via Ollama (OpenAI-compatible) ---
   function generateAnswer(query, results) {
     var contextParts = results.map(function (r) {
       return "[" + r.api + " - " + r.section + "] " + r.text;
@@ -236,26 +173,26 @@
       "Contexte:\n" + contextParts.join("\n\n") +
       "\n\nQuestion: " + query;
 
-    return fetch(HF_GEN_URL, {
+    var url = OLLAMA_HOST + "/v1/chat/completions";
+
+    return fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + hfToken,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: HF_GEN_MODEL,
+        model: OLLAMA_CHAT_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMsg },
         ],
         max_tokens: 1000,
         temperature: 0.3,
+        keep_alive: 0
       }),
     })
       .then(function (resp) {
         if (!resp.ok) {
           return resp.text().then(function (t) {
-            throw new Error("API error " + resp.status + ": " + t);
+            throw new Error("Ollama API error " + resp.status + ": " + t);
           });
         }
         return resp.json();

@@ -1,14 +1,14 @@
-"""Extract structured facts from issues using Gemini."""
+"""Extract structured facts from issues using Ollama."""
 
 import argparse
 import json
 import re
 import sys
-import time
 
 import httpx
 
-from config import EXTRACTED_DIR, GEMINI_API_BASE, GEMINI_API_KEY, GEMINI_MODEL, HUBEAU_APIS, RAW_DATA_DIR
+import ollama_utils
+from config import EXTRACTED_DIR, HUBEAU_APIS, OLLAMA_BIG_MODEL, RAW_DATA_DIR
 
 EXTRACTION_PROMPT = """\
 Tu es un expert en hydrologie et en APIs de données environnementales. Tu analyses des issues GitHub du projet Hub'Eau (plateforme d'accès aux données sur l'eau en France).
@@ -77,31 +77,12 @@ def format_issue_for_prompt(issue: dict) -> str:
 
 
 def extract_facts(client: httpx.Client, issue: dict) -> dict:
-    """Send issue to Gemini and get structured facts back."""
+    """Send issue to Ollama and get structured facts back."""
     prompt = format_issue_for_prompt(issue)
 
-    url = f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "responseMimeType": "application/json",
-            "temperature": 0.2,
-        },
-    }
-
-    resp = client.post(url, json=payload, params={"key": GEMINI_API_KEY})
-
-    # Handle rate limiting
-    if resp.status_code == 429:
-        retry_after = int(resp.headers.get("Retry-After", 10))
-        print(f"  Rate limited. Waiting {retry_after}s...")
-        time.sleep(retry_after)
-        resp = client.post(url, json=payload, params={"key": GEMINI_API_KEY})
-
-    resp.raise_for_status()
-    result = resp.json()
-
-    text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+    text = ollama_utils.chat(
+        client, OLLAMA_BIG_MODEL, prompt, temperature=0.2, json_mode=True
+    ).strip()
 
     # Parse JSON response
     try:
@@ -112,7 +93,7 @@ def extract_facts(client: httpx.Client, issue: dict) -> dict:
         if match:
             facts = json.loads(match.group())
         else:
-            print(f"  WARNING: Could not parse Gemini response for issue #{issue['number']}")
+            print(f"  WARNING: Could not parse Ollama response for issue #{issue['number']}")
             facts = {
                 "api_concernee": ["Général"],
                 "date_source": issue.get("created_at", "")[:10],
@@ -129,13 +110,9 @@ def extract_facts(client: httpx.Client, issue: dict) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Extract facts from fetched issues using Gemini")
+    parser = argparse.ArgumentParser(description="Extract facts from fetched issues using Ollama")
     parser.add_argument("--force", action="store_true", help="Re-extract even if output exists")
     args = parser.parse_args()
-
-    if not GEMINI_API_KEY:
-        print("ERROR: GEMINI_API_KEY environment variable not set.")
-        sys.exit(1)
 
     EXTRACTED_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -148,7 +125,10 @@ def main() -> None:
     extracted = 0
     skipped = 0
 
-    with httpx.Client(timeout=60) as client:
+    with httpx.Client(timeout=600) as client:
+        ollama_utils.check_ollama(client)
+        ollama_utils.ensure_model(OLLAMA_BIG_MODEL, client)
+
         for i, filepath in enumerate(issue_files, 1):
             issue = json.loads(filepath.read_text(encoding="utf-8"))
             num = issue["number"]
@@ -162,6 +142,8 @@ def main() -> None:
             facts = extract_facts(client, issue)
             out_path.write_text(json.dumps(facts, ensure_ascii=False, indent=2), encoding="utf-8")
             extracted += 1
+
+        ollama_utils.unload_model(OLLAMA_BIG_MODEL, client)
 
     print(f"\nDone. Extracted: {extracted}, Skipped: {skipped}")
 

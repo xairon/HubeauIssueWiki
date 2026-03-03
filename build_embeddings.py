@@ -1,24 +1,22 @@
-"""Pre-compute embeddings for wiki content using HuggingFace Inference API.
+"""Pre-compute embeddings for wiki content using local Ollama.
 
-Uses intfloat/multilingual-e5-small (384 dims) — available as Xenova/multilingual-e5-small
-in Transformers.js, ensuring vector space compatibility between build-time and browser.
-Requires "passage: " prefix at build time and "query: " prefix at query time.
+Uses nomic-embed-text (768 dims) via Ollama.
+Requires "search_document: " prefix at build time and "search_query: " prefix at query time.
 """
 
 import json
 import os
 import re
-import time
 
 import httpx
+
+import ollama_utils
+from config import OLLAMA_EMBED_MODEL
 
 WIKI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "wiki")
 SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
-HF_MODEL = "intfloat/multilingual-e5-small"
-HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
-BATCH_SIZE = 32  # texts per API call
+BATCH_SIZE = 32  # texts per Ollama call
 
 
 def chunk_section(text: str) -> list[str]:
@@ -173,61 +171,7 @@ def extract_sections(filepath: str) -> list[dict]:
     return sections
 
 
-def get_embeddings_batch(texts: list[str], client: httpx.Client) -> list[list[float]]:
-    """Get embeddings for a batch of texts via HuggingFace Inference API."""
-    headers = {
-        "Authorization": f"Bearer {HF_TOKEN}",
-    }
-
-    for attempt in range(3):
-        resp = client.post(HF_API_URL, json={"inputs": texts}, headers=headers)
-
-        if resp.status_code == 503:
-            data = resp.json()
-            wait = data.get("estimated_time", 20)
-            print(f"    Model loading, waiting {wait:.0f}s...")
-            time.sleep(wait)
-            continue
-
-        if resp.status_code == 429:
-            wait = int(resp.headers.get("Retry-After", 10))
-            print(f"    Rate limited, waiting {wait}s...")
-            time.sleep(wait)
-            continue
-
-        resp.raise_for_status()
-        result = resp.json()
-
-        # API returns [[float]] for each text — may need mean pooling
-        embeddings = []
-        for item in result:
-            if isinstance(item[0], list):
-                # Token-level embeddings, need mean pooling
-                n_tokens = len(item)
-                dim = len(item[0])
-                pooled = [0.0] * dim
-                for token_emb in item:
-                    for j in range(dim):
-                        pooled[j] += token_emb[j]
-                pooled = [v / n_tokens for v in pooled]
-                # Normalize
-                norm = sum(v * v for v in pooled) ** 0.5
-                if norm > 0:
-                    pooled = [v / norm for v in pooled]
-                embeddings.append(pooled)
-            else:
-                # Already pooled
-                embeddings.append(item)
-        return embeddings
-
-    raise RuntimeError("Failed to get embeddings after 3 attempts")
-
-
 def main():
-    if not HF_TOKEN:
-        print("ERROR: HF_TOKEN environment variable not set.")
-        return
-
     os.makedirs(SITE_DIR, exist_ok=True)
 
     # Collect all chunks from wiki files
@@ -254,19 +198,24 @@ def main():
 
     print(f"Extracted {len(all_chunks)} chunks from {len(md_files)} files")
 
-    # Compute embeddings in batches
-    print("Computing embeddings via HuggingFace API...")
-    with httpx.Client(timeout=120) as client:
+    # Compute embeddings in batches via Ollama
+    print(f"Computing embeddings via Ollama ({OLLAMA_EMBED_MODEL})...")
+    with httpx.Client(timeout=300) as client:
+        ollama_utils.check_ollama(client)
+        ollama_utils.ensure_model(OLLAMA_EMBED_MODEL, client)
+
         for i in range(0, len(all_chunks), BATCH_SIZE):
             batch = all_chunks[i:i + BATCH_SIZE]
-            texts = ["passage: " + c["text"] for c in batch]
-            embeddings = get_embeddings_batch(texts, client)
+            texts = ["search_document: " + c["text"] for c in batch]
+            embeddings = ollama_utils.embed(client, OLLAMA_EMBED_MODEL, texts)
 
             for j, emb in enumerate(embeddings):
                 all_chunks[i + j]["embedding"] = emb
 
             done = min(i + BATCH_SIZE, len(all_chunks))
             print(f"  {done}/{len(all_chunks)} chunks embedded")
+
+        ollama_utils.unload_model(OLLAMA_EMBED_MODEL, client)
 
     # Save
     output_path = os.path.join(SITE_DIR, "embeddings.json")

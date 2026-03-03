@@ -14,10 +14,11 @@ GITHUB_REPO = "BRGM/hubeau"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_API_BASE = "https://api.github.com"
 
-# Gemini
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
+# Ollama
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+OLLAMA_BIG_MODEL = os.environ.get("OLLAMA_BIG_MODEL", "qwen3:14b")
+OLLAMA_SMALL_MODEL = os.environ.get("OLLAMA_SMALL_MODEL", "qwen3.5:4b")
+OLLAMA_EMBED_MODEL = os.environ.get("OLLAMA_EMBED_MODEL", "nomic-embed-text")
 
 # Hub'Eau APIs — used for classification and wiki file mapping
 HUBEAU_APIS = {

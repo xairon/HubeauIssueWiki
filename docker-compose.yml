@@ -1,0 +1,48 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hubeau-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - OLLAMA_KEEP_ALIVE=0
+      - OLLAMA_ORIGINS=*
+    restart: unless-stopped
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+    depends_on:
+      - ollama
+    profiles:
+      - pipeline
+
+  site:
+    image: nginx:alpine
+    container_name: hubeau-site
+    ports:
+      - "8080:80"
+    volumes:
+      - ./site:/usr/share/nginx/html:ro
+    depends_on:
+      - ollama
+    profiles:
+      - serve
+
+volumes:
+  ollama_models:

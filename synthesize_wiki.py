@@ -3,19 +3,17 @@
 import json
 import re
 import sys
-import time
 from collections import defaultdict
 
 import httpx
 import unicodedata
 
+import ollama_utils
 from config import (
     EXTRACTED_DIR,
-    GEMINI_API_BASE,
-    GEMINI_API_KEY,
-    GEMINI_MODEL,
     HUBEAU_APIS,
     MIN_RELEVANCE,
+    OLLAMA_BIG_MODEL,
     WIKI_DIR,
 )
 
@@ -144,7 +142,7 @@ def format_facts_for_synthesis(facts: list[dict]) -> str:
 
 
 def synthesize_guide(client: httpx.Client, api_name: str, facts: list[dict]) -> str:
-    """Call Gemini to synthesize a guide from all facts of an API."""
+    """Call Ollama to synthesize a guide from all facts of an API."""
     facts_text = format_facts_for_synthesis(facts)
     total_facts = sum(
         len(f.get("faits_techniques", [])) + len(f.get("faits_metier", []))
@@ -158,23 +156,7 @@ def synthesize_guide(client: httpx.Client, api_name: str, facts: list[dict]) -> 
         facts_text=facts_text,
     )
 
-    url = f"{GEMINI_API_BASE}/models/{GEMINI_MODEL}:generateContent"
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.3},
-    }
-
-    resp = client.post(url, json=payload, params={"key": GEMINI_API_KEY})
-
-    if resp.status_code == 429:
-        retry_after = int(resp.headers.get("Retry-After", 15))
-        print(f"    Rate limited. Waiting {retry_after}s...")
-        time.sleep(retry_after)
-        resp = client.post(url, json=payload, params={"key": GEMINI_API_KEY})
-
-    resp.raise_for_status()
-    result = resp.json()
-    return result["candidates"][0]["content"]["parts"][0]["text"].strip()
+    return ollama_utils.chat(client, OLLAMA_BIG_MODEL, prompt, temperature=0.3)
 
 
 def render_archive(facts: list[dict]) -> str:
@@ -269,10 +251,6 @@ def render_index(api_groups: dict[str, list[dict]]) -> str:
 
 
 def main() -> None:
-    if not GEMINI_API_KEY:
-        print("ERROR: GEMINI_API_KEY environment variable not set.")
-        sys.exit(1)
-
     WIKI_DIR.mkdir(parents=True, exist_ok=True)
 
     facts = load_all_facts()
@@ -283,7 +261,10 @@ def main() -> None:
     api_groups = group_by_api(facts)
     print(f"Found {len(api_groups)} APIs to synthesize.\n")
 
-    with httpx.Client(timeout=120) as client:
+    with httpx.Client(timeout=600) as client:
+        ollama_utils.check_ollama(client)
+        ollama_utils.ensure_model(OLLAMA_BIG_MODEL, client)
+
         for api_name, api_facts in api_groups.items():
             slug = HUBEAU_APIS.get(api_name, api_name.lower().replace(" ", "_").replace("'", ""))
             filepath = WIKI_DIR / f"{slug}.md"
@@ -294,6 +275,8 @@ def main() -> None:
             content = render_api_page(api_name, guide_text, api_facts)
             filepath.write_text(content, encoding="utf-8")
             print(f"    -> {filepath.name}")
+
+        ollama_utils.unload_model(OLLAMA_BIG_MODEL, client)
 
     # Generate index
     index_path = WIKI_DIR / "index.md"
