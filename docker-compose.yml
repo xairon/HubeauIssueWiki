@@ -36,7 +36,7 @@ services:
     image: nginx:alpine
     container_name: hubeau-site
     ports:
-      - "8080:80"
+      - "49506:80"
     volumes:
       - ./site:/usr/share/nginx/html:ro
     depends_on:

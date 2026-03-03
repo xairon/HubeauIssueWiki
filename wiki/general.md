@@ -1,24 +1,32 @@
 # Général
 
-> 21 issues analysées
+> 19 issues analysées
 
 ## Guide
 
-### Comportement actuel
+### Comportement actuel  
+L'API Hub'Eau propose des endpoints principaux comme 'niveaux_nappes' (piézométrie), 'poissons', et 'écoulement'. Les données sont souvent disponibles en format JSON, avec des endpoints comme 'chroniques.csv' pour les données agrégées. La pagination est limitée à 20 000 entités sans automatisation. Le package R 'hubeau' permet d'accéder à 10 APIs via des fonctions standardisées. Les données 'chroniques' sont agrégées journalièrement (valeur maximale NGF) et peuvent être corrigées, contrairement aux données 'temps réel' brutes (#96).  
 
-Les APIs Hub'Eau utilisent le port standard 443 pour les connexions (#205). Elles offrent la possibilité d'obtenir des données au format GeoJSON via le paramètre `_format_=geojson` pour certaines APIs, bien que ce format ne soit pas universellement implémenté et retourne alors du JSON standard (#149). Une politique générale limite les requêtes à 20 000 enregistrements (`page * size`) afin de préserver les performances du service (#236, #57). Le paramètre `size` est par défaut à 1 000 si non spécifié (#236). L'utilisation de wildcards `*` est supportée pour certains champs de type code (ex: codes entités Hydrométrie), mais pas pour les libellés (ex: `libelle_lieusurv`) (#101). L'API Température des cours d'eau dispose d'un paramètre 'en_service' pour les stations, tandis que pour les autres APIs, le statut 'hors service' est déduit de la présence d'une date de fin renseignée (#108).
+### Pièges à éviter  
+L'endpoint 'chroniques.csv' de 'niveaux_nappes' déclare un format CSV mais utilise un schéma d'objet, causant des conflits (#19). L'API 'poissons' ne permet pas de filtrer par nom d'espèce, uniquement par code OFB, nécessitant une requête préalable via SANDRE (#33). Le paramètre '_format=geojson' n'est pas systématiquement supporté par toutes les APIs, limitant l'intégration avec QGIS (#149).  
 
-### Pièges à éviter
+### Bonnes pratiques  
+Utilisez le package R 'hubeau' pour interroger les APIs, et consultez sa documentation pour des exemples (#137). Vérifiez les dates de maintenance planifiée via le tableau de bord de statut (#258). Pour les poissons, obtenez le code OFB via SANDRE avant d'interroger l'API 'poissons' (#33). Privilégiez les données 'chroniques' pour des analyses à long terme, en sachant qu'elles peuvent être corrigées (#96).  
 
-La principale limitation est la profondeur d'accès aux résultats : la multiplication des paramètres `page` et `size` ne peut excéder 20 000 enregistrements, entraînant une erreur `InvalidRequest` si cette limite est dépassée (#236, #57). Soyez vigilant avec la pagination : l'API peut ajouter `size=1000` aux liens "next" dans la réponse, ce qui peut provoquer des erreurs si cela dépasse la limite de 20 000 résultats (#236). De plus, l'API renvoie un code HTTP 206 (Partial Content) pour les réponses paginées, ce qui est non conforme aux standards REST pour la pagination et peut empêcher la lecture des données dans certains clients comme DuckDB (#261). L'implémentation des wildcards `*` est inconsistante et non supportée pour tous les paramètres, notamment les libellés, nécessitant une vérification par API et par champ (#101). Enfin, même lorsque le format GeoJSON est disponible, les couches chargées directement dans QGIS sont limitées à 20 000 entités sans automatisation spécifique (#149).
+### Contexte métier  
+Les codes OFB (Office Français de la Biodiversité) sont requis pour interroger l'API 'poissons', contrairement aux codes SANDRE (#33). Les données 'temps réel' sont brutes, tandis que les 'chroniques' sont agrégées et peuvent être corrigées (ex. dérive de capteur). Les producteurs de données déterminent la fréquence de mise à jour des 'chroniques' (#96).  
 
-### Bonnes pratiques
+### Évolutions récentes  
+- **2025-10-07** : Mise en place d'un tableau de bord de surveillance en temps réel pour tous les endpoints (#258).  
+- **2025-06-27** : Maintenance planifiée du 24/06/2025, sans lien avec une anomalie de données antérieure (#237).  
+- **2025-03-17** : Maintenance planifiée du 17/03/2025 entre 12h et 15h (#218).  
+- **2024-12-26** : Correction rapide d'un incident DNS empêchant l'accès à l'API (#205).  
 
-Pour une utilisation efficace, consultez systématiquement la section `Models` en bas de chaque page d'accueil d'API pour obtenir les schémas détaillés des données et comprendre les variables (#156). Les utilisateurs R peuvent tirer parti du package `hubeau` développé par INRAE (disponible sur GitHub) qui simplifie l'interrogation des APIs et retourne les résultats sous forme de data.frame (#62). En cas de requêtes volumineuses, découpez-les en utilisant des critères plus discriminants comme des plages de dates (`date_debut_prelevement`) pour rester sous la limite des 20 000 enregistrements par appel (#57, #236). Pour surveiller la disponibilité et les performances des services, utilisez la page de statut globale https://hubeau.eaufrance.fr/status, qui offre un aperçu en temps réel et des détails par endpoint (#258). Pour des exports massifs de données historiques, comme les températures des cours d'eau, le site Naïades peut être une alternative, mais vérifiez toujours la qualité des données exportées (#236).
-
-### Contexte métier
-
-Les APIs Hub'Eau distinguent les paramètres de recherche par 'libellé' ou 'code', ce qui influence la disponibilité des fonctionnalités comme les wildcards (#101). Le statut 'en service' d'une station est une information clé ; bien que l'API Température des cours d'eau l'expose directement, pour d'autres APIs, il est déduit de la présence d'une date de fin d'activité (#108). Il est important de noter que Hub'Eau se concentre sur les données hydrologiques et n'inclut pas les données de pluviométrie ou météorologiques dans son périmètre ; pour ces dernières, Météo-France est la source recommandée (#234). Enfin, le code source des APIs Hub'Eau n'est pas public sur GitHub, ce qui limite les contributions directes au développement de la plateforme (#89).
+### Historique notable  
+- **2025-10-06** : Hub'Eau ne développe pas d'API pluviométrique, orientant vers Météo-France (#234).  
+- **2024-09-04** : Interruption temporaire de toutes les APIs, résolue le même jour (#185).  
+- **2023-05-15** : Incident technique de 5 heures affectant l'ensemble du portail (#143).  
+- **2020-04-08** : Future API Hydrobiologie (prévue en 2020) pour filtrer les poissons par nom (#33).
 
 ---
 
@@ -27,118 +35,72 @@ Les APIs Hub'Eau distinguent les paramètres de recherche par 'libellé' ou 'cod
 
 ### Faits actuels
 
-- Le tutoriel vidéo original pour l'utilisation des API Hub'Eau avec QGIS (spécifiquement pour les stations qualité) n'est plus disponible. (#2)
-- La vidéo a été rendue privée puis jugée obsolète par l'équipe Hub'Eau. (#2)
-- Il n'existe pas de nouvelle vidéo de démonstration de l'utilisation des API Hub'Eau dans QGIS à la date du dernier commentaire (octobre 2022). (#2)
-- Un tutoriel pour afficher des stations qualités dans QGIS à partir des API Hub'Eau avait été réalisé par AQUASYS suite à un Hackathon. (#2)
-- L'utilisation de wildcards `*` dans les paramètres de recherche n'est pas systématiquement implémentée dans les APIs Hub'Eau. (#101)
-- Les wildcards sont disponibles dans certains champs de type code (par exemple, les codes entités de l'API Hydrométrie). (#101)
-- Les wildcards ne sont pas supportées pour le paramètre `libelle_lieusurv` de l'API Surveillance des eaux littorales. (#101)
-- Les APIs Hub'Eau distinguent les champs de type 'libellé' et 'code' pour les paramètres de recherche. (#101)
-- Le paramètre `libelle_lieusurv` permet de rechercher des lieux de surveillance dans l'API Surveillance des eaux littorales. (#101)
-- L'API Température des cours d'eau inclut un paramètre 'en_service' pour les stations. (#108)
-- Il est proposé d'ajouter un paramètre 'en_service' aux stations des autres APIs Hub'Eau. (#108)
-- Actuellement, le statut 'hors service' d'une station est déduit de la présence d'une date de fin renseignée. (#108)
-- Le concept de station 'en service' est une information clé pour l'utilisation des données hydrologiques. (#108)
-- La multiplication des paramètres `page` * `size` ne peut pas dépasser 20 000 pour l'API Température des cours d'eau. (#236)
-- La taille maximale autorisée pour le paramètre `size` est 20 000. (#236)
-- Un maximum de 20 000 valeurs de retour peut être récupéré, quelle que soit la taille de la page. (#236)
-- Le paramètre `size` par défaut est 1 000 si non spécifié. (#236)
-- L'API ajoute `size=1000` aux liens "next" dans la réponse JSON, ce qui peut provoquer une erreur si `page` * `size` dépasse 20 000 (ex: page 21 avec size 1000). (#236)
-- Si le paramètre `size` est omis dans l'URL, la limite de 20 000 résultats ne semble pas fonctionner comme prévu, permettant d'accéder à un nombre de pages supérieur à la limite implicite. (#236)
-- La limitation à 20 000 résultats est une politique générale des API Hub'eau mise en place pour préserver les performances et la disponibilité. (#236)
-- Le site Naïades (naiades.eaufrance.fr) propose un export de données historiques sur les températures des cours d'eau comme alternative à l'API. (#236)
-- L'export de données de Naïades peut contenir des dates incorrectes à la fin du fichier. (#236)
-- Une page de statut globale est disponible à l'adresse https://hubeau.eaufrance.fr/status pour visualiser l'état en temps réel de tous les endpoints des API Hub'eau. (#258)
-- Des pages de statut spécifiques à chaque endpoint fournissent des détails sur les temps de réponse, les incidents et l'historique sur 12 mois. (#258)
-- La plateforme Hub'eau envoie des notifications à l'équipe technique en cas d'incident détecté pour une résolution rapide. (#258)
-- L'API Hub'Eau renvoie un code HTTP 206 (Partial Content) pour les réponses paginées. (#261)
-- Ce comportement peut empêcher la lecture des données paginées dans certains clients comme DuckDB (via la fonction read_json). (#261)
-- L'utilisation du code HTTP 206 pour la pagination est considérée comme non conforme aux standards HTTP (RFC 7233) et aux bonnes pratiques REST, car il est réservé aux requêtes avec en-tête Range. (#261)
-- La pagination REST standard utilise généralement le code HTTP 200, indiquant les pages suivantes via un champ 'next' ou des en-têtes 'Link' (RFC 5988). (#261)
+- Un tutoriel vidéo a été créé après le Hackathon pour utiliser les APIs Hub'Eau avec QGIS (#2)
+- Dans l'API 'niveaux_nappes', le endpoint 'chroniques.csv' déclare 'produces' pour un format CSV mais référence un schéma d'objet ('Chronique_pi_zom_trique'), créant un conflit entre le type de données attendu et le schéma de réponse. (#19)
+- Certains noms d'objets dans la documentation (ex: 'Résultat d'une rêquete sur les chroniques') sont mal adaptés au code, ce qui peut entraîner des erreurs de génération ou une mauvaise lisibilité. (#19)
+- L'API Hub'Eau 'poissons' ne permet pas de filtrer par nom d'espèce, uniquement par code_espece_poisson. (#33)
+- Le code à utiliser dans l'API 'poissons' est le code OFB (champ 'code'), pas le code SANDRE ('code_taxon'). (#33)
+- Une future API Hydrobiologie (prévue en 2020) permettra de filtrer directement par nom d'espèce. (#33)
+- Le référentiel SANDRE contient des correspondances entre noms latins, communs et codes OFB/SANDRE pour 195 espèces de poissons. (#33)
+- Le code OFB est nécessaire pour interroger l'API 'poissons' de Hub'Eau, mais il n'est pas directement lié au code SANDRE. (#33)
+- Un package R nommé 'hubeau' a été développé pour interroger les APIs Hub'Eau, avec une fonction générique et des fonctions spécifiques par API/opération. (#62)
+- Le package est hébergé sur GitHub (https://github.com/inrae/hubeau) et documenté sur https://inrae.github.io/hubeau/ (#62)
+- Le package gère actuellement les APIs 'Prélèvements en eau' et 'Indicateurs des services', avec possibilité d'extension. (#62)
+- Des bugs dans certaines APIs (référencés comme #72 et #74) ont été signalés, mais le package continue de progresser. (#62)
+- Les données 'temps réel' de l'API Piézométrie sont brutes et non corrigées. (#96)
+- La profondeur temporelle des données 'temps réel' est actuellement non limitée, mais une limitation à 1 an est envisagée. (#96)
+- Le endpoint 'chroniques' agrège les données sur une journée (généralement la valeur maximale du niveau NGF). (#96)
+- Les données 'chroniques' peuvent être corrigées (ex. dérive de capteur, nivellement du repère). (#96)
+- La fréquence de mise à jour des données 'chroniques' dépend des producteurs, qui ne transmettent pas toujours rapidement leurs données. (#96)
+- Le package R 'hubeau' permet de requêter 10 des 12 APIs Hub'Eau via une syntaxe standardisée (`get_[API]_[Operation]`) (#137)
+- Le package est disponible sur CRAN et GitHub, avec une documentation incluant des exemples et une vignette (#137)
+- L'OFB DR Normandie utilise le package pour générer des rapports mensuels sur l'écoulement des cours d'eau en Bretagne (#137)
+- Une vignette illustre l'utilisation de l'API 'Écoulement' avec des cartes et graphiques synthétiques (#137)
+- Le paramètre '_format' permet d'obtenir du GeoJSON via les URLs API, mais cette fonctionnalité n'est pas systématiquement implémentée sur toutes les APIs. (#149)
+- Les couches chargées dans QGIS via les APIs sont limitées à 20000 entités sans automatisation des échanges de données. (#149)
+- Aucune API existante n'est mentionnée par Hub'eau pour accéder aux données pluviométriques, mais des producteurs comme Météo-France sont suggérés comme alternatives. (#234)
+- Une page de statut en temps réel affiche l'état global de tous les endpoints Hub'Eau. (#258)
+- Chaque endpoint dispose d'une page détaillée avec des métriques de temps de réponse, historique des incidents et données sur 12 mois. (#258)
+- Les incidents détectés déclenchent automatiquement des notifications à l'équipe technique. (#258)
 
 ### Historique des problèmes résolus
 
-- ~~La spécification Swagger des APIs Hub'Eau contenait des propriétés "allowEmptyValues: false" non conformes à la spécification Swagger, empêchant la génération de clients API. (#19)~~
-- ~~L'API Piézométrie (niveaux_nappes) avait un endpoint `chroniques.csv` dont le `produces` indiquait un format binaire/stream (CSV) mais référençait un schéma d'objet (`Chronique_pi_zom_trique`), causant une erreur de génération de client. (#19)~~
-- ~~Les noms d'objets dans la spécification Swagger (ex: "Résultat d'une rêquete sur les chroniques") n'étaient pas optimaux pour la génération de code, rendant le code client potentiellement "douteux". (#19)~~
-- ~~L'API Piézométrie (niveaux_nappes) fournit des données de chroniques (séries temporelles) pour les niveaux de nappe. (#19)~~
-- ~~La multiplication des paramètres `page` et `size` dans les requêtes Hub'Eau ne peut excéder 20 000 enregistrements (profondeur d'accès aux résultats). (#57)~~
-- ~~Dépasser la limite `page * size > 20000` entraîne une erreur `InvalidRequest` avec le code `ValidatePageDepth`. (#57)~~
-- ~~Cette limite est imposée pour ne pas surcharger le serveur. (#57)~~
-- ~~Pour récupérer plus de 20 000 enregistrements, il faut découper la requête en utilisant des critères plus discriminants, comme `date_debut_prelevement`. (#57)~~
-- ~~L'API peut retourner des URLs erronées dans les attributs 'last' et 'next' lorsque la limite `page * size` est dépassée. (#57)~~
-- ~~Certaines stations (ex: BSS000LGJB) peuvent avoir un très grand nombre de mesures (plus de 20 000). (#57)~~
-- ~~Le BRGM fournit un exemple d'appel de l'API Hub'Eau avec R pour les données piézométriques, disponible sur GitHub à l'adresse https://github.com/BRGM/hubeau/blob/master/code_examples/Trac%C3%A9%20d'une%20chronique%20pi%C3%A9zom%C3%A9trique%20avec%20R.ipynb. (#62)~~
-- ~~Le BRGM prévoit de publier d'autres exemples de code R pour l'API Hub'Eau sur son dépôt GitHub à l'adresse https://github.com/BRGM/hubeau/tree/master/code_examples. (#62)~~
-- ~~Un package R nommé `hubeau` est développé par INRAE pour interroger les APIs Hub'Eau. (#62)~~
-- ~~Le package R `hubeau` inclut une fonction générique d'interrogation et des fonctions spécifiques par API/opération, retournant les résultats sous forme de data.frame. (#62)~~
-- ~~Le package R `hubeau` prend en charge initialement les APIs 'Prélèvements en eau' et 'Indicateurs des services'. (#62)~~
-- ~~Le package R `hubeau` est disponible sur GitHub à l'adresse https://github.com/inrae/hubeau et sa documentation à https://inrae.github.io/hubeau/. (#62)~~
-- ~~L'API Hub'Eau présente des bugs connus, mentionnés dans les issues #72 et #74. (#62)~~
-- ~~Le code source des APIs Hub'Eau n'est pas disponible sur GitHub. (#89)~~
-- ~~Les APIs et le site web Hub'Eau ont été indisponibles suite à un incident survenu le 14 mai 2023 au soir. (#143)~~
-- ~~Le service a été rétabli le 15 mai 2023 à 12h20. (#143)~~
-- ~~Le paramètre _format_=geojson permet d'obtenir des données au format GeoJSON via les API Hub'Eau. (#149)~~
-- ~~Le format GeoJSON n'est pas implémenté pour toutes les API Hub'Eau ; dans ce cas, la syntaxe _format_=geojson retourne des données au format JSON standard. (#149)~~
-- ~~Seules les données GeoJSON diffusées par certaines API Hub'Eau peuvent être chargées directement dans QGIS. (#149)~~
-- ~~Sans automatisation des échanges de données, les couches chargées dans QGIS sont limitées à 20 000 entités. (#149)~~
-- ~~L'utilisation des API Hub'Eau avec QGIS est un cas d'usage pour l'intégration de données hydrologiques dans un SIG. (#149)~~
-- ~~Les données de qualité des nappes peuvent être filtrées par numéro de département (ex: num_departement=23). (#149)~~
-- ~~Les schémas des données (descriptifs des variables) pour les APIs Hub'Eau sont disponibles dans la section `Models` en bas de chaque page d'accueil d'une API. (#156)~~
-- ~~Dans l'API Qualité des cours d'eau, pour l'endpoint `condition_environnementale_pc`, l'attribut `resultat` correspond au 'Résultat de la mesure du paramètre environnemental (résultat direct si le paramètre est quantitatif ou code si le paramètre est qualitatif)'. (#156)~~
-- ~~Une intervention de maintenance sur l’infrastructure technique d’Hub’eau a été planifiée. (#176)~~
-- ~~L'intervention a eu lieu le mardi 23/07/2024 entre 9h et 17h. (#176)~~
-- ~~Cette opération a induit des interruptions de services tournantes sur l’ensemble des API Hub'Eau. (#176)~~
-- ~~Chaque interruption de service ne devait pas dépasser 1h30. (#176)~~
-- ~~L'intervention est terminée et toutes les API Hub'Eau sont de nouveau opérationnelles depuis le 23/07/2024 à 16h46. (#176)~~
-- ~~L'ensemble des APIs Hub'Eau a été momentanément indisponible le 4 septembre 2024. (#185)~~
-- ~~Les APIs Hub'Eau ont été rétablies et sont de nouveau disponibles le 4 septembre 2024. (#185)~~
-- ~~Un incident peut perturber l'accès général aux API Hub'Eau et au domaine eaufrance.fr. (#205)~~
-- ~~Les problèmes de connexion aux API Hub'Eau peuvent se manifester par une absence de résolution DNS pour hubeau.eaufrance.fr. (#205)~~
-- ~~Le port 443 est le port standard utilisé pour la connexion aux API Hub'Eau. (#205)~~
-- ~~Une opération de maintenance a entraîné une interruption de service de l'ensemble des API Hub'Eau. (#218)~~
-- ~~L'interruption de service était prévue le lundi 17 mars 2025, entre 12h et 15h. (#218)~~
-- ~~L'intervention est terminée et toutes les API Hub'Eau sont de nouveau disponibles. (#218)~~
-- ~~La feuille de route Hub'eau ne prévoit pas la création d'une API exposant des données météorologiques. (#234)~~
-- ~~Hub'eau n'a pas connaissance d'API tierces servant des données météorologiques. (#234)~~
-- ~~Le portail API de Météo-France (portail-api.meteofrance.fr) est suggéré comme source pour les données météorologiques. (#234)~~
-- ~~Hub'eau ne couvre pas les données de pluviométrie ou météorologiques dans son périmètre actuel. (#234)~~
-- ~~Les données des entités météorologiques disponibles sur hydro.eaufrance.fr ne sont pas accessibles via une API Hub'eau. (#234)~~
-- ~~Une interruption de service de l'ensemble des API Hub'Eau était planifiée le 24/06/2025 entre 12h et 15h pour une opération de maintenance. (#237)~~
-- ~~L'intervention de maintenance a été terminée plus tôt que prévu, et toutes les API étaient disponibles avant 11h52 le 24/06/2025. (#237)~~
-- ~~Un incident distinct de la maintenance a affecté la disponibilité des données hydrométriques temps réel. (#237)~~
-- ~~Les données hydrométriques temps réel ont été manquantes à partir du 23/06/2025 fin de journée. (#237)~~
-- ~~L'alimentation des données hydrométriques temps réel a été rétablie le 24/06/2025 avant 11h52. (#237)~~
-- ~~Une interruption de service de l'ensemble des API Hub'Eau a été planifiée pour maintenance. (#248)~~
-- ~~L'interruption a eu lieu le mardi 02/09/2025 entre 12h et 14h. (#248)~~
-- ~~Le service de toutes les API Hub'Eau a été rétabli le 02/09/2025 à 12h14:34Z. (#248)~~
-- ~~Une interruption de service a été planifiée pour toutes les API Hub'Eau les 17 et 18 février 2026 entre 12h et 14h. (#273)~~
-- ~~Toutes les API Hub'Eau étaient susceptibles d'être indisponibles pendant ces périodes en raison d'une opération technique. (#273)~~
-- ~~Le service a été rétabli et toutes les API sont disponibles depuis le 18 février 2026 à 12h38. (#273)~~
+- ~~Le tutoriel vidéo original est devenu inaccessible et obsolète (#2)~~
+- ~~La présence de 'allowEmptyValues: false' dans la documentation Swagger génère des erreurs de génération du client, mais ce problème est résolu à partir de la version 2.9.0 de springfox/springfox. (#19)~~
+- ~~Une alternative pour obtenir le code OFB à partir du nom est d'utiliser l'API SANDRE avec un filtre XPath sur 'LbNomCommunAppelTaxon'. (#33)~~
+- ~~Incident technique rendant les API et le site Hub'Eau indisponibles le 15/05/2023 (#143)~~
+- ~~Interruptions de services sur toutes les API Hub'Eau le 23/07 entre 9h et 17h, avec des arrêts de serveurs temporaires de maximum 1h30 (#176)~~
+- ~~Service indisponible temporairement pour toutes les APIs (#185)~~
+- ~~Un incident a affecté la résolution DNS du domaine hubeau.eaufrance.fr, empêchant l'accès à l'API. (#205)~~
+- ~~Le problème de connexion à l'API a été résolu quelques minutes après la déclaration. (#205)~~
+- ~~Interruption planifiée de toutes les API Hub'Eau le 17/03/2025 de 12h à 15h pour maintenance (#218)~~
+- ~~Hub'eau ne prévoit pas de créer d'API dédiée à la pluviométrie dans sa feuille de route. (#234)~~
+- ~~Maintenance planifiée de l'ensemble des API le 24/06/2025 entre 12h et 15h (#237)~~
+- ~~L'interruption de service était indépendante d'une anomalie de données hydrométriques antérieure (#237)~~
+- ~~Une anomalie de données hydrométriques temps réel a été corrigée séparément de la maintenance (#237)~~
+- ~~Interruption de service planifiée pour maintenance des API (#248)~~
+- ~~Interruption de service planifiée du 17 au 18 février 2026 entre 12h et 14h pour des opérations techniques (#273)~~
 
 ### Issues sources
 
-- **#2** Tutoriel utilisation des API avec QGIS — L'issue informe que le tutoriel vidéo pour utiliser les API Hub'Eau avec QGIS est obsolète et n'est plus disponible, sans remplacement actuel. `[information]`
-- **#19** [Toutes APIs] Multiples erreurs lors de la génération d'un client à partir de la documentation Swagger — Des erreurs dans la spécification Swagger des APIs Hub'Eau, notamment des propriétés non conformes et des noms d'objets inadaptés, empêchaient la génération correcte de clients API, particulièrement pour l'API Piézométrie. `[résolu]`
-- **#57** [API qualite_nappes] Erreur avec la dernière page — L'API Hub'Eau `qualite_nappes` (et potentiellement d'autres) impose une limite de 20 000 enregistrements pour le produit `page * size`, nécessitant de découper les requêtes volumineuses avec des critères plus discriminants. `[résolu]`
-- **#62** Utilisation de l'API dans R / Package dédié ? — Cette issue a mené au développement et à la publication du package R `hubeau` par INRAE pour interroger les APIs Hub'Eau, complété par des exemples de code R du BRGM et la mention de bugs existants dans l'API. `[résolu]`
-- **#89** Mettre les API sur github — Hub'Eau n'a pas l'intention de partager le code source de ses APIs sur GitHub, ce qui limite les contributions externes au développement des APIs. `[résolu]`
-- **#101** Utilisation de Wildcards * dans les recherches (un classic) — Les wildcards `*` ne sont pas systématiquement supportées dans les APIs Hub'Eau, étant limitées à certains champs de type code comme les codes entités de l'API Hydrométrie, mais non disponibles pour les libellés. `[information]`
-- **#108** [API Qualité de l'eau] Paramètre de station en service — L'issue propose d'ajouter un paramètre 'en_service' aux stations des APIs Hub'Eau, à l'instar de l'API Température, pour simplifier la détermination du statut opérationnel des stations. `[en_cours]`
-- **#143** Site et API indisponibles 15/05/2023 — Un incident général a rendu les APIs et le site web Hub'Eau indisponibles le 15 mai 2023, avec un retour à la normale à 12h20 le même jour. `[résolu]`
-- **#149** Tutoriel utilisation des API avec QGIS information #2 by tvilmus was closed on Jul 5, 2022 — Cette issue explique comment obtenir des données GeoJSON via les API Hub'Eau en utilisant le paramètre _format_ pour une intégration dans QGIS, tout en précisant les limitations de ce format et du volume de données. `[résolu]`
-- **#156** Qualité des cours d'eau ,nomenclature des variables utilisées — Cette issue explique où trouver les descriptions des variables pour les APIs Hub'Eau (section Models) et fournit la définition de l'attribut `resultat` pour l'API Qualité des cours d'eau. `[résolu]`
-- **#176** [Toutes API] Intervention de maintenance le 23/07 en journée — Une intervention de maintenance a eu lieu le 23/07/2024, entraînant des interruptions de service tournantes sur l'ensemble des API Hub'Eau, mais l'opération est maintenant terminée et les services sont rétablis. `[résolu]`
-- **#185** [toutes API] Service indisponible — Un dysfonctionnement a rendu l'ensemble des APIs Hub'Eau indisponible pendant une courte période le 4 septembre 2024, avant que le service ne soit rétabli. `[résolu]`
-- **#205** [API] Problème de connection depuis hier 14h — Un incident général a perturbé l'accès aux API Hub'Eau et au domaine eaufrance.fr, se manifestant par des problèmes de connexion et de résolution DNS, mais a été résolu. `[résolu]`
-- **#218** [toutes API]  interruption de service lun. 17/03/2025 12h-15h — Une opération de maintenance a provoqué une interruption de service de toutes les API Hub'Eau le 17 mars 2025 de 12h à 15h, et le service a été rétabli. `[résolu]`
-- **#234** API Pluviométrie — Hub'Eau ne propose pas d'API pour les données de pluviométrie ou météorologiques et oriente les utilisateurs vers Météo-France pour ces informations. `[résolu]`
-- **#236** [API Température des cours d'eau] Problème lié à la pagination de l'API — L'API Température des cours d'eau impose une limite de 20 000 résultats (`page` * `size`), mais cette limite est contournable ou mal appliquée si le paramètre `size` est omis, et l'export alternatif de Naïades présente des problèmes de qualité de données. `[en_cours]`
-- **#237** [toutes API] interruption de service mar. 24/06/2025 12h-15h — Une maintenance planifiée pour toutes les API Hub'Eau le 24/06/2025 a été terminée plus tôt que prévu, et un incident distinct ayant causé un manque de données hydrométriques temps réel a également été résolu le même jour. `[résolu]`
-- **#248** [toutes API] interruption de service mar. 02/09/2025 12h-14h — Cette issue annonce et confirme la résolution d'une interruption de service planifiée pour maintenance de l'ensemble des API Hub'Eau le 02/09/2025. `[résolu]`
-- **#258** [toutes API] tableau de bord — Hub'Eau a mis en place un tableau de bord de statut en temps réel pour toutes ses APIs, incluant des pages détaillées par endpoint et un système de notification d'incidents pour l'équipe technique. `[information]`
-- **#261** HTTP 206 renvoyé pour des données paginées : flux non lisible dasn DuckDB par exemple — L'API Hub'Eau retourne un code HTTP 206 pour les réponses paginées, ce qui est non conforme aux standards HTTP pour la pagination et pose des problèmes de lecture avec certains clients comme DuckDB. `[en_cours]`
-- **#273** [toutes API] interruption de service mar. 17/02/2026 et mer. 18/02/2026 12h-14h — Une interruption de service planifiée pour toutes les API Hub'Eau les 17 et 18 février 2026 entre 12h et 14h a eu lieu et a été résolue. `[résolu]`
+- **#2** Tutoriel utilisation des API avec QGIS (2022-10-05) — Un tutoriel vidéo sur l'utilisation des APIs Hub'Eau avec QGIS a été créé mais est désormais inaccessible, avec une proposition de contact alternative pour obtenir des informations.
+- **#19** [Toutes APIs] Multiples erreurs lors de la génération d'un client à partir de la documentation Swagger (2019-01-22) — L'issue met en évidence des erreurs techniques dans la documentation Swagger de l'API Piézométrie, notamment des incohérences entre les types de données déclarés et les schémas de réponse, ainsi que des problèmes de nommage des objets.
+- **#33** Récupération données poisson depuis son nom (2020-04-08) — L'API Hub'Eau 'poissons' nécessite l'utilisation de codes OFB pour les requêtes, mais des alternatives via SANDRE ou une future API Hydrobiologie permettent de contourner cette limitation.
+- **#62** Utilisation de l'API dans R / Package dédié ? (2021-08-18) — Un package R dédié à l'interrogation des APIs Hub'Eau a été développé et est en cours d'amélioration, couvrant actuellement certaines APIs.
+- **#80** utilisation logo de hub-eau (2022-01-10) — Le logo Hub'Eau peut être utilisé librement par des projets tiers, avec possibilité de référencement sur la page officielle du portail.
+- **#89** Mettre les API sur github (2022-07-05) — Le projet Hub'Eau n'a pas de plans actuels pour partager le code de ses APIs sur GitHub.
+- **#96** Profondeur temporelle des données piézométriques (2022-01-28) — L'API Piézométrie fournit des données brutes non corrigées en temps réel, tandis que les données 'chroniques' sont agrégées et peuvent être corrigées, avec une mise à jour dépendante des producteurs.
+- **#137** Package R pour requêter les APIs hubeau (2023-05-30) — Un package R permettant d'accéder à 10 APIs Hub'Eau a été publié, avec des exemples d'utilisation et une intégration dans des rapports hydrologiques.
+- **#143** Site et API indisponibles 15/05/2023 (2023-05-15) — Incident technique affectant la disponibilité globale de Hub'Eau le 15 mai 2023, résolu après 5 heures d'interruption.
+- **#149** Tutoriel utilisation des API avec QGIS information #2 by tvilmus was closed on Jul 5, 2022 (2023-12-15) — Les utilisateurs doivent utiliser le paramètre '_format=geojson' dans les URLs API pour obtenir des données GeoJSON compatibles avec QGIS, tout en étant conscients des limitations de format et de volume de données.
+- **#176** [Toutes API] Intervention de maintenance le 23/07 en journée (2024-07-23) — Maintenance technique globale sur Hub'Eau le 23 juillet 2024 entraînant des interruptions temporaires de toutes les APIs, résolue à la fin de la journée.
+- **#185** [toutes API] Service indisponible (2024-09-04) — Toutes les APIs de Hub'Eau ont été temporairement indisponibles avant d'être rétablies le 4 septembre 2024.
+- **#205** [API] Problème de connection depuis hier 14h (2024-12-26) — Un incident technique lié à la résolution DNS a temporairement rendu inaccessible l'API Hubeau, mais a été corrigé rapidement.
+- **#218** [toutes API]  interruption de service lun. 17/03/2025 12h-15h (2025-03-17) — Maintenance planifiée et résolue le 17 mars 2025 entraînant une interruption temporaire de toutes les APIs Hub'Eau entre 12h et 15h.
+- **#234** API Pluviométrie (2025-10-06) — Hub'eau ne développe pas d'API pluviométrique et oriente vers des sources externes comme Météo-France pour ces données.
+- **#237** [toutes API] interruption de service mar. 24/06/2025 12h-15h (2025-06-27) — Une maintenance planifiée a interrompu temporairement toutes les APIs de Hub'Eau le 24/06/2025, sans lien avec une précédente anomalie de données hydrométriques, les deux incidents ayant été résolus.
+- **#248** [toutes API] interruption de service mar. 02/09/2025 12h-14h (2025-09-02) — Maintenance planifiée du 02/09/2025 entre 12h et 14h entraînant une interruption temporaire de toutes les API de Hub'Eau, résolue après intervention.
+- **#258** [toutes API] tableau de bord (2025-10-07) — La plateforme Hub'Eau a mis en place un tableau de bord de surveillance en temps réel pour tous les endpoints, avec des détails techniques et une gestion automatisée des incidents.
+- **#273** [toutes API] interruption de service mar. 17/02/2026 et mer. 18/02/2026 12h-14h (2026-02-18) — Interruption temporaire de toutes les APIs Hub'Eau pour maintenance technique résolue le 18 février 2026.
 
 </details>

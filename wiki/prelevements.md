@@ -1,24 +1,32 @@
 # Prélèvements en eau
 
-> 13 issues analysées
+> 12 issues analysées
 
 ## Guide
 
-### Comportement actuel
+### Comportement actuel  
+L'API Prélèvements en eau fonctionne en version v1, avec des endpoints principaux comme `/ouvrages` et `/chroniques`, retournant des données en format JSON. La pagination est limitée à 20 000 résultats maximum (page * size ≤ 20 000). Le paramètre `fields` est désormais stable et permet de filtrer les champs retournés. Les données sont mises à jour mensuellement et alignées sur la BNPE. Le nom des ouvrages est disponible dans les chroniques (#26).  
 
-L'API Hub'Eau "Prélèvements en eau" est désormais stable en version v1, accessible via les URLs `/api/v1/`. Elle permet de récupérer des informations détaillées sur les ouvrages de prélèvement (`/referentiel/ouvrages`) et leurs chroniques de prélèvements (`/chroniques`). Les ouvrages sont identifiés par un `code_ouvrage` et incluent des coordonnées géographiques (longitude, latitude). L'opération `chroniques` fournit le nom de l'ouvrage, son identifiant local, le point de prélèvement référent et les noms des plans d'eau, avec une codification simplifiée des usages. Le `code_bss_point_eau` est disponible dans les résultats de prélèvement. Les données sont mises à jour mensuellement et le format GeoJSON est supporté pour les chroniques.
+### Pièges à éviter  
+La limite de 20 000 résultats peut bloquer des requêtes volumineuses (#136). L'endpoint `/chroniques` peut renvoyer un code 500 si le paramètre `fields` n'est pas utilisé (#249). Le code SIRET des établissements n'est pas disponible (#37). Les codes communes obsolètes peuvent rendre les recherches par département imparfaites (#136).  
 
-### Pièges à éviter
+### Bonnes pratiques  
+Utilisez le paramètre `fields` pour éviter les erreurs 500 sur `/chroniques`. Vérifiez les codes BNPE pour les départements. Privilégiez le package R `hubeau` pour une intégration simplifiée (#137). Limitez les requêtes à des plages de dates et de départements récents pour éviter les limites de pagination.  
 
-L'API retourne une erreur HTTP 400 si le produit des paramètres `page * size` dépasse 20 000 enregistrements, avec un message d'erreur générique "requête incorrecte" dans la documentation Swagger, ce qui peut être trompeur (#136). Pour des raisons de confidentialité, le code SIRET de l'établissement exploitant un ouvrage n'est pas diffusé, car il ne s'agit pas d'une donnée ouverte de la BNPE (#37). De même, les coordonnées des points de prélèvement et ouvrages liés à l'Alimentation en Eau Potable (AEP) sont floutées au centroïde de la commune (#26). L'interrogation par codes communes est délicate en raison du millésime non spécifié du référentiel BNPE, risquant de manquer des ouvrages liés à des codes obsolètes (#136).
+### Contexte métier  
+Les codes BSS (Bassin de Surface) identifient des points de prélèvement, pas les ouvrages (#39). Le SANDRE (Système d'information sur les réseaux et les ouvrages) est une base de données hydrologiques utilisée pour les codes communes. Les données proviennent principalement de l'AELB (Agence de l'eau Loire-Bretagne) et sont alignées sur la BNPE (Base Nationale des Plans d'Établissement).  
 
-### Bonnes pratiques
+### Évolutions récentes  
+- **2026-02-16** (#274) : Correction de l'erreur 500 sur `/chroniques` sans dépendance au paramètre `fields`.  
+- **2025-10-01** (#249) : Stabilisation de l'endpoint `/chroniques` après une période de dépendance temporaire au paramètre `fields`.  
+- **2025-07-07** (#241) : En cours de résolution, une erreur interne a été signalée pour des requêtes spécifiques.  
 
-Pour contourner la limite de 20 000 enregistrements (`page * size`), fragmentez vos requêtes en utilisant des plages de codes de départements, une méthode recommandée pour récupérer les données d'ouvrages (#136). Le champ `count` de la première page peut aider à anticiper un dépassement de cette limite (#136). Pour les utilisateurs R, le package `hubeau` (disponible sur le CRAN et GitHub `https://github.com/inrae/hubeau`) simplifie l'interrogation de l'API "Prélèvements en eau" avec des fonctions dédiées et retourne les résultats sous forme de data.frame (#62, #137). Des exemples de code R sont également disponibles sur le dépôt GitHub du BRGM (`https://github.com/BRGM/hubeau/tree/master/code_examples`) (#62).
-
-### Contexte métier
-
-L'API "Prélèvements en eau" s'appuie sur les données de la Banque Nationale des Prélèvements en Eau (BNPE) (#38). Un ouvrage de prélèvement peut regrouper plusieurs points de prélèvement, ce qui explique pourquoi le `code_bss_point_eau` est une information spécifique à un point et ne peut être remonté au niveau de l'ouvrage (#39). Le `code_ouvrage` (ex: OPR0000065205) est l'identifiant unique d'une structure de prélèvement (#25). Le `code_entite_hydrogeo` est utilisé pour caractériser le type d'entité hydrogéologique, comme SOUT pour les prélèvements souterrains (#39).
+### Historique notable  
+- **2021** (#25, #27) : Le paramètre `fields` et le champ `libelle_precision_coord` ont été corrigés avec la version v1.  
+- **2021** (#38) : Mise à jour vers v1 avec des données alignées sur la BNPE et des mises à jour mensuelles.  
+- **2021** (#26) : Ajout du nom des ouvrages dans les chroniques pour une sélection géographique.  
+- **2020** (#37) : Le code SIRET n'est pas diffusé en raison des contraintes de publication des données ouvertes.  
+- **2020** (#39) : Correction planifiée du lien entre `code_bss_point_eau` et les ouvrages.
 
 ---
 
@@ -27,105 +35,52 @@ L'API "Prélèvements en eau" s'appuie sur les données de la Banque Nationale d
 
 ### Faits actuels
 
-- L'API Prélèvements en eau ne fournit pas le code SIRET de l'établissement exploitant l'ouvrage. (#37)
-- Le code SIRET de l'établissement exploitant un ouvrage de prélèvement n'est pas une donnée ouverte et n'est pas diffusé par BNPE ni par Hub'Eau. (#37)
-- L'API Prélèvements retourne un code HTTP 400 si le produit des paramètres `page * size` dépasse 20 000, avec un message d'erreur indiquant cette limite. (#136)
-- La limite de 20 000 enregistrements (`page * size`) est mentionnée dans la section "Limitations" de la documentation de l'API Prélèvements. (#136)
-- Le champ `count` de la première page de résultats peut être utilisé pour détecter si une requête dépassera la limite de 20 000 enregistrements. (#136)
-- La documentation Swagger de l'API Prélèvements décrit un code 400 comme une "requête incorrecte", ce qui est imprécis pour le cas de dépassement de la limite `page * size`. (#136)
-- Un contournement pour la limite de 20 000 enregistrements consiste à fragmenter les requêtes en utilisant des plages de codes communes. (#136)
-- L'API Prélèvements utilise le référentiel des communes/départements de la BNPE, dont le millésime n'est pas spécifié. (#136)
-- Interroger l'API Prélèvements par codes communes est délicat en raison du risque de rater des ouvrages liés à des codes obsolètes. (#136)
-- L'interrogation par codes départements est une méthode recommandée pour récupérer les données d'ouvrages de l'API Prélèvements. (#136)
+- Dans la version beta, les coordonnées étaient fictives, rendant le champ 'libelle_precision_coord' inutile. (#27)
+- Le code SIRET des établissements exploitants n'est pas disponible dans les données ouvertes de l'API Prélèvements en eau. (#37)
+- Le code_bss_point_eau est associé au point de prélèvement plutôt qu'à l'ouvrage, ce qui entraîne une duplication des données. (#39)
+- Un ouvrage peut comporter plusieurs points de prélèvement, chacun avec un code BSS unique, rendant impossible une association directe au niveau de l'ouvrage. (#39)
+- L'API retourne un code 400 lorsque le produit des paramètres `page` * `size` dépasse 20 000. (#136)
+- Le message d'erreur est en anglais et indique que la multiplication des paramètres `page` et `size` ne peut pas dépasser 20 000. (#136)
+- Le comptage total des résultats est disponible dès la première requête, mais l'API ne bloque pas la requête tant que le seuil de 20 000 n'est pas atteint. (#136)
+- Un code d'erreur spécifique est proposé pour améliorer la lisibilité et la gestion des erreurs liées à ce plafond. (#136)
+- Le référentiel des codes communes/départements utilisé est celui de la BNPE, sans indication du millésime. (#136)
+- Les codes communes obsolètes peuvent rendre la recherche par code département imparfaite, justifiant une augmentation du plafond de 20 000. (#136)
+- Le package R 'hubeau' permet de requêter 10 des 12 APIs Hub'Eau via une syntaxe standardisée (`get_[API]_[Operation]`) (#137)
+- Le package est disponible sur CRAN et GitHub, avec une documentation incluant des exemples et une vignette (#137)
+- L'OFB DR Normandie utilise le package pour générer des rapports mensuels sur l'écoulement des cours d'eau en Bretagne (#137)
+- Une vignette illustre l'utilisation de l'API 'Écoulement' avec des cartes et graphiques synthétiques (#137)
+- L'API 'prélèvements/chroniques' a retourné un 'internal server error' lors de la requête avec les paramètres annee=2018 et code_departement=28 le 7 juillet 2025. (#241)
+- Le paramètre 'fields' doit être utilisé avec des champs spécifiques pour éviter l'erreur 500. (#274)
 
 ### Historique des problèmes résolus
 
-- ~~L'utilisation du filtre `fields` sur l'API Prélèvements en eau (version vbeta) pouvait entraîner la perte de certaines informations, notamment les coordonnées géographiques (longitude, latitude), qui devenaient nulles. (#25)~~
-- ~~La propriété `fields` était expérimentale et instable dans la version vbeta de l'API Prélèvements en eau. (#25)~~
-- ~~Une solution temporaire pour contourner le problème était de ne pas utiliser le filtre `fields` et de récupérer l'ensemble des champs. (#25)~~
-- ~~Le problème a été résolu avec le passage de l'API Prélèvements en eau à la version v1. (#25)~~
-- ~~Les URLs de l'API ont évolué de `/api/vbeta/` à `/api/v1/`. (#25)~~
-- ~~L'API Prélèvements en eau permet de récupérer des informations sur les ouvrages (structures) de prélèvement. (#25)~~
-- ~~Les ouvrages sont identifiés par un `code_ouvrage` (ex: OPR0000065205). (#25)~~
-- ~~Les coordonnées géographiques (longitude, latitude) sont des informations importantes associées aux ouvrages. (#25)~~
-- ~~L'API Prélèvements en eau a connu une longue phase beta avant de passer en version 1 (production). (#26)~~
-- ~~L'opération 'chroniques' de l'API Prélèvements en eau inclut désormais le nom de l'ouvrage de prélèvement. (#26)~~
-- ~~Les coordonnées géographiques sont disponibles pour les points de prélèvement et les ouvrages. (#26)~~
-- ~~La codification des usages a été simplifiée dans l'API Prélèvements en eau. (#26)~~
-- ~~Un bug sur les codes des entités hydrogéologiques a été corrigé dans l'API Prélèvements en eau. (#26)~~
-- ~~Les ouvrages de prélèvement incluent désormais l'identifiant local (code producteur), le point de prélèvement référent et les noms des plans d'eau (hors BD Carthage). (#26)~~
-- ~~Les coordonnées des points de prélèvement et des ouvrages liés à l'Alimentation en Eau Potable (AEP) sont floutées au centroïde de la commune pour des raisons de confidentialité. (#26)~~
-- ~~Le champ `libelle_precision_coord` était toujours null pour l'opération `/vbeta/prelevements/referentiel/points_prelevement` de l'API Prélèvements en eau. (#27)~~
-- ~~L'opération `/vbeta/prelevements/referentiel/ouvrages` de l'API Prélèvements en eau n'était pas affectée par le problème du champ `libelle_precision_coord` null. (#27)~~
-- ~~Le bug du champ `libelle_precision_coord` null a été corrigé lors du passage de l'API Prélèvements en eau de la version beta à la version v1. (#27)~~
-- ~~Dans la version beta de l'API Prélèvements en eau, les champs `libelle_precision_coord` étaient inutiles car toutes les coordonnées étaient fictives. (#27)~~
-- ~~Les coordonnées des points de prélèvement dans la version beta de l'API Prélèvements en eau étaient fictives. (#27)~~
-- ~~Le champ `libelle_precision_coord` est lié à la précision des coordonnées réelles. (#27)~~
-- ~~L'API Prélèvements en eau est passée de version bêta à v1 stable en juin 2021. (#38)~~
-- ~~Le passage à la v1 de l'API Prélèvements en eau a inclus une actualisation des données. (#38)~~
-- ~~La v1 de l'API Prélèvements en eau apporte les coordonnées géographiques des ouvrages et points de prélèvement. (#38)~~
-- ~~La v1 de l'API Prélèvements en eau assure une mise à jour mensuelle des données. (#38)~~
-- ~~Des informations complémentaires sur la v1 de l'API Prélèvements en eau sont disponibles sur la page d'actualités Hub'Eau (https://hubeau.eaufrance.fr/news/api-prelevements-en-eau-passage-en-v1). (#38)~~
-- ~~Avant la v1, l'API Prélèvements en eau avait des données moins complètes (nombre d'ouvrages, millésimes) que le jeu de données data.eaufrance.fr (ex: 6872 ouvrages vs 8508 pour Pays de la Loire, millésimes s'arrêtant à 2016 alors que l'AELB fournissait 2019). (#38)~~
-- ~~La v1 de l'API Prélèvements en eau contient les mêmes données que celles de la BNPE (Banque Nationale des Prélèvements en Eau). (#38)~~
-- ~~Le champ code_entite_hydrogeo n'est pas correctement renseigné dans l'API Prélèvements en eau (endpoint ouvrages) pour le type SOUT dans la version beta. (#39)~~
-- ~~Le champ code_entite_hydrogeo sera corrigé dans la version définitive de l'API Prélèvements en eau. (#39)~~
-- ~~Le code_bss_point_eau est présent dans les résultats d'un prélèvement. (#39)~~
-- ~~Le code_bss_point_eau ne peut pas être remonté au niveau de l'ouvrage car un ouvrage peut avoir plusieurs points de prélèvement, chacun avec son propre code_bss_point_eau. (#39)~~
-- ~~Un ouvrage peut être composé de plusieurs points de prélèvement. (#39)~~
-- ~~Le code_bss_point_eau est une information spécifique à un point de prélèvement. (#39)~~
-- ~~Le type SOUT (Souterrain) est associé au code_entite_hydrogeo. (#39)~~
-- ~~Le BRGM fournit un exemple d'appel de l'API Hub'Eau avec R pour les données piézométriques, disponible sur GitHub à l'adresse https://github.com/BRGM/hubeau/blob/master/code_examples/Trac%C3%A9%20d'une%20chronique%20pi%C3%A9zom%C3%A9trique%20avec%20R.ipynb. (#62)~~
-- ~~Le BRGM prévoit de publier d'autres exemples de code R pour l'API Hub'Eau sur son dépôt GitHub à l'adresse https://github.com/BRGM/hubeau/tree/master/code_examples. (#62)~~
-- ~~Un package R nommé `hubeau` est développé par INRAE pour interroger les APIs Hub'Eau. (#62)~~
-- ~~Le package R `hubeau` inclut une fonction générique d'interrogation et des fonctions spécifiques par API/opération, retournant les résultats sous forme de data.frame. (#62)~~
-- ~~Le package R `hubeau` prend en charge initialement les APIs 'Prélèvements en eau' et 'Indicateurs des services'. (#62)~~
-- ~~Le package R `hubeau` est disponible sur GitHub à l'adresse https://github.com/inrae/hubeau et sa documentation à https://inrae.github.io/hubeau/. (#62)~~
-- ~~L'API Hub'Eau présente des bugs connus, mentionnés dans les issues #72 et #74. (#62)~~
-- ~~L'endpoint `/api/v1/prelevements/referentiel/ouvrages` de l'API Prélèvements en eau a rencontré un bug où il retournait `count 0` (aucune donnée). (#71)~~
-- ~~Le bug de l'endpoint `/api/v1/prelevements/referentiel/ouvrages` a été corrigé. (#71)~~
-- ~~L'API Prélèvements en eau dispose d'un référentiel des ouvrages (`/referentiel/ouvrages`) liés aux prélèvements. (#71)~~
-- ~~Le package R `hubeau` version 0.4.0 est disponible sur le CRAN. (#137)~~
-- ~~Le package `hubeau` permet de requêter 10 des 12 APIs Hub'Eau. (#137)~~
-- ~~La syntaxe des fonctions de requête du package `hubeau` est `get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)`. (#137)~~
-- ~~Le package `hubeau` est documenté avec des exemples d'utilisation et des vignettes. (#137)~~
-- ~~Le code source du package `hubeau` est disponible sur GitHub à l'adresse `https://github.com/inrae/hubeau`. (#137)~~
-- ~~Les éléments descriptifs du package R `hubeau` ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (`https://github.com/BRGM/hubeau/tree/master/re-utilisations`) et non sur le site éditorial. (#137)~~
-- ~~Le package R `hubeau` couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (#137)~~
-- ~~L'OFB DR Normandie utilise le package R `hubeau` pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (#137)~~
-- ~~Une vignette du package `hubeau` propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (#137)~~
-- ~~L'API Hub'Eau `/api/v1/prelevements/chroniques` a retourné une "internal server error" (erreur 500) le 07/07/2025. (#241)~~
-- ~~L'erreur s'est produite pour une requête incluant les paramètres `annee=2018`, `code_departement=28` et `format=geojson`. (#241)~~
-- ~~Le même appel API fonctionnait la semaine précédant le 07/07/2025. (#241)~~
-- ~~L'API "Prélèvements en eau" permet de récupérer les chroniques de prélèvements. (#241)~~
-- ~~Les données de prélèvements peuvent être filtrées par année et par code de département. (#241)~~
-- ~~Le format GeoJSON est supporté pour les chroniques de prélèvements. (#241)~~
-- ~~L'endpoint `/prelevements/chroniques` de l'API Prélèvements en eau a connu des périodes d'indisponibilité ou d'instabilité, retournant des erreurs 500. (#249)~~
-- ~~Lors d'une période d'instabilité de l'endpoint `/prelevements/chroniques`, l'ajout du paramètre `fields` (ex: `fields=code_ouvrage,annee,volume`) pouvait servir de contournement pour obtenir des résultats. (#249)~~
-- ~~L'endpoint `/prelevements/chroniques` est désormais stable et ne nécessite plus la spécification du paramètre `fields`. (#249)~~
-- ~~L'endpoint `/prelevements/chroniques` permet d'accéder aux données chroniques de prélèvements en eau. (#249)~~
-- ~~Les données de prélèvements en eau peuvent être filtrées par `bbox` (zone géographique), `annee` (année), `code_departement` (code du département). (#249)~~
-- ~~Des champs comme `code_ouvrage`, `annee`, `volume` sont disponibles pour les données de prélèvements en eau. (#249)~~
-- ~~L'API Prélèvements en eau (endpoint chroniques) a temporairement renvoyé une erreur 500 lors de requêtes ne spécifiant pas le paramètre `fields`. (#274)~~
-- ~~Cette anomalie affectait certaines APIs Hub'Eau lors de requêtes demandant l'ensemble des champs. (#274)~~
-- ~~Un contournement temporaire consistait à utiliser le paramètre `fields` en listant explicitement les champs désirés pour éviter l'erreur 500. (#274)~~
-- ~~L'anomalie a été résolue, et l'interrogation de l'API Prélèvements en eau sans le paramètre `fields` est de nouveau fonctionnelle. (#274)~~
-- ~~Les données de prélèvements chroniques de l'API Hub'Eau incluent des informations détaillées sur l'ouvrage (code, nom, URI, coordonnées, commune, département), l'année, le volume, l'usage, les statuts et qualifications du volume, le statut et mode d'obtention de l'instruction, le caractère écrasant du prélèvement, et le producteur de la donnée. (#274)~~
+- ~~Le paramètre 'fields' était expérimental et instable dans la version beta de l'API, entraînant des valeurs null pour des champs comme la longitude et la latitude. (#25)~~
+- ~~Le passage de l'API en version v1 a corrigé ce problème et stabilisé le comportement du paramètre 'fields'. (#25)~~
+- ~~L'API des prélèvements en eau a été mise à jour pour inclure le nom de l'ouvrage dans l'opération 'chroniques'. (#26)~~
+- ~~Le nom de l'ouvrage de prélèvement est désormais disponible dans l'API, permettant une sélection géographique directe. (#26)~~
+- ~~Le champ 'libelle_precision_coord' de l'API /vbeta/prelevements/referentiel/points_prelevement était toujours null en raison d'un bug, corrigé lors du passage à la version v1 en 2021. (#27)~~
+- ~~L'API Prélèvements en eau était en version bêta avec des données incomplètes et des millésimes obsolètes (arrêtés en 2016). (#38)~~
+- ~~La version v1 de l'API a été déployée en juin 2021, avec des mises à jour mensuelles et des données alignées sur la BNPE. (#38)~~
+- ~~La version bêta de l'API présentait un retard de mise à jour des données par rapport à la source principale (AELB) et un sous-échantillonnage des ouvrages (6872 vs 8508 en Pays de la Loire). (#38)~~
+- ~~Le champ code_entite_hydrogeo était mal renseigné dans la version bêta de l'API mais sera corrigé dans la version finale. (#39)~~
+- ~~La requête 'ouvrages' de l'API Prélèvements en eau retournait un count 0 avant la correction. (#71)~~
+- ~~L'endpoint 'chroniques' de l'API Prélèvements en eau a connu des instabilités avec des erreurs 500, nécessitant temporairement l'ajout du paramètre 'fields' pour obtenir des résultats. (#249)~~
+- ~~Le problème a été corrigé, permettant à nouveau l'accès à l'endpoint sans paramètre 'fields'. (#249)~~
+- ~~La requête de l'API 'prélèvements chroniques' renvoyait un code erreur 500 lors de la requête sur l'ensemble des champs, mais le problème a été résolu. (#274)~~
 
 ### Issues sources
 
-- **#25** [API Prélèvements en eau] - Erreur lors de la récupération des ouvrages — L'API Prélèvements en eau (vbeta) présentait un bug où le filtre `fields` causait la perte des coordonnées géographiques des ouvrages, problème résolu avec le passage de l'API à la version v1. `[résolu]`
-- **#26** [API Prélèvement en eau] nom de l'ouvrage dans les chroniques — L'API Hub'Eau Prélèvements en eau est passée en version 1, intégrant le nom de l'ouvrage dans les chroniques, les coordonnées géographiques (floutées pour l'AEP), une simplification des usages, et des identifiants supplémentaires pour les ouvrages. `[résolu]`
-- **#27** [API Prélèvements en eau] - Champs libelle_precision_coord toujours null — L'API Prélèvements en eau présentait un bug où le champ `libelle_precision_coord` était toujours null pour les points de prélèvement en version beta, en raison de coordonnées fictives, et ce problème a été résolu avec le passage à la version v1. `[résolu]`
-- **#37** [API Prélèvement] code SIRET des établissements de prélèvement — L'API Prélèvements en eau ne diffuse pas le code SIRET des établissements de prélèvement car cette donnée n'est pas ouverte et n'est pas fournie par BNPE. `[information]`
-- **#38** [API Prélèvements] actualisation des données — L'API Prélèvements en eau est passée en v1 en juin 2021, résolvant les problèmes d'incomplétude des données en s'alignant sur la BNPE, offrant des mises à jour mensuelles et incluant les coordonnées géographiques des ouvrages. `[résolu]`
-- **#39** [API Prélèvement] Suggestion d'association du code_bss à l'ouvrage plutôt qu'au point de prélèvement — L'issue clarifie que le champ code_entite_hydrogeo est manquant pour les ouvrages de type souterrain dans l'API Prélèvements en eau (version beta) et sera corrigé, et explique pourquoi le code_bss_point_eau ne peut pas être associé à l'ouvrage. `[résolu]`
-- **#62** Utilisation de l'API dans R / Package dédié ? — Cette issue a mené au développement et à la publication du package R `hubeau` par INRAE pour interroger les APIs Hub'Eau, complété par des exemples de code R du BRGM et la mention de bugs existants dans l'API. `[résolu]`
-- **#71** [API prélèvements] Aucune donnée dans la réponse de la requête "ouvrages" ? — Un bug empêchait l'API Prélèvements en eau de retourner des données pour le référentiel des ouvrages, mais il a été corrigé. `[résolu]`
-- **#136** API Prélèvements - retourne code 400 sur dépassement page * size — L'API Prélèvements limite la récupération des données à 20 000 enregistrements (`page * size`), retournant une erreur 400 au-delà, et suggère des méthodes d'interrogation par département ou par plages de communes pour gérer cette limitation et les référentiels. `[en_cours]`
-- **#137** Package R pour requêter les APIs hubeau — Le package R `hubeau` version 0.4.0 est disponible sur le CRAN, permettant de requêter 10 des 12 APIs Hub'Eau avec une syntaxe simplifiée, et est utilisé par l'OFB pour des rapports mensuels sur l'écoulement des cours d'eau. `[résolu]`
-- **#241** Accès impossible aux prélèvements via l'API - "internal error" retourné ce 07 juillet 2025 — L'API Prélèvements en eau a rencontré une erreur interne (500) sur l'endpoint `/chroniques` le 07/07/2025 pour des requêtes spécifiques (département 28, année 2018, format GeoJSON), alors que la requête fonctionnait précédemment. `[résolu]`
-- **#249** [API Prélèvements en eau] endpoint "chroniques": Erreur 500 sur toutes les requêtes — L'endpoint `/prelevements/chroniques` de l'API Prélèvements en eau a rencontré des instabilités récurrentes provoquant des erreurs 500, avec un contournement temporaire via le paramètre `fields`, avant une résolution finale. `[résolu]`
-- **#274** [API Prélèvements en eau] get prelevements chroniques -> Error 500 — L'API Prélèvements en eau a rencontré et résolu une erreur 500 sur l'endpoint chroniques lorsque le paramètre `fields` n'était pas spécifié, avec un contournement temporaire disponible. `[résolu]`
+- **#25** [API Prélèvements en eau] - Erreur lors de la récupération des ouvrages (2021-06-16) — Le paramètre 'fields' de l'API Prélèvements en eau a eu des problèmes de stabilité dans la version beta, mais a été corrigé avec la mise à jour en version v1.
+- **#26** [API Prélèvement en eau] nom de l'ouvrage dans les chroniques (2021-06-16) — L'API des prélèvements en eau a été mise à jour pour inclure le nom des ouvrages dans les chroniques, facilitant la sélection géographique.
+- **#27** [API Prélèvements en eau] - Champs libelle_precision_coord toujours null (2021-06-16) — Le champ 'libelle_precision_coord' de l'API Prélèvements en eau était incorrectement null en version beta, mais le bug a été résolu avec la mise à jour vers la version v1 en 2021.
+- **#37** [API Prélèvement] code SIRET des établissements de prélèvement (2020-06-26) — Le code SIRET des établissements n'est pas diffusé par l'API Prélèvements en eau en raison des contraintes de publication des données ouvertes.
+- **#38** [API Prélèvements] actualisation des données (2021-06-16) — L'API Prélèvements en eau a été mise à jour en v1 en juin 2021, résolvant les problèmes de complétude et de mise à jour des données.
+- **#39** [API Prélèvement] Suggestion d'association du code_bss à l'ouvrage plutôt qu'au point de prélèvement (2020-08-06) — L'API Prélèvements en eau associe incorrectement le code_bss_point_eau au point de prélèvement plutôt qu'à l'ouvrage, avec une correction planifiée pour la version finale.
+- **#71** [API prélèvements] Aucune donnée dans la réponse de la requête "ouvrages" ? (2021-07-21) — L'API 'Prélèvements en eau' a temporairement renvoyé des données vides pour l'endpoint 'ouvrages', mais le problème a été corrigé.
+- **#136** API Prélèvements - retourne code 400 sur dépassement page * size (2023-05-02) — L'API Prélèvements en eau de Hub'Eau limite les résultats à 20 000 enregistrements, avec un retour de code 400 non explicite et un besoin d'amélioration de la gestion des erreurs.
+- **#137** Package R pour requêter les APIs hubeau (2023-05-30) — Un package R permettant d'accéder à 10 APIs Hub'Eau a été publié, avec des exemples d'utilisation et une intégration dans des rapports hydrologiques.
+- **#241** Accès impossible aux prélèvements via l'API - "internal error" retourné ce 07 juillet 2025 (2025-07-07) — Une erreur serveur a été signalée le 7 juillet 2025 lors de l'accès à l'API des prélèvements pour le département 28 et l'année 2018.
+- **#249** [API Prélèvements en eau] endpoint "chroniques": Erreur 500 sur toutes les requêtes (2025-10-01) — L'endpoint 'chroniques' de l'API Prélèvements en eau a connu des instabilités techniques résolues, avec une période de dépendance temporaire au paramètre 'fields' pour obtenir des résultats.
+- **#274** [API Prélèvements en eau] get prelevements chroniques -> Error 500 (2026-02-16) — L'API 'prélèvements chroniques' a connu une erreur 500 lors de requêtes non filtrées, résolue par l'utilisation du paramètre 'fields' ou la correction technique.
 
 </details>

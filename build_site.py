@@ -4,6 +4,7 @@ Static site generator for Hub'Eau knowledge base.
 Converts wiki/*.md into a polished static website in site/.
 """
 
+import argparse
 import json
 import os
 import re
@@ -198,7 +199,7 @@ def _toc_slugify(value, separator):
 # HTML template
 # ---------------------------------------------------------------------------
 
-def render_page(body_html: str, title: str, apis: list, active_slug: str) -> str:
+def render_page(body_html: str, title: str, apis: list, active_slug: str, wiki_only: bool = False) -> str:
     """Wrap HTML body in the full page template."""
     sidebar_items = []
     for api in apis:
@@ -213,6 +214,41 @@ def render_page(body_html: str, title: str, apis: list, active_slug: str) -> str
 
     is_index = active_slug == "index"
     index_active = ' class="active"' if is_index else ""
+
+    chatbot_html = "" if wiki_only else """    <!-- Chatbot toggle button -->
+    <button class="chatbot-toggle" id="chatbotToggle" aria-label="Ouvrir le chatbot">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+    </button>
+
+    <!-- Chatbot panel -->
+    <div class="chatbot-panel" id="chatbotPanel">
+        <div class="chatbot-header">
+            <div class="chatbot-header-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                Hub'Eau Assistant
+            </div>
+            <div class="chatbot-header-actions">
+                <button class="chatbot-clear" id="chatbotClear" title="Effacer la conversation">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+                <button class="chatbot-close" id="chatbotClose">&times;</button>
+            </div>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-msg chat-msg-bot">
+                <div class="chat-bubble">Bonjour ! Posez-moi une question sur les APIs Hub'Eau. Je cherche dans la base de connaissances pour vous r&eacute;pondre.</div>
+            </div>
+        </div>
+        <div class="chatbot-status" id="chatbotStatus" style="display:none;"></div>
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbotInput" placeholder="Posez votre question..." autocomplete="off">
+            <button class="chatbot-send" id="chatbotSend">Envoyer</button>
+        </div>
+    </div>"""
+
+    chatbot_script = "" if wiki_only else '\n    <script src="chatbot.js"></script>'
 
     return f"""<!DOCTYPE html>
 <html lang="fr">
@@ -279,41 +315,9 @@ def render_page(body_html: str, title: str, apis: list, active_slug: str) -> str
         </footer>
     </main>
 
-    <!-- Chatbot toggle button -->
-    <button class="chatbot-toggle" id="chatbotToggle" aria-label="Ouvrir le chatbot">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-    </button>
+{chatbot_html}
 
-    <!-- Chatbot panel -->
-    <div class="chatbot-panel" id="chatbotPanel">
-        <div class="chatbot-header">
-            <div class="chatbot-header-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                Hub'Eau Assistant
-            </div>
-            <div class="chatbot-header-actions">
-                <button class="chatbot-clear" id="chatbotClear" title="Effacer la conversation">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
-                <button class="chatbot-close" id="chatbotClose">&times;</button>
-            </div>
-        </div>
-        <div class="chatbot-messages" id="chatbotMessages">
-            <div class="chat-msg chat-msg-bot">
-                <div class="chat-bubble">Bonjour ! Posez-moi une question sur les APIs Hub'Eau. Je cherche dans la base de connaissances pour vous r&eacute;pondre.</div>
-            </div>
-        </div>
-        <div class="chatbot-status" id="chatbotStatus" style="display:none;"></div>
-        <div class="chatbot-input-area">
-            <input type="text" id="chatbotInput" placeholder="Posez votre question..." autocomplete="off">
-            <button class="chatbot-send" id="chatbotSend">Envoyer</button>
-        </div>
-    </div>
-
-    <script src="search.js"></script>
-    <script src="chatbot.js"></script>
+    <script src="search.js"></script>{chatbot_script}
     <script>
         // Hamburger menu toggle
         const hamburger = document.getElementById('hamburger');
@@ -1245,6 +1249,15 @@ SEARCH_JS = r"""(function() {
 # ---------------------------------------------------------------------------
 
 def main():
+    parser = argparse.ArgumentParser(description="Build Hub'Eau static site")
+    parser.add_argument("--wiki-only", action="store_true",
+                        help="Build wiki-only (no chatbot, no embeddings)")
+    args = parser.parse_args()
+    wiki_only = args.wiki_only
+
+    if wiki_only:
+        print("=== Wiki-only mode (no chatbot) ===")
+
     os.makedirs(SITE_DIR, exist_ok=True)
 
     # 1. Parse API list from index
@@ -1269,12 +1282,13 @@ def main():
         f.write(SEARCH_JS)
     print("Wrote search.js")
 
-    # Copy chatbot.js
-    chatbot_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chatbot.js")
-    if os.path.isfile(chatbot_src):
-        import shutil
-        shutil.copy2(chatbot_src, os.path.join(SITE_DIR, "chatbot.js"))
-        print("Copied chatbot.js")
+    # Copy chatbot.js (skip in wiki-only mode)
+    if not wiki_only:
+        chatbot_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chatbot.js")
+        if os.path.isfile(chatbot_src):
+            import shutil
+            shutil.copy2(chatbot_src, os.path.join(SITE_DIR, "chatbot.js"))
+            print("Copied chatbot.js")
 
     # 4. Convert each wiki page to HTML
     # Start with index.md
@@ -1295,12 +1309,21 @@ def main():
             title=title,
             apis=apis,
             active_slug=slug,
+            wiki_only=wiki_only,
         )
 
         out_path = os.path.join(SITE_DIR, f"{slug}.html")
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(page_html)
         print(f"  {basename} -> {slug}.html")
+
+    # In wiki-only mode, remove chatbot artifacts from site/ if present
+    if wiki_only:
+        for artifact in ("chatbot.js", "embeddings.json"):
+            artifact_path = os.path.join(SITE_DIR, artifact)
+            if os.path.isfile(artifact_path):
+                os.remove(artifact_path)
+                print(f"Removed {artifact} (wiki-only mode)")
 
     print(f"\nBuild complete! {len(md_files)} pages in {SITE_DIR}/")
 

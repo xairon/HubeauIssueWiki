@@ -3,8 +3,10 @@ pages:
   tags:
     - hubeau
   script:
+    - pip install markdown
+    - python3 build_site.py --wiki-only
     - mkdir -p public
-    - cp -r site/* public/
+    - cp -r site/*.html site/style.css site/search.js site/search-index.json public/
   artifacts:
     paths:
       - public

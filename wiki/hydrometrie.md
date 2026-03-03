@@ -1,26 +1,40 @@
 # Hydrométrie
 
-> 87 issues analysées
+> 85 issues analysées
 
 ## Guide
 
-Voici un guide pratique pour les développeurs et data scientists utilisant l'API Hub'Eau "Hydrométrie".
+### Comportement actuel  
+L'API Hydrométrie propose deux endpoints principaux : `observations_tr` (données brutes en temps réel) et `observations_elab` (données élaborées, comme débits moyens journaliers). Les données sont renvoyées en format JSON, avec une pagination basée sur le paramètre `size` et le lien `next` pour les pages suivantes. Le paramètre `timestep` permet de filtrer les données selon des intervalles temporels (ex: 5 minutes, 30 minutes). Les coordonnées géographiques sont désormais correctement renvoyées via `longitude_station` et `latitude_station` (#48). L'API supporte désormais le format GeoJSON pour les observations (#264).
 
-### Comportement actuel
+### Pièges à éviter  
+- **Format `bbox` incohérent entre v1 et v2** : La syntaxe du paramètre `bbox` a changé entre les versions, nécessitant une adaptation des requêtes (#227).  
+- **Absence de filtrage multiple sur `grandeur_hydro_elab`** : Impossible de demander simultanément plusieurs types de données (ex: HIXnJ et QmnJ) dans une même requête (#242).  
+- **Données manquantes pour certaines stations** : Certaines stations n'ont pas de données de débit publiques, même si des données historiques existent sur HydroPortail (#253).  
+- **Incohérences d'unité** : Le paramètre `altitude_ref_alti_station` peut mélanger mètres et millimètres dans les données sources (#267).  
 
-L'API Hydrométrie V2 est désormais la version de production, remplaçant la V1 arrêtée fin avril 2025 (#190, #222). Toutes les dates sont renvoyées dans le fuseau horaire de Paris pour `observations_tr` (#7) et au format ISO 8601 pour JSON (#8). L'endpoint `observations_tr` fournit des observations en temps réel (hauteur 'H', débit 'Q'), mises à jour toutes les 2 minutes, avec un historique limité à environ 30 jours (#118, #161). L'endpoint `obs_elab` propose des grandeurs élaborées comme les débits moyens journaliers (`QmnJ`) et mensuels (`QmM`), mises à jour deux fois par jour, ainsi que la Hauteur instantanée maximale journalière (`HIXnJ`) (#28, #118, #229, #263). La pagination est gérée par page (max 20 000 résultats) via un champ 'next' (#9). Les paramètres `timestep`, `size`, `fields` et `sort` sont disponibles (#9, #118). L'API supporte le format GeoJSON pour les observations (#264) et permet le filtrage des observations élaborées par date d'intégration (`date_debut_prod`, `date_fin_prod`) (#265). Les spécifications Swagger/OpenAPI sont accessibles via `/api-docs` (#13).
+### Bonnes pratiques  
+- Utilisez `code_station` plutôt que `code_entite` pour éviter les doublons entre sites et stations (#114).  
+- Filtrez les données par `statut_serie` (ex: 4 pour brut, 12 pour pré-validé) pour obtenir des résultats cohérents (#60).  
+- Pour les données élaborées, utilisez `date_debut_prod` et `date_fin_prod` pour cibler des périodes spécifiques (#265).  
+- Vérifiez la disponibilité des données via HydroPortail si l'API ne les retourne pas, notamment pour les hauteur instantanée maximale (#262).  
 
-### Pièges à éviter
+### Contexte métier  
+- **Codes SANDRE** : Les réseaux hydrométriques (ex: POH, RIC) utilisent des codes non standardisés par SANDRE, nécessitant un préfixe '0' pour certains (#35).  
+- **Sites vs stations** : Un site peut inclure plusieurs stations, avec `code_entite` à 8 caractères pour les sites et 10 pour les stations (#11).  
+- **Sources de données** : Les données en temps réel proviennent de SCHAPI, avec un retard de 20 minutes par rapport aux mesures (#47).  
 
-L'API peut occasionnellement retourner des erreurs 500/503, notamment sur l'endpoint `/referentiel/stations` ou en cas de forte sollicitation (#94). Les wildcards `*` ne sont pas supportées systématiquement, mais fonctionnent pour certains champs de type code comme `code_entite` (#101). Il n'existe pas de filtre pour les stations ayant des données en temps réel, et une station "en service" ne garantit pas la disponibilité de ces données (#114). L'API ne gère pas les dates de modification des observations, ce qui complexifie la synchronisation partielle des données (#60, #131). Des différences peuvent exister avec HydroPortail, notamment si les corrections de la source ne sont pas correctement taguées (#118). L'API ne fournit pas les hauteurs historiques au-delà de 30 jours via `observations_tr` (#161), ni les débits caractéristiques (Qmod, Q2, Q5) ou les fonctions statistiques (#171, #238). Le champ `altitude_ref_alti_station` peut présenter des incohérences d'unité (mètres/millimètres) et des inversions longitude/latitude peuvent survenir pour les coordonnées WGS84 (#162, #267, *en_cours*).
+### Évolutions récentes  
+- **2025-12-23** : Support du format GeoJSON pour `obs_elab` et `observations_tr` (#264).  
+- **2025-12-17** : Correction du paramètre `grandeur_hydro_elab` pour accéder correctement aux débits moyens journaliers (QmnJ) (#263).  
+- **2025-06-19** : Ajout de la grandeur HIXnJ (hauteur instantanée maximale journalière) via `obs_elab` (#229).  
+- **2025-04-24** : Mise à jour de la version 2 de l'API avec des améliorations comme le format SANDRE v2 et des observations élaborées (#222).  
 
-### Bonnes pratiques
-
-Utilisez systématiquement l'API V2 en remplaçant 'v1' par 'v2' dans vos URL et en adaptant les paramètres si nécessaire (#190, #222). Pour éviter les doublons d'observations lorsque `code_entite` est un site, interrogez avec un `code_station` spécifique (#73) et ajoutez `code_site` au paramètre `fields` pour distinguer les données (#11). Pour `obs_elab`, utilisez `grandeur_hydro_elab=QmnJ` pour cibler le débit moyen journalier et éviter de récupérer d'autres grandeurs par défaut (#133, #263). Pour des volumes importants, utilisez le paramètre `timestep` pour agréger les données de `observations_tr` (#9). En cas de données historiques fines, la base de données complète PHyC est téléchargeable sur data.ofb.fr (#206). Séparez les paramètres d'URL par '&' et non '&amp;' (#40), et pour des paramètres multiples, répétez le paramètre (`param=val1&param=val2`) (#126).
-
-### Contexte métier
-
-Un **site hydrométrique** (code à 8 caractères) est un tronçon de cours d'eau où les débits sont homogènes, pouvant regrouper plusieurs **stations hydrométriques** (code à 10 caractères), qui sont des appareillages de mesure de grandeurs spécifiques (#11, #100). Les grandeurs hydrologiques clés sont 'H' (hauteur d'eau), 'Q' (débit instantané), `QmnJ` (débit moyen journalier) et `QmM` (débit moyen mensuel) (#7, #28, #87). Les données sont associées à des **statuts de validité** (4: brute, 8: corrigée, 12: pré-validée, 16: validée), l'API V2 diffusant la série du meilleur statut (#60, #95). Les données proviennent de la Plate-forme HYDRO Centrale (PHyC) et du SCHAPI, qui administre la Banque Hydro, HydroPortail étant une référence pour la consultation (#47, #55, #118). L'API Hub'Eau est recommandée par le Service central Vigicrues pour son exhaustivité par rapport à l'API Vigicrues, qui est plus orientée crues et moins complète (#224).
+### Historique notable  
+- **2024-12-02** : La version 2 de l'API a connu une interruption temporaire des données, résolue par relance des traitements (#190).  
+- **2018-12-18** : Correction de l'incohérence de fuseau horaire dans `observations_tr` (#7).  
+- **2022-07-05** : Ajout de l'endpoint `observations_elab` pour les débits moyens journaliers et mensuels (#28).  
+- **2021-01-04** : Indisponibilité temporaire de l'API, affectant l'accès aux données en temps réel (#53).
 
 ---
 
@@ -29,592 +43,340 @@ Un **site hydrométrique** (code à 8 caractères) est un tronçon de cours d'ea
 
 ### Faits actuels
 
-- Le paramètre `code_entite` de l'API Hydrométrie (`observations_tr`) peut correspondre à la fois à un code de site hydrométrique et à un code de station hydrométrique. (#11)
-- Lorsqu'une donnée est associée directement à un site hydrométrique (et non à une station spécifique), le champ `code_station` dans la réponse JSON de l'API sera `null`. (#11)
-- Pour distinguer les données de site des données de station, il est recommandé d'ajouter `code_site` au paramètre `fields` de la requête. (#11)
-- L'API ne permet pas de filtrer nativement pour obtenir uniquement les données de site ou uniquement les données de station lorsque `code_entite` est utilisé avec un wildcard qui correspond aux deux ; le filtrage doit être effectué côté client. (#11)
-- Un site hydrométrique est un tronçon de cours d'eau où les mesures de débit sont homogènes, identifié par un code de 8 caractères (ex: A0610050). Un site peut regrouper plusieurs stations et porte principalement des données de débit. (#11)
-- Une station hydrométrique est un appareillage installé sur un site pour observer et mesurer une grandeur spécifique (hauteur ou débit), identifiée par un code de 10 caractères (ex: A061005051), où les 8 premiers caractères correspondent au code du site parent. (#11)
-- Les débits au niveau du site sont agrégés à partir des informations remontées par les différentes stations qui le composent. (#11)
-- La documentation Swagger de l'API Hydrométrie n'est pas directement accessible via un navigateur en raison d'un bug dans le composant springfox qui n'envoie pas le content-type. (#16)
-- Pour accéder à la documentation Swagger de l'API Hydrométrie depuis une application, il est nécessaire de fournir le header 'Accept' avec la valeur 'application/json;charset=utf-8,*/*' dans la requête. (#16)
-- Les codes de réseaux SANDRE retournés par l'API peuvent nécessiter l'ajout d'un '0' au début pour être valides (ex: 100000009 doit être 0100000009). (#35)
-- L'anomalie des codes de réseaux SANDRE sans '0' initial est en cours de correction dans Hub'Eau et sa prise en compte peut prendre plusieurs semaines ou mois. (#35)
-- Certains réseaux de mesure hydrométrique, notamment ceux liés à Vigicrues et dont l'identifiant commence par POH (Plan d'Organisation de l'Hydrométrie) ou RIC (Règlement d'Information sur les Crues), ne sont pas encore standardisés par le SANDRE. (#35)
-- La définition des réseaux POH et RIC n'est pas disponible sur sandre.eaufrance.fr car ils ne sont pas encore standardisés. (#35)
-- La standardisation des codes de réseaux POH et RIC sera évoquée lors d'un prochain comité de pilotage de la banque HYDRO. (#35)
-- Le SCHAPI est le service du ministère de l'environnement chargé de l'administration de la banque HYDRO. (#35)
-- Un utilisateur a rencontré des erreurs 500 lors d'appels successifs automatiques à l'API Hydrométrie en utilisant l'attribut `next` pour la pagination. (#36)
-- L'erreur 500 survenait après moins de 10 appels successifs. (#36)
-- L'équipe Hub'Eau n'a pas pu reproduire l'erreur 500 en utilisant des scripts PHP avec `size=1000` ou `size=100` et sans `sleep` entre les requêtes. (#36)
-- Il est suggéré d'essayer d'appeler l'API Hydrométrie avec le paramètre `size=1000`. (#36)
-- L'API Hydrométrie permet de parcourir l'ensemble des données d'une chronique (série temporelle). (#36)
-- La station hydrométrique N100151010 a été utilisée pour les tests de reproduction. (#36)
-- Les données de hauteur (grandeur_hydro=H) de l'API Hydrométrie peuvent s'actualiser par paquets et présenter un décalage par rapport à la fréquence de mesure (ex: 2 itérations de retard). (#47)
-- La fréquence d'actualisation des données de l'API Hydrométrie est directement liée à celle de sa source, le SCHAPI. (#47)
-- Les données hydrométriques temps réel de Hub'Eau proviennent de la même source que Vigicrues (données Temps Réel du SCHAPI). (#47)
-- Hub'Eau ne peut pas fournir de données hydrométriques plus récentes que celles disponibles sur Vigicrues. (#47)
-- Le code d'entité M800001010 correspond à la station de la Loire à Nantes. (#47)
-- L'API Hydrométrie, endpoint observations_tr, renvoie des observations doublonnées lorsque le paramètre code_entite correspond à un code_site. (#73)
-- Dans le cas de doublons, un des éléments a le champ code_station à null. (#73)
-- Pour éviter les doublons, il faut interroger l'API avec un code_entite correspondant à un code_station spécifique. (#73)
-- Le paramètre code_entite de l'API Hydrométrie est polyvalent et peut être utilisé indifféremment avec un code_site ou un code_station. (#73)
-- Un code_site peut regrouper plusieurs code_station. (#73)
-- Les données hydrométriques peuvent être associées à un code_site (avec code_station = null) ou à un code_station spécifique. (#73)
-- Les endpoints `/hydrometrie/observations_tr` et `/hydrometrie/referentiel/stations` peuvent retourner des codes d'erreur 500 (Internal Server Error) ou 503 (Service Unavailable). (#94)
-- Le endpoint `/hydrometrie/referentiel/stations` est particulièrement "fragile" et sujet à des déconnexions occasionnelles. (#94)
-- Une forte sollicitation de l'API peut entraîner la défaillance des endpoints `stations` et `observations_tr`. (#94)
-- Les causes identifiées des dysfonctionnements sont les plantages du cluster Solr (hébergeant et indexant les données) et du serveur de l'API. (#94)
-- Des actions correctives planifiées incluent la mise à niveau du cluster Solr de la version 5 à 8 (prévue au 2nd semestre 2022) et l'augmentation significative de la RAM du serveur de l'API. (#94)
-- L'API Hydrométrie permet de récupérer des observations (`observations_tr`) et des informations sur les stations (`referentiel/stations`). (#94)
-- Le paramètre `grandeur_hydro=Q` est utilisé pour filtrer les observations par débit. (#94)
-- Le paramètre `code_entite` permet de cibler des entités spécifiques (ex: `Y142203001`). (#94)
-- Les requêtes peuvent demander un grand nombre de résultats (ex: `size=20000`) et des champs spécifiques (ex: `date_obs,resultat_obs`). (#94)
-- L'utilisation de wildcards `*` dans les paramètres de recherche n'est pas systématiquement implémentée dans les APIs Hub'Eau. (#101)
-- Les wildcards sont disponibles dans certains champs de type code (par exemple, les codes entités de l'API Hydrométrie). (#101)
-- Les wildcards ne sont pas supportées pour le paramètre `libelle_lieusurv` de l'API Surveillance des eaux littorales. (#101)
-- Les APIs Hub'Eau distinguent les champs de type 'libellé' et 'code' pour les paramètres de recherche. (#101)
-- Le paramètre `libelle_lieusurv` permet de rechercher des lieux de surveillance dans l'API Surveillance des eaux littorales. (#101)
-- Les APIs Hub'Eau (notamment Piézométrie, Hydrobiologie, Qualité des cours d'eau, Hydrométrie) ne disposent pas de paramètre de filtre par date de mise à jour des données. (#131)
-- L'absence de filtre par date de mise à jour oblige les utilisateurs à charger l'intégralité des données pour rester à jour. (#131)
-- L'API Hydrométrie inclut une 'date de production' dans ses résultats, mais ce paramètre n'est pas utilisable comme filtre de requête. (#131)
-- L'ajout d'un filtre par date de mise à jour n'est pas prévu à court terme pour l'API Piézométrie. (#131)
-- L'ajout d'un filtre par date de mise à jour est une évolution identifiée pour l'API Hydrométrie. (#131)
-- Le service web ADES (Accès aux Données sur les Eaux Souterraines) offre une fonctionnalité de synchronisation des points d'eau et mesures basée sur une date de mise à jour. (#131)
-- La synchronisation par date de mise à jour est essentielle pour récupérer uniquement les différences et les corrections apportées aux données sans télécharger l'intégralité du jeu de données. (#131)
-- Les données environnementales peuvent être corrigées après leur première publication ('date de production'), nécessitant un mécanisme de mise à jour efficace. (#131)
-- Une pratique courante pour contourner l'absence de filtre est de requêter toutes les données d'une période (ex: dernière année) mensuellement, ce qui est sous-optimal. (#131)
-- L'endpoint `/hydrometrie/obs_elab` retourne les données de toutes les stations associées à un `code_entite` de site, et non une station unique sélectionnée selon une logique de calendrier. (#150)
-- L'API Hub'Eau ne dispose pas des informations de "calendrier" ou de la logique de sélection de station au niveau du site utilisée par HydroPortail. (#150)
-- Il est possible de récupérer les données d'une station spécifique en utilisant son `code_entite` (code station) dans l'endpoint `/hydrometrie/obs_elab`. (#150)
-- L'endpoint `/hydrometrie/referentiel/stations` permet d'obtenir la description des stations d'un site, incluant leurs périodes d'ouverture, mais cela ne suffit pas à répliquer la logique de sélection d'HydroPortail si plusieurs stations sont actives simultanément. (#150)
-- HydroPortail utilise un "calendrier" pour déterminer quelle station est la plus pertinente pour représenter un site hydrologique à un moment donné. (#150)
-- Un site hydrologique peut être associé à plusieurs stations de mesure. (#150)
-- Les "données élaborées" (QmJ) sont un type de grandeur hydrologique. (#150)
-- L'API Hydrométrie peut inverser les coordonnées longitude/latitude pour certaines stations. (#162)
-- Le dysfonctionnement d'inversion longitude/latitude se produit lorsque les coordonnées sources sont exprimées en WGS84 (code_projection = 31). (#162)
-- Les altitudes des stations hydrométriques dans les données sources peuvent être exprimées en mètres ou en millimètres. (#162)
-- Certaines stations hydrométriques peuvent manquer d'informations sur l'altitude dans les données sources. (#162)
-- Hub'Eau restitue les données altimétriques (cote du zéro d'échelle) telles quelles du système de référence et n'a pas vocation à les corriger ou les compléter. (#162)
-- Une validation qualitative des altitudes peut être effectuée en observant que la hauteur des stations décroît le long d'une rivière. (#162)
-- L'API Hydrométrie de Hub'Eau n'inclut pas et n'est pas prévue d'inclure à court ou moyen terme des fonctions statistiques (crucal) ou des fiches de synthèse. (#171)
-- Les fonctions statistiques 'crucal' sont des outils d'analyse hydrologique spécifiques. (#171)
-- Les fiches de synthèse sont des documents récapitulatifs d'informations hydrologiques. (#171)
-- L'endpoint hydrometrie/obs_elab ne supporte actuellement que les grandeurs QmnJ (débit moyen journalier) et QmM (débit moyen mensuel). (#206)
-- L'endpoint hydrometrie/obs_elab ne prévoit pas l'exposition de données horaires (QmnH). (#206)
-- Les données horaires peuvent être obtenues via l'endpoint hydrometrie/observations_tr en utilisant le paramètre _timestep_, mais l'historique est limité à 30 jours. (#206)
-- L'utilisation de _timestep_ avec hydrometrie/observations_tr peut être perturbée par la sélection du meilleur statut, entraînant des données moins denses. (#206)
-- Pour des données historiques à pas de temps fin, la base de données complète PhyC est téléchargeable sur data.ofb.fr. (#206)
-- La base de données PhyC est mise à jour trimestriellement. (#206)
-- La grandeur H (hauteur enregistrée) n'est pas directement disponible via hydrometrie/obs_elab. (#206)
-- Des grandeurs hydrométriques supplémentaires sont prévues pour hydrometrie/obs_elab au T1 2025, incluant HIXnJ (Hauteur instantanée maximale journalière), HIXM (Hauteur instantanée maximale mensuelle), QIXnJ, QIXM, QINnJ, QINM. (#206)
-- QmnH représente le débit moyen horaire. (#206)
-- La version 1 de l'API Hydrométrie a été arrêtée fin avril 2025. (#222)
-- La version 2 de l'API Hydrométrie est disponible en production et remplace la v1. (#222)
-- Les utilisateurs doivent ajuster leurs URL d'appel en remplaçant 'v1' par 'v2'. (#222)
-- Des ajustements des paramètres d'utilisation peuvent être nécessaires pour la v2. (#222)
-- Depuis le 5 mai 2025, la version 1 de l'API Hydrométrie n'est plus disponible. (#222)
-- La version 2 de l'API Hydrométrie intègre la sélection du meilleur statut pour les données. (#222)
-- La version 2 de l'API Hydrométrie utilise le format Sandre v2. (#222)
-- La version 2 de l'API Hydrométrie fournit des observations élaborées pour les sites. (#222)
-- La version 2 de l'API Hydrométrie inclut des libellés complémentaires. (#222)
-- Les débits caractéristiques (Qmod, Q2, Q5,...) et autres informations issues des fiches de synthèse ne sont pas accessibles aux traitements Hub'Eau. (#238)
-- L'API Hydrométrie ne peut pas exposer les débits caractéristiques et autres informations issues des fiches de synthèse. (#238)
-- Les débits caractéristiques (Qmod, Q2, Q5,...) sont des valeurs issues d'ajustements statistiques des fiches de synthèse (toutes eaux, basses eaux, hautes eaux) des stations hydrométriques. (#238)
-- Les débits caractéristiques et autres informations des fiches de synthèse doivent être consultés sur HydroPortail. (#238)
-- L'API Hydrométrie ne supporte pas le filtrage par plusieurs valeurs du paramètre `grandeur_hydro_elab` via une syntaxe de liste séparée par des virgules pour le endpoint `_obs_elab_`. (#242)
-- La syntaxe de liste séparée par des virgules est supportée pour le paramètre `fields` de l'API Hydrométrie (ex: `&fields=code_station,grandeur_hydro_elab`). (#242)
-- La possibilité de filtrer par plusieurs `grandeur_hydro_elab` n'est pas prévue à court terme pour l'API Hydrométrie, mais le besoin est noté pour les futures évolutions. (#242)
-- `grandeur_hydro_elab` est un paramètre de l'API Hydrométrie qui identifie une grandeur hydrologique élaborée. (#242)
-- `HIXnJ` et `QmnJ` sont des exemples de codes pour des grandeurs hydrologiques élaborées utilisées dans l'API Hydrométrie. (#242)
-- L'API Hydrométrie supporte désormais le format GeoJSON pour les observations. (#264)
-- Le paramètre `format=geojson` est disponible pour les endpoints `obs_elab` et `observations_tr` de l'API Hydrométrie. (#264)
-- L'endpoint `hydrometrie/obs_elab` de l'API Hydrométrie supporte désormais le filtrage par date d'intégration. (#265)
-- Les paramètres de filtrage pour la date d'intégration sont `date_debut_prod` et `date_fin_prod`. (#265)
-- Le format des dates pour les paramètres `date_debut_prod` et `date_fin_prod` est `aaaa-mm-jj`. (#265)
-- Un exemple d'URL de filtrage est : `https://hubeau.eaufrance.fr/api/v2/hydrometrie/obs_elab?code_entite=K435001010&format=json&size=1&date_debut_prod=2025-10-01&date_fin_prod=2025-12-07`. (#265)
-- Les observations élaborées exposées par l'API Hydrométrie peuvent être filtrées en fonction de leur date d'intégration. (#265)
-- La date d'intégration correspond à la date à laquelle le traitement d'alimentation de Hub'eau a collecté l'information auprès de la PHyC. (#265)
-- En cas de recalculs côté PHyC ou de rechargements massifs côté Hub'eau, la date de production (date d'intégration) des données peut être actualisée. (#265)
+- La requête avec code_entite=A0610050* retourne des enregistrements avec code_station=null car code_entite correspond à la fois aux sites (8 caractères) et aux stations (10 caractères). (#11)
+- L'API ne permet pas de filtrer explicitement entre les données de site et les données de station dans les requêtes actuelles. (#11)
+- Un site hydrométrique peut être composé de plusieurs stations, mais un code_entite avec 8 caractères (ex: A0610050) correspond à un site, tandis qu'un code_entite avec 10 caractères (ex: A061005051) correspond à une station. (#11)
+- Les données de débit agrégées au niveau du site peuvent avoir code_station=null, contrairement aux stations individuelles qui ont un code complet. (#11)
+- La documentation Swagger de l'API Hydrométrie ne peut pas être accédée via un navigateur en raison d'un bug dans le composant springfox, qui ne transmet pas le content-type correctement. (#16)
+- Pour accéder à la documentation Swagger depuis une application, il faut spécifier l'en-tête 'Accept' avec la valeur 'application/json;charset=utf-8,*/*'. (#16)
+- Le paramètre 'timestep' sélectionne une valeur toutes les 'timestep' minutes sans moyennage, limité à 60 minutes. (#28)
+- Les utilisateurs doivent assimiler les données observées pour corriger les modèles hydrologiques, nécessitant des débits journaliers précis. (#28)
+- Les codes de réseaux commençant par POH ou RIC ne sont pas encore standardisés par SANDRE. (#35)
+- Les codes des réseaux SANDRE doivent être précédés d'un '0' (exemple : 0100000009 au lieu de 100000009). (#35)
+- Les réseaux POH et RIC sont spécifiques à l'hydrométrie et à la prévision des crues (Vigicrues). (#35)
+- L'API Hydro peut renvoyer une erreur 500 après plusieurs appels successifs utilisant l'attribut 'next' pour la pagination. (#36)
+- Le problème persiste même avec des paramètres 'size' réduits (ex: 100) et sans délai entre les requêtes. (#36)
+- L'utilisation du mode 'a' dans fopen() permet l'ajout de données au fichier existant, ce qui n'efface pas le contenu précédent contrairement à l'attente de l'utilisateur. (#40)
+- Pour chaque couple site/date-heure ou station/date-heure, les données de hauteur (H) et de débit (Q) sont souvent mutuellement exclusives (seulement l'une ou l'autre est disponible). (#41)
+- L'API Hydrométrie met à jour les données par 'paquets' avec un retard de 20 minutes par rapport aux mesures toutes les 10 minutes. (#47)
+- L'API utilise la même source de données que le site Vigicrues (données Temps Réel du SCHAPI), donc elle ne peut pas fournir de données plus récentes que ce dernier. (#47)
+- La fréquence d'actualisation des données n'est pas documentée explicitement dans l'API. (#47)
+- Les données de hauteur du cours d'eau de la Loire à Nantes sont collectées toutes les 10 minutes mais ne sont pas toujours disponibles en temps réel sur l'API. (#47)
+- Des tests sont en cours sur l'endpoint 'observations_tr' pour évaluer l'extension de la profondeur des données à 2-3 mois. (#55)
+- Les données historiques de la banque Hydro sont accessibles via http://hydro.eaufrance.fr/ mais nécessitent un compte et une procédure peu conviviale. (#55)
+- Les utilisateurs ont exprimé un besoin critique pour des données historiques pour des études comme la prévision des niveaux d'eau ou le rejeu de crises. (#55)
+- Le SCHAPI rencontre des difficultés techniques pour mettre à disposition l'ensemble des données historiques. (#55)
+- Avant la version 2, il était impossible de filtrer les données par 'statut_serie' dans l'API. (#60)
+- Les données corrigées ou expertisées ont un 'statut_serie' différent (8, 12, 16) par rapport aux données brutes (4). (#60)
+- L'API Hydrométrie renvoie des doublons lorsqu'un code_entite correspond à un code_site, car elle inclut à la fois les données du site (code_station = null) et celles des stations associées. (#73)
+- Le paramètre code_entite peut désigner à la fois un site (code_site) ou une station (code_station), ce qui influence la granularité des données renvoyées. (#73)
+- L'API Hydrométrie renvoie un 'Internal server error' lors de requêtes spécifiques (ex: code_departement=10), avec un comportement intermittent lié à la redémarrage du service. (#85)
+- L'API peut être instable en raison des opérations de maintenance en cours (#86)
+- Le comblement des données pour les hauteurs est en cours (#86)
+- Le cluster Solr (responsable de l'indexation des données) a connu des plantages lors de la mise à jour de la version v5 à v8. (#94)
+- Le serveur hébergeant l'API a nécessité une augmentation significative de la RAM pour éviter les plantages. (#94)
+- L'API retourne des données avec différents statuts (ex: 4 pour 'brute', 12 pour 'pré-validée') au même pas de temps, entraînant des doublons. (#95)
+- Les données pré-validées remplacent les séries de validité inférieure, mais doivent être traitées séparément pour éviter des incohérences. (#95)
+- Les utilisateurs doivent filtrer les données par code de validité pour obtenir des résultats cohérents, notamment en temps réel. (#95)
+- Les wildcards * ne sont pas systématiquement implémentés dans les champs de recherche de l'API Surveillance des eaux littorales, notamment pour le paramètre libelle_lieusurv. (#101)
+- Les wildcards * sont disponibles dans certains champs de type code de l'API Hydrométrie (ex. codes entités). (#101)
+- L'API Hydrométrie a connu des erreurs 500 (Internal Server Error) intermittentes entre avril et juin 2022, affectant plusieurs endpoints comme /sites, /stations et /observations_tr. (#112)
+- Le champ 'en_service' dans le référentiel ne garantit pas la présence de données en temps réel (#114)
+- Les stations peuvent être en service sans avoir de données en temps réel disponibles dans observations_tr (#114)
+- Les données d'observations élaborées (hydro_elab) sont réinitialisées deux fois par jour (8h45 et 23h45) par Hub'Eau. (#118)
+- Les données temps réel (hydro_tr) peuvent ne pas refléter les corrections si les sources ne les tagguent pas explicitement comme telles. (#118)
+- L'API Hydrométrie renvoie une erreur 500 lors de la requête sur l'endpoint '/referentiel/stations' avec des paramètres spécifiques. (#126)
+- La construction des URLs pour les requêtes multiples a changé : les codes de station sont maintenant répétés comme paramètres distincts (ex: code_station=K1&code_station=K2) au lieu d'être séparés par des virgules (ex: code_station=K1,K2). (#126)
+- Le changement de format d'URL pour les requêtes multiples pourrait être une cause de l'erreur 500 persistante. (#126)
+- L'API Piézométrie ne permet pas de filtrer les données par date de mise à jour, obligeant à télécharger l'intégralité des données à chaque synchronisation (#131)
+- L'API Hydrométrie dispose d'un champ 'date de production' mais ne permet pas de filtrer les requêtes sur cette date (#131)
+- Les utilisateurs doivent régulièrement télécharger l'intégralité des données piezométriques pour rester à jour, ce qui est inefficace (#131)
+- La fonctionnalité de filtrage par date de mise à jour est demandée pour optimiser la synchronisation des données (#131)
+- Les débits moyens mensuels (QmM) sont systématiquement datés au 1er de chaque mois, contrairement aux débits moyens journaliers (QmJ) qui portent sur la date de la journée concernée. (#133)
+- Le package R 'hubeau' permet de requêter 10 des 12 APIs Hub'Eau via une syntaxe standardisée (`get_[API]_[Operation]`) (#137)
+- Le package est disponible sur CRAN et GitHub, avec une documentation incluant des exemples et une vignette (#137)
+- L'OFB DR Normandie utilise le package pour générer des rapports mensuels sur l'écoulement des cours d'eau en Bretagne (#137)
+- Une vignette illustre l'utilisation de l'API 'Écoulement' avec des cartes et graphiques synthétiques (#137)
+- Des anomalies similaires (valeurs négatives, sauts brusques) ont été détectées sur d'autres stations, probablement liées à des erreurs de traitement des données (#138)
+- D'autres stations présentent des transitions abruptes de débits (ex: 63 → 7405 l/s) et des débits négatifs qualifiés de 'douteux' (#138)
+- Les données Hydroportail et Hubeau présentent des écarts de valeurs pour la même station mais dans la même ordre de grandeur (#138)
+- L'API Hydrométrie ne permet pas de sélectionner automatiquement une station en se basant sur le calendrier HydroPortail. L'utilisateur doit spécifier manuellement le code de la station souhaitée. (#150)
+- Un site peut être associé à plusieurs stations simultanément (ex. : A116003002 et A116003004), et le calendrier HydroPortail indique quelle station est active à une période donnée. (#150)
+- Le calendrier HydroPortail n'est pas accessible via l'API Hub'Eau. Les utilisateurs doivent consulter séparément le calendrier pour déterminer quelle station utiliser. (#150)
+- Aucun mécanisme de surveillance en temps réel du statut de la plateforme n'est disponible actuellement. (#153)
+- L'endpoint XML pour 'observations_tr' fonctionne avec l'URL fournie, mais un problème de console empêche le rendu correct des messages d'erreur. (#157)
+- L'endpoint 'obs_elab' de l'API Hydrométrie ne retourne que des données de débit (QmJ et QmM), pas de hauteur d'eau. (#161)
+- L'endpoint 'observations_tr' permet d'accéder à des données de hauteur, mais uniquement pour les 30 derniers jours. (#161)
+- La station H227000102 dispose d'observations de hauteur d'eau récentes (y compris aujourd'hui) accessibles via le Hydroportail. (#161)
+- Les données de hauteur antérieures à 30 jours ne sont pas accessibles via l'API Hydrométrie et nécessitent le Hydroportail. (#161)
+- L'API retourne des coordonnées longitude/latitude inversées pour certaines stations lorsque les données sources utilisent le code_projection = 31 (WGS84). (#162)
+- Les altitudes sont fournies dans des unités non uniformisées (mètres ou millimètres) sans correction de l'API. (#162)
+- 18 stations hydrométriques ont leurs coordonnées longitude/latitude inversées dans les données de l'API. (#162)
+- Les altitudes des stations sont exprimées de manière incohérente (mètres vs millimètres) dans les données sources. (#162)
+- La fermeture de Hydroreel n'a pas affecté la disponibilité des données via l'API Hydrométrie, qui est déjà utilisée comme source principale. (#168)
+- Le serveur de l'API Hydrométrie ne prend pas en charge les requêtes HTTP 'range', ce qui empêche l'utilisation de certaines méthodes d'accès direct aux données (comme via DuckDB). (#170)
+- DuckDB nécessite que les serveurs acceptent les requêtes 'range' pour interroger des flux CSV distants de manière optimisée. (#170)
+- Les fichiers retournés par l'API Hydrométrie sont limités à 4 Mo (20 000 enregistrements), ce qui permet un téléchargement local direct. (#170)
+- L'API Hydrométrie ne prévoit pas, à court ou moyen terme, l'intégration de fonctions statistiques (comme les fiches de synthèse) dans ses services. (#171)
+- Les utilisateurs doivent remplacer 'v1' par 'v2' dans les URLs et ajuster les paramètres pour s'adapter à la nouvelle version (#190)
+- Le champ 'qmj' a été renommé en 'qmnj' dans la version 2 (#190)
+- La version 2 intègre des améliorations comme le format Sandre v2, des observations élaborées et des libellés complémentaires (#190)
+- La version 1 reste disponible jusqu'en avril 2025 (#190)
+- L'API Hydrométrie présente des interruptions de connexion SSL à 01:00 UTC, entraînant une absence temporaire de données. (#196)
+- La station U121504001 (Ignon) est particulièrement concernée par les coupures de données. (#196)
+- Les requêtes sans paramètre de date récupèrent l'ensemble des données de la station, ce qui peut inclure des périodes non disponibles. (#196)
+- La version 1 de l'API Hydrométrie reste disponible et n'a pas subi de coupure. (#202)
+- La version 1 de l'API Hydrométrie sera décommissariée le 30 avril 2025, mais peut être utilisée en complément jusqu'à cette date. (#202)
+- Le projet SUBLIM utilise les données hydrologiques de l'API Hub'Eau pour simuler les débits des cours d'eau et les niveaux piézométriques via des réseaux de neurones artificiels. (#203)
+- Le service SUBLIM intègre des données météorologiques historiques (ERA5) et prévisionnelles (CEP/ECMWF 0.25°) en complément des données Hub'Eau. (#203)
+- L'endpoint _obs_elab_ ne prend pas en charge la récupération de hauteurs (H) actuellement, uniquement QmnJ et QmM. (#206)
+- Les données horaires (QmnH) ne sont pas disponibles via _obs_elab_ et nécessitent l'utilisation de _observations_tr_ avec des limitations de densité et de disponibilité. (#206)
+- Un accès à des données plus anciennes et détaillées est possible via la base PhyC sur https://data.ofb.fr, mise à jour trimestriellement. (#206)
+- Les hauteurs instantanées maximales (HIXnJ/HIXM) et débits instantanés (QIXnJ/QIXM/QINnJ/QINM) sont en cours de déploiement pour l'API Hydrométrie, prévues pour le premier trimestre 2025. (#206)
+- La base PhyC contient des données historiques détaillées, mais avec une mise à jour limitée à trois mois. (#206)
+- Certains sites sont associés à plusieurs codes géographiques (région, département, commune) en raison de leur localisation sur des frontières administratives. (#209)
+- Seulement 3 sites ont des codes régionnels multiples, 16 des codes départementaux multiples, et 212 des codes communaux multiples, révélant une rareté des stations situées sur des frontières administratives. (#209)
+- Les données de la v2 sont alimentées à partir de sources distinctes de la v1, ce qui peut expliquer des écarts de disponibilité ou de synchronisation. (#213)
+- La v1 de l'API Hydrométrie sera mise hors ligne en avril 2025 (#216)
+- La version 1 de l'API Hydrométrie est arrêtée et remplacée par la version 2 depuis fin avril 2025. (#222)
+- Les utilisateurs doivent mettre à jour leurs URLs en remplaçant 'v1' par 'v2' pour accéder aux données. (#222)
+- La version 2 intègre des améliorations comme le format Sandre v2, des libellés complémentaires et des observations élaborées. (#222)
+- L'API Vigicrues est une alternative limitée, ne couvrant pas toutes les stations et tronquant les données de débit à 0.1 m³/s. (#224)
+- La syntaxe du paramètre 'bbox' a changé entre la v1 et la v2 de l'API Hydrométrie. La v1 accepte une chaîne de caractères avec des coordonnées séparées par des virgules (ex: '1.6,47.79,1.8,47.99'), tandis que la v2 exige la répétition du paramètre 'bbox' pour chaque valeur (ex: 'bbox=1.6194&bbox=47.7965&bbox=2.1910&bbox=47.9988') (#227)
+- L'API Hydrométrie ne fournit pas accès aux débits caractéristiques (Qmod, Q2, Q5, etc.) issus des fiches de synthèse. (#238)
+- Les débits caractéristiques sont disponibles dans les fiches de synthèse (toutes eaux, basses eaux, hautes eaux) mais ne sont pas exposés par l'API Hydrométrie. (#238)
+- Les données de la station V1318239 sur HydroPortail sont à jour, mais l'API ne les transmettait pas en temps réel. (#239)
+- La station F700000103 présentait également une absence de mise à jour des données depuis le 4 juillet 2025. (#239)
+- La bibliothèque Débi’Clic utilise l’API Hub’Eau pour accéder aux données hydrologiques en temps réel. (#240)
+- L’intégration de Débi’Clic nécessite une simple ligne de code JavaScript. (#240)
+- La bibliothèque est open source sous licence AGPL 3.0 avec une documentation complète disponible sur GitHub. (#240)
+- Débi’Clic permet d’accéder aux données de hauteur d’eau, débit instantané et débit moyen journalier via l’Hydroportail. (#240)
+- Les utilisateurs peuvent personnaliser les stations affichées, les couleurs des marqueurs et la période des graphiques. (#240)
+- L'API Hydrométrie ne permet actuellement pas de filtrer sur plusieurs valeurs de grandeur_hydro_elab dans une même requête. (#242)
+- Les utilisateurs expriment un besoin fonctionnel pour interroger simultanément plusieurs grandeurs hydrologiques élaborées (ex: HIXnJ, QmnJ) via un paramètre unique. (#242)
+- L'API Hydrométrie retourne correctement les valeurs négatives de débit (Q<0) telles que fournies par les sources de données. (#243)
+- Des débits négatifs peuvent survenir en raison de phénomènes hydrologiques comme les crues inversant le sens du débit (ex. crue de la Loire remontant dans la Maine à Angers). (#243)
+- La date_obs renvoyée par l'API Hydrométrie ne varie pas pour les observations d'une même période, souvent égale à date_debut_serie ou date_fin_serie, ce qui rompt la série temporelle. (#245)
+- L'API ne retourne pas de données pour certaines stations (ex. W102000102) lorsqu'aucune donnée n'est disponible (ex. pour les débits Q après 02/07/2025). (#245)
+- Le paramètre code_entite est utilisé pour filtrer les stations, mais code_station est uniquement présent dans les résultats. (#245)
+- Certaines stations n'ont pas de données de débit (Q) disponibles, uniquement des données de hauteur (H). (#245)
+- La disponibilité des données varie selon les stations et les paramètres de requête (ex. absence de données Q pour W102000102 après 02/07/2025). (#245)
+- L'API ne réalise pas d'imports complets périodiques de la base PHyC, uniquement des mises à jour incrémentielles basées sur les dates d'ajout/modification des données. (#253)
+- Les restrictions de publication (ex: droit 'hauteur publique') empêchent l'accès aux données de débit via l'API, même si des données historiques existent sur Hydroportail. (#253)
+- Les données de débit de F359000103 sont équivalentes à celles de F3580004 (L'Yonne à Pont-sur-Yonne), mais celles-ci ne sont pas accessibles via l'API. (#253)
+- L'API Hydrométrie ne fournit pas la grandeur 'Hauteur moyenne journalière'. (#262)
+- La 'Hauteur moyenne journalière' est disponible via HydroPortail. (#262)
+- Les codes de grandeur hydrologique (ex: QmnJ) décrivent des types de calculs spécifiques (ex: débit moyen journalier), et leur utilisation incorrecte peut mener à des résultats incohérents. (#263)
+- L'API Hydrométrie propose désormais un format GeoJSON pour les endpoints 'obs_elab' et 'observations_tr'. (#264)
+- Les données hydrométriques peuvent être accessibles en format géospatial (GeoJSON) pour une utilisation dans des applications cartographiques. (#264)
+- L'API Hydrométrie permet désormais de filtrer les observations élaborées par leur date d'intégration via les paramètres 'date_debut_prod' et 'date_fin_prod'. (#265)
+- Des recalculs côté PHyC ou rechargements massifs côté Hub'eau peuvent modifier la date de production des données, entraînant des mises à jour de cette date. (#265)
+- La possibilité de filtrer par date d'intégration facilite l'utilisation différentielle du endpoint, utile pour des analyses temporelles ciblées. (#265)
+- Le champ `altitude_ref_alti_station` est documenté en mètres, mais des disparités d'unité (m et mm) existent dans les données sources. (#267)
+- L'altitude du zéro de l’échelle altimétrique est censée être exprimée en mètres, mais des incohérences ont été constatées dans les données historiques. (#267)
+- L'API Hydrométrie ne renvoie plus aucune valeur depuis 6 heures (#272)
+- L'équipe Hub'eau n'a pas réussi à reproduire l'anomalie (#272)
+- Des crues sont en cours sur le territoire lors de l'incident (#272)
 
 ### Historique des problèmes résolus
 
-- ~~Avant correction, la méthode `observations_tr` de l'API Hydrométrie renvoyait les dates en UTC si le paramètre `fields` n'était pas utilisé, et en fuseau horaire de Paris (+02:00) si le paramètre `fields` était spécifié. (#7)~~
-- ~~Le comportement corrigé et actuel de la méthode `observations_tr` est de renvoyer toutes les dates dans le fuseau horaire de Paris. (#7)~~
-- ~~La correction de cette incohérence de fuseau horaire a été effectuée le 23/07/2018. (#7)~~
-- ~~La méthode `observations_tr` de l'API Hydrométrie permet d'accéder aux observations hydrométriques en temps réel. (#7)~~
-- ~~Les données d'observation incluent des champs comme `date_debut_serie`, `date_fin_serie`, `date_obs` (date de l'observation), `resultat_obs` (valeur de l'observation), et `continuite_obs_hydro` (continuité des observations hydrométriques). (#7)~~
-- ~~Le paramètre `grandeur_hydro=H` est utilisé pour filtrer les observations par la grandeur 'Hauteur'. (#7)~~
-- ~~Avant correction, la méthode `observations_tr.csv` de l'API Hydrométrie renvoyait les dates au format `aaaa-mm-jj` (sans heure). (#8)~~
-- ~~La version JSON de l'API Hydrométrie renvoie les dates au format `aaaa-mm-jjThh:mm:ssZ` (avec heure et fuseau horaire UTC). (#8)~~
-- ~~Il est recommandé d'utiliser des dates au format ISO 8601 avec fuseau horaire (`aaaa-mm-jjThh:mm:ss+ZZ:ZZ`) pour éviter les ambiguïtés. (#8)~~
-- ~~La limite de 20 000 résultats pour l'API `observations_tr` s'applique par page, et non à l'ensemble des résultats, permettant la récupération de toutes les données via pagination. (#9)~~
-- ~~La pagination de l'API `observations_tr` utilise un champ 'next' dans la réponse pour obtenir la page suivante. (#9)~~
-- ~~Un problème de pagination existait où le caractère '+' dans le paramètre `cursor` de l'URL 'next' provoquait une erreur interne (problème résolu). (#9)~~
-- ~~Une solution temporaire pour le problème du caractère '+' était de le remplacer par '%2B' dans l'URL du curseur (problème résolu). (#9)~~
-- ~~Des erreurs internes pouvaient survenir lors de la pagination avec des valeurs élevées pour le paramètre `size` (ex: 3000), en raison du problème du caractère '+' dans le curseur de l'URL 'next'. (#9)~~
-- ~~Un paramètre `timestep` a été ajouté aux endpoints `observations_tr` pour spécifier le pas de temps des données. (#9)~~
-- ~~Les données hydrométriques peuvent être très volumineuses à des pas de temps fins (ex: 5 minutes). (#9)~~
-- ~~Le paramètre `timestep` permet de télécharger des données hydrométriques à un pas de temps agrégé (ex: 30 minutes), réduisant le volume de données et le nombre de requêtes nécessaires. (#9)~~
-- ~~L'API Hydrométrie de Hub'Eau fournit des spécifications Swagger/OpenAPI pour la génération de clients. (#13)~~
-- ~~La spécification est accessible via l'endpoint `/api-docs` (ex: http://hubeau.eaufrance.fr/api/vbeta/hydrometrie/api-docs). (#13)~~
-- ~~Pour récupérer la spécification, il peut être nécessaire d'inspecter le code source de la page `api-docs` si elle n'est pas servie directement comme un fichier brut (par exemple, XML ou JSON). (#13)~~
-- ~~La propriété 'next' de la pagination de l'API Hydrométrie était remplie même lorsque la dernière page était atteinte. (#17)~~
-- ~~Le paramètre 'timestep' de l'API Hydrométrie permet de retenir une valeur toutes les 'timestep' minutes. (#28)~~
-- ~~Le paramètre 'timestep' de l'API Hydrométrie était initialement limité à 60 minutes. (#28)~~
-- ~~Il n'existait pas de routine dans l'API Hydrométrie pour calculer un débit moyen journalier à partir des observations brutes. (#28)~~
-- ~~Un nouvel endpoint 'observations_elaborees' (ou 'obs_elab') est disponible dans l'API Hydrométrie depuis le 24 novembre 2021. (#28)~~
-- ~~L'endpoint 'observations_elaborees' fournit des grandeurs élaborées. (#28)~~
-- ~~L'endpoint 'observations_elaborees' de l'API Hydrométrie permet de récupérer les débits moyens journaliers (QmJ). (#28)~~
-- ~~L'endpoint 'observations_elaborees' de l'API Hydrométrie permet de récupérer les débits moyens mensuels (QmM). (#28)~~
-- ~~Les débits journaliers sont utiles pour la correction de modèles hydrologiques de prévision des étiages. (#28)~~
-- ~~Lors de l'utilisation des APIs Hub'Eau, les paramètres d'URL doivent être séparés par le caractère '&' et non par l'entité HTML '&amp;'. (#40)~~
-- ~~L'API Hub'Eau Hydrométrie, pour les observations en temps réel (observations_tr), structure les données de manière à ce que différentes grandeurs hydro (ex: Q et H) apparaissent sur des lignes distinctes plutôt que dans des colonnes séparées. (#40)~~
-- ~~Les données hydrométriques peuvent inclure des observations de différentes grandeurs comme la hauteur ('H') et le débit ('Q'). (#40)~~
-- ~~Il n'est pas possible d'obtenir simultanément les observations de hauteur (H) et de débit (Q) pour un même enregistrement (couple site/date-heure) via l'API. (#41)~~
-- ~~Pour un couple site/date-heure donné, il est fréquent que seule la hauteur (H) ou seul le débit (Q) soit disponible, mais pas les deux simultanément. (#41)~~
-- ~~Sur l'API Hydrométrie, l'endpoint `hydrometrie/referentiel/stations` renvoyait `null` pour les champs `longitude_station` et `latitude_station` (et potentiellement d'autres) lorsque ces champs étaient explicitement demandés via le paramètre `fields`. (#48)~~
-- ~~Le comportement incorrect se produisait uniquement lorsque le paramètre `fields` était utilisé pour filtrer les champs, alors que sans filtre, les valeurs étaient correctement initialisées. (#48)~~
-- ~~Les stations hydrométriques sont identifiées par un `code_station` et possèdent des coordonnées géographiques (`longitude_station`, `latitude_station`). (#48)~~
-- ~~Les stations peuvent avoir un statut `en_service` (en service ou non). (#48)~~
-- ~~L'API Hydrométrie peut connaître des périodes d'indisponibilité temporaire. (#53)~~
-- ~~Les indisponibilités de l'API Hydrométrie sont généralement résolues rapidement. (#53)~~
-- ~~L'API Hydrométrie fournit des données de niveaux d'eau en quasi temps réel. (#53)~~
-- ~~La station hydrométrique d'Austerlitz-Paris est une station de référence pour les niveaux d'eau. (#53)~~
-- ~~Les données de l'API Hydrométrie sont utilisées par la Ville de Paris pour la gestion des crues et des actions sur l'espace public. (#53)~~
-- ~~Initialement, l'API Hydrométrie ne permettait pas d'accéder aux données historiques au-delà d'un mois. (#55)~~
-- ~~Un nouvel endpoint "observations élaborées" est désormais disponible pour accéder aux débits journaliers et mensuels sur une période historique complète. (#55)~~
-- ~~Des tests sont prévus pour augmenter la profondeur des données de l'endpoint observations_tr à 2 ou 3 mois. (#55)~~
-- ~~Les données de la Banque Hydro sont accessibles via http://hydro.eaufrance.fr/, mais la procédure est peu conviviale et nécessite la création d'un compte. (#55)~~
-- ~~Les données de l'API Hydrométrie Temps Réel sont des données brutes qui ne bénéficient pas des corrections apportées par les spécialistes. (#55)~~
-- ~~Les "observations élaborées" sont des débits moyens journaliers et mensuels. (#55)~~
-- ~~Le SCHAPI est l'organisme responsable de la Banque Hydro et de la mise à disposition des données historiques. (#55)~~
-- ~~Les données historiques sont essentielles pour des études hydrologiques (prévision, rejeu de crises, pluies-débits, crues de projets, statistiques). (#55)~~
-- ~~L'API Hub'Eau ne gère pas les dates de modification des observations. (#60)~~
-- ~~La version 1 de l'API Hydrométrie ne permettait pas de filtrer les observations par statut de série. (#60)~~
-- ~~La version 2 de l'API Hydrométrie permet de filtrer les observations temps réel (`observations_tr`) sur le paramètre `code_statut`. (#60)~~
-- ~~Exemple de requête pour filtrer par statut dans l'API Hydrométrie V2: `/api/v2/hydrometrie/observations_tr?code_statut=8`. (#60)~~
-- ~~Les données brutes ont un `statut_serie` de 4. (#60)~~
-- ~~Les données corrigées ont un `statut_serie` de 8. (#60)~~
-- ~~Les données pré-validées ont un `statut_serie` de 12. (#60)~~
-- ~~Les données validées ont un `statut_serie` de 16. (#60)~~
-- ~~Une donnée corrigée ou expertisée ne doit plus avoir un `statut_serie` de 4. (#60)~~
-- ~~L'utilisation du logo Hub'Eau est libre pour les applications intégrant ses APIs. (#80)~~
-- ~~Hub'Eau propose de référencer les outils utilisant ses APIs sur sa page 'ils-nous-utilisent'. (#80)~~
-- ~~Les informations requises pour le référencement d'une application sont : un logo, le nom de l'application, une description courte (3 à 5 lignes) et une copie d'écran pour la vignette, ainsi qu'une description longue avec liens et copies d'écran supplémentaires pour la page de description. (#80)~~
-- ~~L'endpoint GET /api/v1/hydrometrie/referentiel/stations peut retourner une erreur de type "Internal server error". (#83)~~
-- ~~Le format d'erreur pour un "Internal server error" est {"code": "Internal server error", "message": "", "field_errors": null}. (#83)~~
-- ~~L'API Hydrométrie propose un endpoint /referentiel/stations pour récupérer les stations du référentiel. (#83)~~
-- ~~L'API GET /hydrometrie/referentiel/stations peut retourner une erreur interne du serveur (code: "Internal server error") pour des requêtes valides (ex: code_departement=10). (#85)~~
-- ~~Ce bug est intermittent : il disparaît après un redémarrage du service mais réapparaît au bout de quelques jours. (#85)~~
-- ~~Le problème a été identifié comme un retour d'un bug précédent (lié à l'issue #83). (#85)~~
-- ~~L'endpoint hydrometrie/referentiel/stations permet de récupérer les stations hydrométriques du référentiel, filtrables par des critères comme le code département. (#85)~~
-- ~~L'alimentation des observations temps réel de l'API Hydrométrie a été stoppée le 2021-12-14 vers 17:45 en raison d'une faille de sécurité majeure. (#86)~~
-- ~~La reprise du service de l'API Hydrométrie a eu lieu le 2021-12-20 à 11h. (#86)~~
-- ~~L'API Hydrométrie pouvait être instable pendant les opérations de maintenance après la reprise du service. (#86)~~
-- ~~Un trou de données pour les observations hydrométriques (hauteurs et débits temps réel) a existé entre le 2021-12-14 et le 2021-12-20. (#86)~~
-- ~~Le trou de données pour les débits a été comblé après la reprise du service. (#86)~~
-- ~~Le comblement du trou de données pour les hauteurs était en cours après le 2021-12-20. (#86)~~
-- ~~Le paramètre `grandeur_hydro` de l'API `/v1/hydrometrie/observations_tr` utilise la valeur "H" pour la hauteur d'eau et "Q" pour le débit. (#87)~~
-- ~~Le champ `resultat_obs` de l'API `/v1/hydrometrie/observations_tr` retourne la valeur numérique correspondant à la grandeur hydrologique demandée. (#87)~~
-- ~~En hydrologie, "H" désigne communément la hauteur d'eau (niveau) et "Q" le débit. (#87)~~
-- ~~Les données hydrométriques de Hub'Eau sont cohérentes avec celles du SCHAPI (Service Central d'Hydrométéorologie et d'Appui à la Prévision des Inondations) et du site Vigicrues. (#87)~~
-- ~~L'API Hydrométrie, endpoint `referentiel/stations`, a rencontré une erreur 500 (Internal Server Error) en l'absence du paramètre `fields`. (#92)~~
-- ~~Le problème d'erreur 500 sur `referentiel/stations` a été résolu, l'API fonctionnant normalement avec ou sans le paramètre `fields`. (#92)~~
-- ~~Certains utilisateurs de l'API Hydrométrie continuent d'utiliser systématiquement le paramètre `fields` par précaution. (#92)~~
-- ~~L'API Hydrométrie renvoyait des doublons de données (hauteur H, débit Q) pour un même pas de temps et une même station. (#95)~~
-- ~~Ces doublons étaient dus à la présence de plusieurs séries de données avec des codes de statut de validité différents (ex: 4 pour brute, 12 pour pré-validée) pour la même observation. (#95)~~
-- ~~L'API expose un champ 'statut_serie' pour chaque observation, permettant de distinguer les niveaux de validité. (#95)~~
-- ~~La correction impliquait de modifier l'API pour ne diffuser que les séries de données de meilleur statut. (#95)~~
-- ~~Les données hydrométriques peuvent avoir différents statuts de validité (ex: 4 pour brute, 12 pour pré-validée) pour une même mesure à un instant T. (#95)~~
-- ~~Lors de la validation (pré-validation ou validation), les courbes de données sont lissées pour filtrer le 'batillage' (bruit) et ne garder que les variations significatives. (#95)~~
-- ~~Une série de données de validité supérieure 'annule et remplace' les séries de validité inférieure pour un même pas de temps, même si ces dernières restent consultables dans la PHYC (Plateforme Hydrométrique Centralisée). (#95)~~
-- ~~Mélanger des données de différents niveaux de validité peut entraîner des incohérences (sauts, traits verticaux) dans les visualisations. (#95)~~
-- ~~Pour la gestion de crise en temps réel, la donnée brute (statut_serie 4) est souvent considérée comme la plus utile. (#95)~~
-- ~~Le SCHAPI (Service Central d'Hydrométéorologie et d'Appui à la Prévision des Inondations) est impliqué dans la gestion et la compréhension des statuts de données hydrométriques. (#95)~~
-- ~~La superficie du bassin versant est fournie dans l'attribut `surface_bv`. (#100)~~
-- ~~L'attribut `surface_bv` est associé au site hydrométrique, et non à la station hydrométrique. (#100)~~
-- ~~La définition du Bassin Versant Site Hydro est disponible sur le SANDRE à l'URL https://www.sandre.eaufrance.fr/definition/HYD/2.0/BassinVersantSiteHydro. (#100)~~
-- ~~Il est important de distinguer un 'site hydrométrique' d'une 'station hydrométrique' lors de l'accès aux données. (#100)~~
-- ~~La superficie du bassin versant est une caractéristique du 'site hydrométrique'. (#100)~~
-- ~~L'API Hydrométrie de Hub'Eau propose un référentiel des sites hydro (endpoint /referentiel/sites) qui inclut des champs de localisation. (#102)~~
-- ~~Il existe une distinction ou une potentielle confusion entre les concepts de 'stations' et de 'sites' dans les données hydrométriques. (#102)~~
-- ~~Le référentiel des sites hydro peut être filtré par code de département (paramètre code_departement) et la taille des résultats peut être limitée (paramètre size). (#102)~~
-- ~~L'API Hydrométrie de Hub'Eau peut renvoyer une erreur "Internal server error" avec une réponse JSON spécifique: {"code": "Internal server error", "message": "", "field_errors": null}. (#112)~~
-- ~~Cette erreur affecte plusieurs endpoints de l'API Hydrométrie, notamment /referentiel/sites, /observations_tr et /referentiel/stations. (#112)~~
-- ~~Les dysfonctionnements sont temporaires mais récurrents, observés sur plusieurs semaines, notamment durant les weekends. (#112)~~
-- ~~Une des causes possibles des interruptions est la surcharge temporaire des serveurs. (#112)~~
-- ~~Le service nécessite parfois une relance manuelle pour restaurer l'accès. (#112)~~
-- ~~Le problème est un doublon d'une issue antérieure (#94), indiquant une problématique persistante. (#112)~~
-- ~~Pour les APIs `hydrometrie/observations_tr` et `hydrometrie/obs_elab`, le paramètre à utiliser pour identifier une station est `code_entite`. (#114)~~
-- ~~L'API Hub'Eau est un service gratuit sans garantie de disponibilité, et des erreurs de serveur (500, 503) peuvent survenir. (#114)~~
-- ~~Il n'existe pas de paramètre dans l'API `hydrometrie/referentiel/stations` pour filtrer les stations ayant des données en temps réel (`observations_tr`). (#114)~~
-- ~~Le `code_station` du référentiel des stations hydrométriques correspond au `code_entite` utilisé pour interroger les observations en temps réel (`observations_tr`) ou élaborées (`obs_elab`). (#114)~~
-- ~~Une station marquée `en_service` dans le référentiel ne garantit pas qu'elle dispose de données en temps réel (`observations_tr`). Elle peut avoir d'autres types de données. (#114)~~
-- ~~Certaines stations, même `en_service`, peuvent ne pas avoir d'enregistrements en temps réel (ex: station 1011000101 en Guadeloupe). (#114)~~
-- ~~L'API Hydrométrie (endpoints `obs_elab` et `observations_tr`) peut présenter des différences avec les données de l'HydroPortail, même si la source est censée être la même. (#118)~~
-- ~~Les données corrigées de la source (SCHAPI) ne sont pas toujours correctement taguées, ce qui peut empêcher Hub'Eau de les prendre en compte, un point en discussion avec le SCHAPI. (#118)~~
-- ~~L'API Hydrométrie `observations_tr` est mise à jour toutes les 2 minutes pour les nouvelles données et les corrections. (#118)~~
-- ~~L'API Hydrométrie `obs_elab` est mise à jour deux fois par jour (8h45 et 23h45) en interrogeant la PHYC. (#118)~~
-- ~~Des réinitialisations manuelles des données peuvent être nécessaires pour résoudre les incohérences, mais les corrections peuvent être temporaires ou entraîner de nouvelles différences. (#118)~~
-- ~~Le paramètre `size` permet de spécifier le nombre de résultats (ex: `size=20000`). (#118)~~
-- ~~Le paramètre `fields` permet de sélectionner des champs spécifiques (ex: `fields=code_station,date_obs_elab,resultat_obs_elab`). (#118)~~
-- ~~Le paramètre `sort` permet de trier les résultats (ex: `sort=asc`). (#118)~~
-- ~~L'HydroPortail est une référence pour la consultation des données hydrologiques en France. (#118)~~
-- ~~`QmJ` désigne le débit moyen journalier. (#118)~~
-- ~~`Q` désigne le débit instantané (observations temps réel). (#118)~~
-- ~~La PHYC (Plateforme Hydrologique Centrale) est la source des observations hydrologiques élaborées. (#118)~~
-- ~~Les corrections de données sont courantes dans le suivi hydrologique et leur propagation est cruciale pour la cohérence des différentes plateformes. (#118)~~
-- ~~L'endpoint `hydrometrie/referentiel/stations` de l'API Hub'Eau a rencontré des erreurs HTTP 500. (#120)~~
-- ~~Ces erreurs 500 sont survenues lors de requêtes filtrées par `code_site` ou `code_station`. (#120)~~
-- ~~Le problème a été résolu une première fois mais a montré une tendance à la récurrence. (#120)~~
-- ~~Il a été observé que l'endpoint `hydrometrie/referentiel/stations` pouvait échouer pour les requêtes de stations alors que l'API répondait correctement pour les sites. (#120)~~
-- ~~L'API Hydrométrie de Hub'Eau permet d'interroger les stations hydrométriques via l'endpoint `referentiel/stations` en utilisant des identifiants de site (`code_site`) ou de station (`code_station`). (#120)~~
-- ~~L'endpoint `/hydrometrie/referentiel/stations` de l'API Hub'Eau a renvoyé des erreurs 500 (Internal Server Error) en août-septembre 2022, affectant les exports CSV et JSON. (#126)~~
-- ~~L'API Hydrométrie distingue les requêtes sur les 'sites' et les 'stations', ces dernières ayant rencontré des problèmes d'erreur 500. (#126)~~
-- ~~L'API Hub'Eau a modifié la manière de passer plusieurs valeurs pour un même paramètre (ex: `code_station`) : elle est passée d'une liste séparée par des virgules dans un seul paramètre (`code_station=VAL1,VAL2`) à la répétition du paramètre (`code_station=VAL1&code_station=VAL2`). (#126)~~
-- ~~Les données hydrométriques sont structurées autour de 'stations' identifiées par un `code_station` (ex: K269821001). (#126)~~
-- ~~Il existe une distinction entre 'sites' et 'stations' dans le référentiel hydrométrique de Hub'Eau. (#126)~~
-- ~~L'opération `obs_elab` de l'API Hydrométrie renvoie par défaut les débits moyens journaliers (QmJ) et les débits moyens mensuels (QmM) si le paramètre `grandeur_hydro_elab` n'est pas utilisé pour filtrer. (#133)~~
-- ~~L'absence de filtrage par `grandeur_hydro_elab` peut entraîner l'apparition de "doublons" pour le 1er de chaque mois, correspondant aux QmJ et QmM. (#133)~~
-- ~~Pour ne récupérer qu'un type de grandeur (ex: QmJ), il faut utiliser le paramètre `grandeur_hydro_elab`. (#133)~~
-- ~~Les données élaborées (obs_elab) de l'API Hydrométrie incluent des débits moyens journaliers (QmJ) et des débits moyens mensuels (QmM). (#133)~~
-- ~~Les débits moyens mensuels (QmM) sont datés au 1er de chaque mois. (#133)~~
-- ~~Le package R `hubeau` version 0.4.0 est disponible sur le CRAN. (#137)~~
-- ~~Le package `hubeau` permet de requêter 10 des 12 APIs Hub'Eau. (#137)~~
-- ~~La syntaxe des fonctions de requête du package `hubeau` est `get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)`. (#137)~~
-- ~~Le package `hubeau` est documenté avec des exemples d'utilisation et des vignettes. (#137)~~
-- ~~Le code source du package `hubeau` est disponible sur GitHub à l'adresse `https://github.com/inrae/hubeau`. (#137)~~
-- ~~Les éléments descriptifs du package R `hubeau` ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (`https://github.com/BRGM/hubeau/tree/master/re-utilisations`) et non sur le site éditorial. (#137)~~
-- ~~Le package R `hubeau` couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (#137)~~
-- ~~L'OFB DR Normandie utilise le package R `hubeau` pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (#137)~~
-- ~~Une vignette du package `hubeau` propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (#137)~~
-- ~~L'API Hydrométrie (v1) a rencontré des problèmes d'unité et de cohérence des valeurs pour la grandeur `QmJ` (débit moyen journalier), avec des transitions abruptes (ex: 5000 l/s à 4 m3/s). (#138)~~
-- ~~Ces problèmes ont été résolus suite au passage de l'API Hydrométrie en version 2 et à des rechargements complets des données. (#138)~~
-- ~~L'API peut retourner des débits négatifs, qui sont généralement qualifiés de "douteux". (#138)~~
-- ~~Les données de débit moyen journalier (`QmJ`) peuvent présenter des incohérences d'unité (l/s vs m3/s) ou des erreurs de grandeur, nécessitant une vérification. (#138)~~
-- ~~La station `R002001002` (La Charente à Suris) est un exemple de station ayant eu des problèmes de cohérence de données de débit. (#138)~~
-- ~~Les données d'hydrométrie peuvent inclure des débits négatifs, qui sont considérés comme "douteux" et nécessitent une interprétation prudente. (#138)~~
-- ~~Hydroportail est une source de référence pour la comparaison des données hydrométriques. (#138)~~
-- ~~L'API Hub'Eau restitue les données de méthode telles que collectées, sans intervention propre sur la valeur. (#145)~~
-- ~~La version 1 de l'API Hub'Eau utilisait une source de données v1 qui pouvait retourner un code de méthode incorrect (ex: 12 pour 'Interpolation') pour certaines chroniques. (#145)~~
-- ~~La version 2 de l'API Hub'Eau utilise une source de données v2 qui corrige les codes de méthode (ex: 10 pour 'Expertisé'). (#145)~~
-- ~~La migration de l'API hydrométrie vers la v2 a résolu les problèmes de métadonnées sur la méthode. (#145)~~
-- ~~L'endpoint hubeau.eaufrance.fr/api/v2/hydrometrie/obs_elab expose désormais les données de méthode corrigées. (#145)~~
-- ~~Il y a eu une divergence entre les données de méthode (libellé et code) exposées par Hub'Eau v1 et celles d'Hydro Portail pour les chroniques de débits journaliers (QmJ). (#145)~~
-- ~~Le code de méthode 12 correspond à 'Interpolation' et le code de méthode 10 à 'Expertisé'. (#145)~~
-- ~~Hydro Portail est considéré comme la référence pour les données hydrométriques en France. (#145)~~
-- ~~Pour la station K543302001 en 2016, la méthode correcte selon Hydro Portail était 'Expertisé' (code 10), tandis que Hub'Eau v1 affichait 'Interpolation' (code 12). (#145)~~
-- ~~Les métadonnées de méthode sont cruciales pour comprendre la qualité et l'origine des données hydrométriques. (#145)~~
-- ~~L'endpoint `/hydrometrie/obs_elab` fournit des données élaborées. (#147)~~
-- ~~Le paramètre `date_debut_obs_elab` permet de filtrer les données à partir d'une date spécifique. (#147)~~
-- ~~Le champ `date_prod` dans la réponse de l'API indique la date de production de la donnée, qui peut être différente de la `date_obs_elab`. (#147)~~
-- ~~L'API peut rencontrer des interruptions de mise à jour des données provenant de la source. (#147)~~
-- ~~Les données élaborées de l'API Hydrométrie (`obs_elab`) peuvent inclure le débit moyen journalier (`QmJ`). (#147)~~
-- ~~Les données peuvent avoir différents statuts (`Donnée pré-validée`, `Donnée brute`) et méthodes (`Interpolation`). (#147)~~
-- ~~Les données peuvent être 'Non qualifiée'. (#147)~~
-- ~~Les problèmes de mise à jour des données Hub'Eau peuvent être liés à des absences de données à la source (Schapi). (#147)~~
-- ~~Un problème de non-mise à jour des données sur l'endpoint `obs_elab` a affecté plusieurs stations (ex: `Y461502001`, `R3070010`, `B0220010`, `P2404010`) autour du 05/07/2023. (#147)~~
-- ~~L'API Hydrométrie peut subir des incidents techniques entraînant des retards dans l'alimentation des données ou l'indisponibilité des endpoints. (#153)~~
-- ~~En cas d'incident sur l'API Hydrométrie, les données temps réel manquantes peuvent être rechargées pour combler les plages non alimentées. (#153)~~
-- ~~Il n'existe pas de moyen public pour connaître le statut de la plateforme Hub'Eau en cas de panne, mais cette fonctionnalité est en réflexion. (#153)~~
-- ~~Les données d'hydrométrie disponibles via l'API Hub'Eau peuvent parfois être en retard par rapport à celles affichées sur la plateforme hydro.eaufrance.fr. (#153)~~
-- ~~L'incident a spécifiquement affecté les données d'hydrométrie temps réel. (#153)~~
-- ~~La console de test de l'API Hydrométrie pour l'endpoint `observations_tr` a affiché une erreur '_😱 Could not render _t, see the console_' due to une anomalie. (#157)~~
-- ~~L'endpoint `observations_tr` de l'API Hydrométrie est fonctionnel, l'anomalie ne concernait que sa console de test et non l'API elle-même. (#157)~~
-- ~~Il est possible de spécifier le format de sortie (`format=json`) même si l'URL de l'endpoint contient `.xml` (ex: `https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr.xml?format=json`). (#157)~~
-- ~~L'endpoint `observations_tr` de l'API Hydrométrie permet d'accéder aux observations hydrométriques. (#157)~~
-- ~~Le paramètre `code_entite` est utilisé pour filtrer les observations hydrométriques, par exemple avec un code comme `K435001010`. (#157)~~
-- ~~L'endpoint `/hydrometrie/obs_elab` de l'API Hub'Eau Hydrométrie retourne uniquement des valeurs de débit (débits moyens journaliers QmJ et débits moyens mensuels QmM). (#161)~~
-- ~~L'endpoint `/hydrometrie/observations_tr` de l'API Hub'Eau Hydrométrie retourne des valeurs de hauteur et de débit avec un pas de temps fin, mais l'historique est limité à 30 jours. (#161)~~
-- ~~La récupération de données de hauteurs antérieures à 30 jours n'est pas disponible via l'API Hub'Eau Hydrométrie et nécessite de passer par l'Hydroportail. (#161)~~
-- ~~Il existe une distinction entre les observations (souvent des hauteurs d'eau brutes) et les observations élaborées (comme les débits moyens journaliers ou mensuels). (#161)~~
-- ~~Les données de hauteurs d'eau historiques sont disponibles sur l'Hydroportail même si elles ne sont pas accessibles via l'API Hub'Eau Hydrométrie au-delà de 30 jours. (#161)~~
-- ~~Des coupures de quelques minutes de l'alimentation en données d'hydrométrie temps réel ont pu survenir via l'API Hydrométrie entre le 20/02/2024 et le 22/02/2024. (#164)~~
-- ~~Le système source des mesures d'hydrométrie est la Plate-forme HYDRO Centrale (PHyC). (#164)~~
-- ~~Une opération de maintenance sur la Plate-forme HYDRO Centrale (PHyC) a eu lieu du 20/02/2024 au 22/02/2024. (#164)~~
-- ~~Cette maintenance a pu induire des coupures de l'alimentation en données d'hydrométrie temps réel. (#164)~~
-- ~~L'endpoint `/hydrometrie/obs_elab` de l'API Hub'Eau Hydrométrie a connu une interruption de service pour les données élaborées de type 'QmJ' (débit moyen journalier) entre le 25 février 2024 et le 14 mars 2024. (#167)~~
-- ~~Pendant l'interruption des données élaborées, les données temps réel via l'endpoint `/hydrometrie/observations_tr` restaient disponibles. (#167)~~
-- ~~Un rechargement complet des données élaborées a été effectué après la résolution du problème. (#167)~~
-- ~~Les données élaborées 'QmJ' correspondent au débit moyen journalier. (#167)~~
-- ~~La plateforme HYDRO Centrale (PHyC) est la source des observations élaborées exposées par l'API Hydrométrie. (#167)~~
-- ~~Des opérations de recalcul de masse sur PHyC peuvent perturber l'alimentation des données de débit moyen journalier dans l'API Hub'Eau. (#167)~~
-- ~~L'API Hydrométrie de Hub'Eau est alimentée par la Plate-forme HYDRO Centrale (PHyC). Toute absence de donnée dans PHyC se répercute sur l'API. (#168)~~
-- ~~L'URL `https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr` permet de récupérer les observations hydrométriques en temps réel pour une station donnée. (#168)~~
-- ~~Le site Hydroreel fermera prochainement. (#168)~~
-- ~~Des problèmes de disponibilité des données hydrométriques sur Hub'Eau peuvent survenir, notamment durant les crues, et sont souvent liés à des incidents en amont de la chaîne de collecte des données (ex: changement de méthode de collecte). (#168)~~
-- ~~L'Hydroportail (`https://www.hydro.eaufrance.fr/`) présente les mêmes données que l'API Hydrométrie de Hub'Eau, car tous deux sont alimentés par PHyC. (#168)~~
-- ~~En cas de données manquantes ou incohérentes dans l'API Hydrométrie, il est conseillé de contacter le Schapi ou le service producteur de la donnée pour investigation. (#168)~~
-- ~~La station `V131502001` a connu une absence temporaire de données de débit (grandeur_hydro=Q) entre le 22 et le 28 février 2024, due à un changement de collecte, qui a été corrigée et rendue disponible. (#168)~~
-- ~~Les API Hub'Eau ne supportent pas les requêtes HTTP Range. (#170)~~
-- ~~L'interrogation directe des fichiers CSV des API Hub'Eau via des outils comme DuckDB (utilisant `read_csv_auto`) échoue avec une erreur `IO Error: HTTP GET error: Content-Length from server mismatches requested range` car ces outils nécessitent le support des Range-requests. (#170)~~
-- ~~Les fichiers CSV retournés par les API Hub'Eau sont limités à 20 000 enregistrements ou 4 Mo. (#170)~~
-- ~~La solution recommandée pour exploiter les CSV des API Hub'Eau avec des outils nécessitant les Range-requests est de télécharger le fichier complet localement avant de le traiter. (#170)~~
-- ~~L'endpoint `observations_tr` de l'API Hydrométrie peut occasionnellement renvoyer une erreur HTTP 500 (Internal Server Error). (#173)~~
-- ~~L'API Hydrométrie permet de récupérer des observations en temps réel (`observations_tr`) pour des entités hydrologiques (stations) via leur `code_entite`. (#173)~~
-- ~~Les observations hydrométriques peuvent inclure des grandeurs comme `Q` (débit) et des champs tels que `code_station`, `date_obs`, `resultat_obs`. (#173)~~
-- ~~Le endpoint `observations_tr` de l'API Hydrométrie a retourné une erreur 500 (Internal Server Error) du 18 juillet 2024 à 22h au 19 juillet 2024 avant 6h27 UTC. (#177)~~
-- ~~L'API Hydrométrie utilise des paramètres comme `code_entite`, `grandeur_hydro`, `size`, et `fields` pour filtrer les observations temps réel. (#177)~~
-- ~~Le paramètre `grandeur_hydro=Q` est utilisé pour filtrer les observations hydrométriques, `Q` désignant probablement le débit. (#177)~~
-- ~~Le paramètre `code_entite` est utilisé pour identifier une entité spécifique (ex: `U201203001`) dans les observations hydrométriques. (#177)~~
-- ~~L'endpoint `observations_tr` de l'API Hydrométrie peut retourner une erreur HTTP 500 (Internal Server Error). (#183)~~
-- ~~L'endpoint `observations_tr` de l'API Hydrométrie peut subir des anomalies de service le rendant indisponible pendant plusieurs heures. (#183)~~
-- ~~Le paramètre `code_entite` est utilisé pour filtrer les données hydrométriques par entité ou station. (#183)~~
-- ~~Le paramètre `grandeur_hydro=Q` permet de spécifier la grandeur hydrologique 'Débit' (Q) pour les observations. (#183)~~
-- ~~L'API Hydrométrie fournit des observations en temps réel via l'endpoint `observations_tr`. (#183)~~
-- ~~Les API Hydrométrie et Piézométrie ont retourné une erreur 500 et étaient indisponibles. (#184)~~
-- ~~Un dysfonctionnement a affecté l'ensemble des API Hub'Eau, les rendant momentanément indisponibles. (#184)~~
-- ~~Les API Hub'Eau ont été rétablies et sont de nouveau disponibles. (#184)~~
-- ~~L'API Hydrométrie peut connaître des dégradations de performance, avec des temps de réponse passant de ~1min à 10-30min. (#187)~~
-- ~~L'API Hydrométrie peut devenir complètement inaccessible, se manifestant par des time-outs ou des erreurs SSL ('The SSL connection could not be established'). (#187)~~
-- ~~Un volume inhabituel de requêtes peut entraîner une dégradation des temps de réponse de l'API Hydrométrie. (#187)~~
-- ~~Des épisodes de dégradation de performance ou d'indisponibilité de l'API Hydrométrie peuvent durer jusqu'à 48 heures. (#187)~~
-- ~~Les requêtes sur l'API Hydrométrie utilisent le paramètre `code_entite` pour le code de la station et `grandeur_hydro` pour le code du capteur. (#187)~~
-- ~~La chaîne d'alimentation de l'API Hydrométrie a subi un dysfonctionnement. (#188)~~
-- ~~Le mode de collecte nominal des données pour l'API Hydrométrie a été rétabli. (#188)~~
-- ~~Des données hydrométriques ont été manquantes pour certaines stations (ex: O493101001, O866151002) à partir du 04-10 à 6h. (#188)~~
-- ~~Les données manquantes pendant la période de dysfonctionnement n'ont pas été comblées après le rétablissement du service. (#188)~~
-- ~~L'API Hydrométrie peut retourner un code d'erreur HTTP 500 ('Internal server error') en cas d'anomalie d'infrastructure. (#189)~~
-- ~~Une indisponibilité de l'API hydrométrie TR a eu lieu entre le 08/10 22h00 et le 09/10 10h45 en raison d'une anomalie d'infrastructure Hub'eau. (#189)~~
-- ~~Le service de l'API hydrométrie TR a été rétabli le 09/10 à 10h50. (#189)~~
-- ~~L'API Hydrométrie fournit des relevés de niveaux, comme ceux du pont Morand à Lyon. (#189)~~
-- ~~La version 2 de l'API Hydrométrie est disponible. (#190)~~
-- ~~Les URL d'appel de l'API Hydrométrie doivent être ajustées en remplaçant 'v1' par 'v2' pour utiliser la nouvelle version. (#190)~~
-- ~~La version 1 de l'API Hydrométrie restera disponible jusqu'en avril 2025. (#190)~~
-- ~~La version 2 de l'API Hydrométrie a connu un problème d'alimentation des données entre le 28 novembre et le 2 décembre 2024. (#190)~~
-- ~~Le problème d'alimentation de la version 2 de l'API Hydrométrie a été résolu le 2 décembre 2024. (#190)~~
-- ~~Des changements de nommage de champs existent entre la V1 et la V2 de l'API Hydrométrie (ex: 'qmj' devient 'qmnj'). (#190)~~
-- ~~La page https://hubeau.eaufrance.fr/page/api-hydrometrie détaille les différences entre les versions 1 et 2 de l'API. (#190)~~
-- ~~La version 2 de l'API Hydrométrie intègre la sélection du meilleur statut pour les données. (#190)~~
-- ~~La version 2 de l'API Hydrométrie utilise le format Sandre v2. (#190)~~
-- ~~La version 2 de l'API Hydrométrie inclut les observations élaborées pour les sites. (#190)~~
-- ~~La version 2 de l'API Hydrométrie propose des libellés complémentaires. (#190)~~
-- ~~L'API Hydrométrie v2, endpoint `/referentiel/stations`, a initialement retourné des valeurs `null` pour des champs comme `altitude_ref_alti_station`, `code_systeme_alti_site`, `code_commune_station`, `libelle_commune`, et `code_departement`, alors que ces champs étaient renseignés en v1. (#191)~~
-- ~~Un correctif a été déployé pour l'API Hydrométrie v2, rendant les réponses des endpoints `/referentiel/sites` et `/referentiel/stations` complètes et filtrables. (#191)~~
-- ~~Les données des stations hydrométriques incluent des informations géographiques détaillées telles que le code et le libellé de la commune, ainsi que le code du département. (#191)~~
-- ~~Les données des stations hydrométriques contiennent également des informations altimétriques comme l'altitude de référence et le code du système altimétrique. (#191)~~
-- ~~Le type de station peut être 'LIMNI' ou 'STD'. (#191)~~
-- ~~L'API Hydrométrie peut rencontrer des erreurs de connexion SSL ("The SSL connection could not be established") qui bloquent l'acquisition de données, souvent observées spécifiquement autour de 01h00 du matin. (#196)~~
-- ~~Ces erreurs SSL sont distinctes des absences de données qui peuvent survenir sans code d'erreur technique. (#196)~~
-- ~~Le problème de disponibilité était lié à un module d'échanges de données en amont de la Plateforme Hydrométrique Centrale (PHyC). (#196)~~
-- ~~Une méthode de contournement a été mise en place pour résoudre le problème de retard de publication des données. (#196)~~
-- ~~Les requêtes sans paramètre de date (ex: `https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr.xml?code_entite={station}&grandeur_hydro=H`) sont utilisées par les clients pour récupérer les données. (#196)~~
-- ~~Des indisponibilités temporaires des données hydrométriques ont été observées, se manifestant par des "trous de données" qui sont ensuite comblés lorsque le service redevient opérationnel. (#196)~~
-- ~~La station Ignon (identifiant U121504001) pour les mesures de hauteur (H) et de débit (Q) a été spécifiquement mentionnée comme affectée. (#196)~~
-- ~~Les données hydrométriques doivent désormais arriver en PHyC au moins toutes les heures et être exposées par Hub'eau dans les minutes qui suivent, sauf défaut de transmission de la station ou du réseau de collecte. (#196)~~
-- ~~L'API Hydrométrie peut renvoyer une erreur 500 (internal server error). (#197)~~
-- ~~L'URL `https://hubeau.eaufrance.fr/api/v1/hydrometrie/observations_tr` est utilisée pour accéder aux observations hydrométriques. (#197)~~
-- ~~Les paramètres `code_entite`, `grandeur_hydro`, `size`, et `fields` sont utilisés pour filtrer et sélectionner les données de l'API Hydrométrie. (#197)~~
-- ~~Un dysfonctionnement de l'API Hydrométrie a été résolu le 12/11/2024 à 10:00. (#197)~~
-- ~~Le paramètre `code_entite` peut prendre des valeurs comme `U201203001` pour l'API Hydrométrie. (#197)~~
-- ~~Le paramètre `grandeur_hydro` peut prendre la valeur `Q` (débit) pour l'API Hydrométrie. (#197)~~
-- ~~Les champs `code_station`, `date_obs`, `resultat_obs` sont disponibles pour les observations hydrométriques. (#197)~~
-- ~~La disponibilité des données sur la plateforme eaufrance.fr ne garantit pas leur disponibilité immédiate via l'API Hub'Eau. (#197)~~
-- ~~L'API Hydrométrie v2 a connu une interruption des traitements d'alimentation, entraînant l'absence de données postérieures au 2024-11-27T20:00:00Z. (#202)~~
-- ~~Les traitements d'alimentation de l'API Hydrométrie v2 ont été relancés le 2024-12-02. (#202)~~
-- ~~Les données hydrométriques restaient disponibles via l'API Hydrométrie v1 pendant l'interruption de la v2. (#202)~~
-- ~~La date de coupure de l'API Hydrométrie v1 est prévue pour le 30/04/2025. (#202)~~
-- ~~Hub'Eau préconise l'utilisation de l'API Hydrométrie v2, mais la v1 peut être utilisée en complément si nécessaire jusqu'au 30/04/2025. (#202)~~
-- ~~Le problème de données de l'API Hydrométrie v2 a affecté au moins 14 stations sans problème apparent sur les stations elles-mêmes. (#202)~~
-- ~~Le projet SUBLIM utilise les données des API Hub'Eau Hydrométrie et Piézométrie pour simuler le débit des cours d'eau et les niveaux piézométriques via des réseaux de neurones artificiels. (#203)~~
-- ~~SUBLIM est un service de prévision hydrologique automatisé à l'échelle du territoire métropolitain. (#203)~~
-- ~~Les données Hub'Eau sont combinées avec des données météorologiques historiques (ERA5) et prévisionnelles (CEP/ECMWF 0.25°) pour la modélisation hydrologique. (#203)~~
-- ~~Le service SUBLIM visualise les données historiques (2 ans maximum) et les prévisions au pas de temps journalier pour la majorité des stations hydrologiques et piézométriques en temps réel. (#203)~~
-- ~~Le site SUBLIM permet d'accéder à la qualité de prévision des modèles (entraînement et utilisation) et à des indicateurs comme la tendance des prévisions à 10 jours. (#203)~~
-- ~~L'endpoint `/api/v2/hydrometrie/referentiel/stations` de l'API Hydrométrie v2 présentait des données attributaires majoritairement vides. (#208)~~
-- ~~Les filtres par `code_departement` et `code_region` ne fonctionnaient pas sur l'endpoint `/api/v2/hydrometrie/referentiel/stations`. (#208)~~
-- ~~Le même dysfonctionnement (données attributaires vides et filtres inopérants) affectait également l'endpoint `/api/v2/hydrometrie/referentiel/sites`. (#208)~~
-- ~~Un correctif a été déployé pour résoudre ces problèmes, rendant les données complètes et les filtres fonctionnels sur les endpoints `/api/v2/hydrometrie/referentiel/stations` et `/api/v2/hydrometrie/referentiel/sites`. (#208)~~
-- ~~Les données attributaires des stations et sites hydrométriques pouvaient être incomplètes ou vides, impactant la capacité à filtrer par critères géographiques comme le département ou la région. (#208)~~
-- ~~L'API Hydrométrie retournait auparavant des doublons au sein des itérables de codes géographiques (ex: code_departement = ["59", "59"]). (#209)~~
-- ~~Le comportement de retour de doublons au sein des itérables de codes géographiques a été corrigé. (#209)~~
-- ~~L'API Hydrométrie peut retourner des itérables de codes géographiques avec des valeurs multiples et uniques (ex: code_departement = ["59", "62"]) pour les sites situés sur des frontières administratives. (#209)~~
-- ~~Certains sites hydrométriques sont situés sur des frontières administratives (départementales, régionales, communales) et peuvent être associés à plusieurs codes géographiques. (#209)~~
-- ~~Actuellement, 3 sites sont associés à plusieurs codes régionaux, 16 à plusieurs codes départementaux et 212 à plusieurs codes communaux. (#209)~~
-- ~~L'API Hydrométrie peut subir des retards dans la mise à jour des données en raison de dysfonctionnements de son alimentation. (#212)~~
-- ~~L'endpoint `/hydrometrie/observations_tr` est utilisé pour récupérer les observations hydrométriques en temps réel. (#212)~~
-- ~~Le paramètre `grandeur_hydro` permet de spécifier le type de mesure (ex: `Q` pour le débit). (#212)~~
-- ~~L'API Hydrométrie fournit des données de hauteur et de débit pour des stations hydrométriques. (#212)~~
-- ~~Les données hydrométriques sont attendues avec une mise à jour régulière, et un retard est rapidement détectable par les utilisateurs. (#212)~~
-- ~~Les stations hydrométriques sont identifiées par un `code_entite` (ex: `V131502001`). (#212)~~
-- ~~L'API Hydrométrie v2 a connu des interruptions d'alimentation de données, affectant les endpoints `observations_tr` et `obs_elab`, entraînant des données manquantes ou en retard par rapport à la v1. (#213)~~
-- ~~Les APIs Hub'Eau v1 et v2 fonctionnent en parallèle avec des sources de données, des traitements d'alimentation et des implémentations API distincts. (#213)~~
-- ~~En cas de dysfonctionnement de la v2, il est pertinent de rebasculer temporairement sur l'API v1 pour accéder aux données. (#213)~~
-- ~~Des rechargements de données ont été nécessaires pour combler les ruptures d'alimentation sur le endpoint `obs_elab` de la v2. (#213)~~
-- ~~Le problème d'alimentation de la v2 s'est reproduit à plusieurs reprises (mi-février et début mars 2025). (#213)~~
-- ~~Les données d'observations temps réel (`observations_tr`) et d'observations élaborées (`obs_elab`) de l'API Hydrométrie v2 ont été impactées par les problèmes d'alimentation. (#213)~~
-- ~~L'API Hydrométrie v2 a connu un dysfonctionnement de l'alimentation des données d'observations en temps réel. (#216)~~
-- ~~L'API Hydrométrie v1 sera mise hors ligne courant Avril. (#216)~~
-- ~~L'URL spécifique affectée par l'absence de données était https://hubeau.eaufrance.fr/api/v2/hydrometrie/observations_tr. (#216)~~
-- ~~Les données d'observations hydrométriques en temps réel n'étaient pas disponibles entre le 4 et le 11 mars 2025. (#216)~~
-- ~~L'API Hydrométrie (v1 et v2) a cessé de retourner des données (débits) après le 16 avril 2025 à 10h pour certaines stations. (#224)~~
-- ~~Le problème était lié à un blocage d'accès aux données sources de Hub'Eau. (#224)~~
-- ~~L'origine du blocage a été difficile à identifier. (#224)~~
-- ~~Les observations temps réel de l'API Hydrométrie v1 ont été rétablies le 23 avril 2025 au matin. (#224)~~
-- ~~Les observations temps réel de l'API Hydrométrie v2 ont été rétablies le 24 avril 2025. (#224)~~
-- ~~Les observations élaborées de l'API Hydrométrie v1 et v2 ont été rétablies et rechargées le 24 avril 2025. (#224)~~
-- ~~Les données de débit (grandeur_hydro=Q) de l'API Hydrométrie sont utilisées par VNF pour la gestion de crise (crues et étiages). (#224)~~
-- ~~Les données Hub'Eau sont collectées périodiquement auprès de la PHyC (Plate-forme Hydro Centrale), stockées, indexées et exposées. (#224)~~
-- ~~Les champs et filtres de l'API Hub'Eau sont définis conjointement avec le Schapi. (#224)~~
-- ~~L'API Vigicrues ne contient pas toutes les stations hydrométriques (uniquement celles affichées sur Vigicrues, excluant plus de 500 points de mesure et les outre-mer). (#224)~~
-- ~~L'API Vigicrues ne donne pas accès aux données des sites hydrométriques (un site peut regrouper plusieurs stations). (#224)~~
-- ~~L'API Vigicrues tronque les données de débit à 0.1 m3/s, étant orientée pour un usage 'crues'. (#224)~~
-- ~~En cas d'expertise sur les données (ex: changement de courbe de tarage), l'API Vigicrues ne met à jour les données que pour les dernières 24h. (#224)~~
-- ~~Le Service central Vigicrues recommande l'utilisation de l'API Hub'Eau pour une meilleure exhaustivité et précision des données hydrométriques. (#224)~~
-- ~~La syntaxe du paramètre `bbox` pour l'API Hydrométrie (v1 et v2) accepte les coordonnées sous forme d'une chaîne unique séparée par des virgules (min_lon,min_lat,max_lon,max_lat). (#227)~~
-- ~~La console API Hub'Eau peut imposer des validations d'entrée spécifiques (ex: valeur numérique) qui ne reflètent pas la syntaxe acceptée par l'API elle-même, pouvant générer des erreurs trompeuses (ex: 'index0errorValue must be a number'). (#227)~~
-- ~~Une réponse vide de l'API ne signifie pas nécessairement une erreur de syntaxe; elle peut indiquer une absence de données disponibles pour les paramètres de requête spécifiés. (#227)~~
-- ~~L'absence de données récentes pour une période donnée peut entraîner des réponses vides de l'API, même si la requête est syntaxiquement correcte. (#227)~~
-- ~~La grandeur `HIXnJ` (Hauteur instantanée maximale journalière) n'était initialement pas alimentée dans le endpoint `obs_elab` de l'API Hydrométrie V2. (#229)~~
-- ~~La grandeur `HIXnJ` (Hauteur instantanée maximale journalière) est désormais disponible via le endpoint `obs_elab` de l'API Hydrométrie V2. (#229)~~
-- ~~La grandeur `HIXnJ` correspond à la Hauteur instantanée maximale journalière. (#229)~~
-- ~~Une interruption de service de l'ensemble des API Hub'Eau était planifiée le 24/06/2025 entre 12h et 15h pour une opération de maintenance. (#237)~~
-- ~~L'intervention de maintenance a été terminée plus tôt que prévu, et toutes les API étaient disponibles avant 11h52 le 24/06/2025. (#237)~~
-- ~~Un incident distinct de la maintenance a affecté la disponibilité des données hydrométriques temps réel. (#237)~~
-- ~~Les données hydrométriques temps réel ont été manquantes à partir du 23/06/2025 fin de journée. (#237)~~
-- ~~L'alimentation des données hydrométriques temps réel a été rétablie le 24/06/2025 avant 11h52. (#237)~~
-- ~~L'API Hub'Eau hydrometrie/observations_tr dépend d'un processus de traitement des flux de données qui, en cas de dysfonctionnement, peut entraîner l'arrêt des mises à jour des données en temps réel sans générer d'erreur API. (#239)~~
-- ~~Les problèmes de flux de données peuvent également affecter les observations hydrométriques journalières (observations_elaborees). (#239)~~
-- ~~Le redémarrage du traitement des observations élaborées peut ne pas combler toutes les données manquantes pour les jours passés. (#239)~~
-- ~~Le job de chargement des données hydrométriques peut être instable et nécessiter des efforts de stabilisation. (#239)~~
-- ~~Les données hydrométriques en temps réel (observations_tr) peuvent être désynchronisées avec celles disponibles sur HydroPortail en cas de dysfonctionnement du flux de données Hub'Eau. (#239)~~
-- ~~Les grandeurs hydrométriques courantes incluent 'Q' (débit) et 'H' (hauteur d'eau). (#239)~~
-- ~~Débi’Clic est une bibliothèque JavaScript open source (AGPL 3.0) disponible sur GitHub. (#240)~~
-- ~~Elle utilise l'API Hub’Eau pour afficher des données hydrologiques. (#240)~~
-- ~~L'intégration se fait via une simple ligne de code JavaScript. (#240)~~
-- ~~La bibliothèque permet d'afficher une carte interactive des stations, une liste de stations avec les dernières données, et des graphiques détaillés exportables en PNG. (#240)~~
-- ~~Elle offre des options de personnalisation pour les stations affichées, les couleurs des marqueurs, le type de données (hauteur, débit instantané, débit moyen journalier), la période et l'ordre d'affichage. (#240)~~
-- ~~Débi’Clic simplifie l'accès et l'affichage des données hydrologiques en temps réel (niveaux d’eau et débits des cours d’eau). (#240)~~
-- ~~La bibliothèque a été développée par le SMMAR pour l’observatoire SIGN’EAU. (#240)~~
-- ~~Les données proviennent de l'Hydroportail via l'API Hub’Eau. (#240)~~
-- ~~Elle est conçue pour le grand public et les collectivités. (#240)~~
-- ~~L'API Hydrométrie de Hub'Eau expose des données qui sont le reflet de celles consultables sur HydroPortail. (#243)~~
-- ~~L'endpoint `obs_elab` de l'API Hydrométrie permet de récupérer des observations élaborées comme `QmnJ` (débit moyen journalier) pour une station et une période données. (#243)~~
-- ~~Des débits négatifs peuvent être observés dans les données hydrométriques (ex: station M410191040 début juin 2016). (#243)~~
-- ~~Certains phénomènes hydrologiques, tels que les crues ou l'influence maritime, peuvent induire des débits négatifs. (#243)~~
-- ~~Pour la station M410191040 (Maine à Angers), des débits négatifs peuvent s'expliquer par une crue de la Loire remontant dans la Maine et inversant le sens du débit. (#243)~~
-- ~~Le champ `date_obs` de l'API Hub'Eau Hydrométrie `observations_tr` est censé représenter la date et l'heure spécifique de chaque observation et a été observé comme variant correctement dans des tests ultérieurs, malgré un rapport initial d'un comportement statique. (#245)~~
-- ~~L'API Hub'Eau Hydrométrie `observations_tr` retourne un tableau `data` vide et un `count: 0` lorsqu'aucune observation ne correspond aux critères de la requête. (#245)~~
-- ~~Le paramètre de requête pour le filtrage par station/site dans l'API Hub'Eau Hydrométrie `observations_tr` est `code_entite`, qui filtre sur les champs de sortie `code_station` et `code_site`, et peut également retourner des observations pour le site lui-même (où `code_station` n'est pas spécifié). (#245)~~
-- ~~L'API Vigicrues (`observations.json`) peut retourner des données de hauteur (H) même lorsque des données de débit (Q) sont explicitement demandées pour certaines stations, indiquant un bug potentiel dans cette API. (#245)~~
-- ~~Pour la station W102000102, des données de hauteur (H) en temps réel sont disponibles en quantités significatives, mais les données de débit (Q) en temps réel correspondantes sont largement absentes ou très limitées, ce qui est cohérent entre l'API Hub'Eau et Hydroportail. (#245)~~
-- ~~La disponibilité des données pour les paramètres hydrologiques (par exemple, H vs. Q) peut varier considérablement pour une station donnée. (#245)~~
-- ~~L'API Hydrométrie `obs_elab` peut ne pas retourner toutes les données historiques disponibles sur Hydroportail, même si la station est en service et a des données anciennes, en raison de droits de publication ou d'anomalies de synchronisation. (#253)~~
-- ~~La synchronisation des observations élaborées (`obs_elab`) entre PHyC et Hub'Eau est effectuée deux fois par jour, basée sur la date d'ajout ou de modification dans PHyC, ce qui inclut les corrections et recalculs. (#253)~~
-- ~~Des rechargements complets de données ne sont effectués que suite à des incidents significatifs, mais une réflexion est en cours pour une fréquence plus régulière. (#253)~~
-- ~~Un filtre `date_prod` (date de collecte par Hub'Eau) sera prochainement disponible pour l'API `obs_elab` afin de faciliter les synchronisations partielles. (#253)~~
-- ~~Des anomalies ponctuelles dans le traitement peuvent entraîner la non-prise en compte de certaines données lors de la synchronisation quotidienne. (#253)~~
-- ~~La disponibilité des données sur Hydroportail (ex: `disponibilité H` pour les hauteurs) ne garantit pas leur accès public via Hub'Eau pour tous les types de grandeurs (ex: débits). (#253)~~
-- ~~Certaines stations hydrométriques ont des droits de publication restreints (ex: "hauteur publique"), ce qui signifie que seuls les niveaux d'eau (hauteurs) sont accessibles au public, et non les débits (`QmnJ`). (#253)~~
-- ~~La station `F359000103` (L'Yonne à Pont-sur-Yonne) a un droit de publication "hauteur publique", rendant ses débits (`QmnJ`) inaccessibles via Hub'Eau, bien que des données de hauteur (`HIXnJ`) soient disponibles. (#253)~~
-- ~~Les débits de la station `F359000103` sont équivalents à ceux de la station `F3580004 - L'Yonne à Pont-sur-Yonne`, offrant une alternative potentielle. (#253)~~
-- ~~La station `F459000101` (L'Essonne à Ballancourt-sur-Essonne - Secours CT) est une station historique de secours pour les débits de l'Essonne. (#253)~~
-- ~~L'API Hydrométrie de Hub'Eau ne propose pas la grandeur 'Hauteur moyenne journalière'. (#262)~~
-- ~~Il n'est pas prévu d'intégrer la 'Hauteur moyenne journalière' au périmètre de l'API Hydrométrie de Hub'Eau. (#262)~~
-- ~~La grandeur 'Hauteur moyenne journalière' n'est pas collectée ni exposée par Hub'Eau. (#262)~~
-- ~~La 'Hauteur instantanée maximale journalière' (HIXnJ) est une grandeur disponible via l'API Hydrométrie de Hub'Eau. (#262)~~
-- ~~Les données de 'Hauteur moyenne journalière' sont disponibles via HydroPortail (https://www.hydro.eaufrance.fr/). (#262)~~
-- ~~Pour l'API Hub'Eau Hydrométrie v2, l'endpoint `/obs_elab` utilise le paramètre `grandeur_hydro_elab` pour filtrer les grandeurs hydrologiques élaborées. (#263)~~
-- ~~Le paramètre `grandeur_hydro` est utilisé pour l'endpoint `obs_tr` (observations en temps réel), et non pour `obs_elab`. (#263)~~
-- ~~La valeur `QmJ` était utilisée en v1 pour le débit moyen journalier mais n'est pas la bonne valeur pour filtrer le débit moyen journalier sur l'endpoint `obs_elab` en v2. (#263)~~
-- ~~Le code `QmnJ` représente le débit moyen journalier pour les données élaborées (`obs_elab`) dans l'API Hub'Eau Hydrométrie v2. (#263)~~
-- ~~D'autres grandeurs hydrologiques élaborées comme `HIXnJ`, `QINnJ`, `QIXnJ` peuvent être retournées par l'endpoint `obs_elab` si le filtrage n'est pas précis. (#263)~~
-- ~~Le champ `altitude_ref_alti_station` de l'API Hydrométrie est documenté en mètres. (#267)~~
-- ~~Des disparités d'unité (mètres et millimètres) existent actuellement dans les valeurs retournées pour `altitude_ref_alti_station` en raison d'incohérences dans les données sources. (#267)~~
-- ~~Une campagne de correction est en cours pour standardiser l'unité de `altitude_ref_alti_station` en mètres. (#267)~~
-- ~~Le champ `altitude_ref_alti_station` représente l'altitude du zéro de l’échelle limnimétrique et est essentiel pour convertir les hauteurs relatives en hauteurs absolues. (#267)~~
-- ~~L'unité cible et documentée pour `altitude_ref_alti_station` est le mètre. (#267)~~
-- ~~L'API Hydrométrie est utilisée pour le suivi des crues sur le territoire français. (#272)~~
+- ~~L'API 'observations_tr' de l'API Hydrométrie renvoie des dates au format UTC lorsqu'aucun paramètre 'fields' n'est spécifié, et au format fuseau horaire Paris (+02:00) lorsqu'un paramètre 'fields' est utilisé. (#7)~~
+- ~~L'API observations_tr avait initialement une limite de 20 000 résultats par page, mais cette limite s'applique uniquement par page et non globalement. (#9)~~
+- ~~Le mécanisme de pagination par curseur contenait un bug lié aux caractères '+' dans les URLs, empêchant certaines requêtes de fonctionner correctement. (#9)~~
+- ~~Un paramètre 'timestep' a été ajouté aux endpoints observations_tr pour permettre de filtrer les données selon un intervalle temporel spécifique. (#9)~~
+- ~~Les utilisateurs pouvaient rencontrer des limites de volume de données avec des pas de temps fins (ex: 5 minutes) lors de requêtes massives sur de nombreuses stations. (#9)~~
+- ~~Le besoin de réduire le volume de données en utilisant des pas de temps plus larges (ex: 30 minutes) a été identifié comme un cas d'usage important. (#9)~~
+- ~~Le fichier XML de description des services de l'API Hydrométrie contenait initialement une erreur empêchant la génération correcte du client Java via Swagger. (#13)~~
+- ~~L'API Hydrométrie retourne une propriété 'next' même lorsqu'il n'y a plus de pages suivantes, ce qui peut induire en erreur les utilisateurs de l'API. (#17)~~
+- ~~Aucune routine existante ne permet de calculer un débit journalier à partir de données à pas de temps variable ou fin. (#28)~~
+- ~~Un nouvel endpoint 'observations_elaborees' a été mis en place, offrant des débits moyens journaliers (QmJ) et mensuels (QmM). (#28)~~
+- ~~L'utilisation de &amp; au lieu de & dans les paramètres URL de la requête PHP empêche le bon fonctionnement de la requête API, car les paramètres ne sont pas correctement interprétés par le serveur. (#40)~~
+- ~~L'API Hydrométrie ne permet pas de retourner simultanément les valeurs de hauteur (H) et de débit (Q) dans des colonnes distinctes pour le même enregistrement. (#41)~~
+- ~~L'API cours d'eau présentait une erreur lors de la récupération des données pour la station 04204300 avec un paramètre ou l'historique (#44)~~
+- ~~La station 04204300 a connu des problèmes de disponibilité des données hydrométriques (paramètre/historique) avant la résolution (#44)~~
+- ~~Le décalage entre la fréquence de collecte et l'actualisation des données est lié au traitement de la source de données (SCHAPI), non à l'API Hub'Eau. (#47)~~
+- ~~Lors de la requête à l'API Hydrométrie avec le paramètre 'fields', les champs 'longitude_station' et 'latitude_station' retournent des valeurs null malgré leur présence dans les données, mais ce comportement a été corrigé. (#48)~~
+- ~~L'API Hydrométrie a connu une indisponibilité temporaire le 4 janvier 2021. (#53)~~
+- ~~L'API Hydrométrie ne permettait initialement pas l'accès aux données historiques au-delà d'un mois. (#55)~~
+- ~~Un endpoint 'observations_elaborees' a été mis en place pour fournir des débits journaliers et mensuels sur une période longue. (#55)~~
+- ~~La version 2 de l'API Hydrométrie permet désormais de filtrer les observations temps réel via le paramètre 'code_statut'. (#60)~~
+- ~~L'API Hydrométrie a renvoyé un 'Internal server error' lors de la récupération des stations du référentiel avec l'endpoint '/api/v1/hydrometrie/referentiel/stations?format=json&size=20' (#83)~~
+- ~~L'alimentation des données temps réel a été interrompue le 14/12 en raison d'une faille de sécurité majeure (#86)~~
+- ~~Une procédure manuelle a été mise en œuvre pour combler le trou de données entre le 14/12 et le 17/12 (#86)~~
+- ~~Le trou de données entre le 14/12 et le 20/12 a été comblé pour les débits (#86)~~
+- ~~L'API Hydrométrie retourne des valeurs inversées pour les paramètres 'H' (hauteur) et 'Q' (débit) dans l'endpoint /observations_tr. (#87)~~
+- ~~La station K4000010 semble avoir des données cohérentes avec Vigicrues, ce qui suggère que l'inversion signalée par l'utilisateur pourrait provenir d'une confusion dans l'interprétation des résultats. (#87)~~
+- ~~L'API Hydrométrie a nécessité le paramètre `fields` pour éviter une erreur 500, mais ce problème a été résolu. (#92)~~
+- ~~La modification de l'API pour ne diffuser que les séries de meilleur statut est prévue, ce qui résoudra le problème de doublons. (#95)~~
+- ~~L'attribut `surface_bv` dans l'API Hydrométrie fournit la superficie des bassins versants associés aux sites hydrométriques. (#100)~~
+- ~~La distinction entre un "site" (hydro) et une "station" (hydro) est cruciale : la superficie du bassin versant est associée au site, pas à la station. (#100)~~
+- ~~L'API Hydrométrie a eu un problème de champ vide pour les données de localisation dans le format CSV. (#102)~~
+- ~~La confusion entre les paramètres 'stations' et 'site' dans l'URL de l'API a été corrigée. (#102)~~
+- ~~Les données de localisation pour les sites hydrologiques étaient initialement absentes dans le format CSV. (#102)~~
+- ~~Les interruptions ont été signalées notamment les weekends et ont nécessité des relances du service par l'équipe technique. (#112)~~
+- ~~L'endpoint observations_tr utilise le paramètre code_entite, pas code_station, pour récupérer les données (#114)~~
+- ~~L'API 'hydro_elab' n'a pas immédiatement pris en compte les corrections des données, contrairement à 'hydro_tr' qui a été mis à jour avec les valeurs corrigées. (#118)~~
+- ~~La station Y412204001 a connu des corrections de débits (ex. 0,76 m³/s vs 0,82 m³/s le 10 juillet 2022) qui ont été appliquées à 'hydro_tr' mais pas immédiatement à 'hydro_elab'. (#118)~~
+- ~~Les différences observées entre HydroPortail et l'API 'hydro_elab' étaient dues à un retard dans la synchronisation des corrections. (#118)~~
+- ~~L'API /referentiel/stations de l'API Hydrométrie a retourné un code d'erreur 500 lors de requêtes avec des paramètres code_site ou code_station spécifiques. (#120)~~
+- ~~Le problème a été corrigé le 2022-08-03, permettant à nouveau l'accès aux données via cet endpoint. (#120)~~
+- ~~Les utilisateurs ont tenté d'accéder à des informations sur les stations hydrométriques via des codes de site ou de station (ex. K5552300, K555230001). (#120)~~
+- ~~L'API retourne simultanément des données de débits moyens journaliers (QmJ) et mensuels (QmM) sans filtre, ce qui peut générer des doublons pour les dates du 1er de chaque mois. (#133)~~
+- ~~La station R002001002 a connu une erreur de recalibrage des unités (passage de m³/s à l/s sans indication) entre février 2021 et mars 2021 (#138)~~
+- ~~Les données corrigées après février 2021 montrent des valeurs cohérentes avec Hydroportail (#138)~~
+- ~~La station R002001002 a des données douteuses en début 2021 avec des débits anormalement bas (3-4 l/s) après des valeurs de 5000 l/s (#138)~~
+- ~~La version 1 de l'API Hydrométrie utilisait une source de données défectueuse avec le code_methode 12 au lieu de 10 pour la station K543302001. (#145)~~
+- ~~La version 2 de l'API Hydrométrie corrige ce problème en utilisant une source de données actualisée avec le code_methode 10. (#145)~~
+- ~~Le code_methode 12 (Interpolation) était incorrectement associé à la station K543302001 dans la version 1 de l'API, alors que HydroPortail indiquait la méthode 'Expertisé' (code 10). (#145)~~
+- ~~Le endpoint `obs_elab` de l'API Hydrométrie a cessé de fournir des données mises à jour à partir du 5 juillet 2023 (#147)~~
+- ~~Le problème a été résolu et les données sont à nouveau disponibles après une intervention technique (#147)~~
+- ~~Plusieurs dizaines de stations hydrométriques (ex. Y461502001, R3070010, B0220010, P2404010) ont été affectées par l'absence de mise à jour des données (#147)~~
+- ~~Les données disponibles jusqu'au 5 ou 6 juillet 2023 indiquent une interruption de la collecte ou de la transmission des observations (#147)~~
+- ~~Le paramètre `code_entite` de l'API accepte à la fois des codes de site et des codes de station. Utiliser un code de station permet de filtrer les données à une seule station. (#150)~~
+- ~~Un incident technique a provoqué une interruption des données de l'API Hydrométrie du 19 au 21 août 2023. (#153)~~
+- ~~Les données manquantes du 19 au 21 août 2023 ont été rechargées pour combler le retard. (#153)~~
+- ~~Le service est déclaré fonctionnel par l'équipe technique, mais une anomalie affecte l'interface de test. (#157)~~
+- ~~Maintenance sur le système source PHyC du 20/02/2024 au 22/02/2024, pouvant entraîner des coupures temporaires des données d'hydrométrie en temps réel (#164)~~
+- ~~Les données d'hydrométrie en temps réel ont pu être interrompues pendant la période de maintenance du 20/02/2024 au 22/02/2024 (#164)~~
+- ~~Un recalcul de masse sur la plateforme HYDRO Centrale (PHyC) a provoqué une interruption temporaire de la mise à jour des données élaborées (QmJ) via l'API Hydrométrie. (#167)~~
+- ~~Les données temps réel restent accessibles via le endpoint _observations_tr_ de l'API Hydrométrie pendant la période de recalcul. (#167)~~
+- ~~Les données de débit moyen journalier (QmJ) étaient indisponibles pour la majorité des stations hydrométriques du 26 février 2024 au 14 mars 2024. (#167)~~
+- ~~L'API Hydrométrie tire ses données de la plateforme HYDRO Centrale (PhyC), et les lacunes de données dans cette source entraînent des absences dans l'API. (#168)~~
+- ~~La station V131502001 a connu une absence de données durant la période du 22 au 28 février 2024 en raison d'un changement de collecte de données avant l'événement, mais les données ont été corrigées et rendues disponibles ultérieurement. (#168)~~
+- ~~Le endpoint 'Observations temps réel' de l'API Hydrométrie a connu une panne serveur (erreur 500) entre 05:00 et 07:58. (#173)~~
+- ~~Le service a été rétabli après intervention technique. (#173)~~
+- ~~Le endpoint 'Observations temps réel' de l'API Hydrométrie a retourné une erreur 500 (Internal server error) du 18 juillet 2024 à 22h jusqu'au 19 juillet 2024 à 06h27. (#177)~~
+- ~~Le endpoint 'observations_tr' de l'API Hydrométrie a retourné un 'internal server error' (code 500) entre le 30 août 2024 à 5h et le 30 août 2024 à 12h15. (#183)~~
+- ~~Le endpoint 'observations_tr' de l'API Hydrométrie est à nouveau disponible après intervention technique. (#183)~~
+- ~~Les API Hydrométrie et Piézométrie ont connu un dysfonctionnement temporaire entraînant une erreur 500 lors de leur appel. (#184)~~
+- ~~Le service a été rétabli après intervention des équipes techniques. (#184)~~
+- ~~Un volume inhabituel de requêtes a entraîné des temps de réponse dégradés sur l'API Hydrométrie, avec des erreurs de type timeout et problèmes SSL. (#187)~~
+- ~~Un dysfonctionnement de la chaîne d'alimentation de l'API a provoqué des manques de données pendant plusieurs jours. (#188)~~
+- ~~Le mode de collecte nominal a été rétabli sans comblement des données manquantes de la semaine précédente. (#188)~~
+- ~~Certaines stations hydrométriques (ex. O493101001, O866151002) ont connu des absences de données à partir du 04-10 à 6h. (#188)~~
+- ~~L'absence de données était due à un problème technique de l'API, non à une panne des stations elles-mêmes. (#188)~~
+- ~~L'API Hydrométrie a rencontré un problème serveur (code 500) entre le 8 octobre 22h00 et le 9 octobre 10h45 en raison d'une anomalie d'infrastructure. (#189)~~
+- ~~Le service a été rétabli à partir du 9 octobre 10h50. (#189)~~
+- ~~La version 2 de l'API a connu un problème d'alimentation des données entre le 28 novembre 2024 et le 2 décembre 2024 (#190)~~
+- ~~La version v2 de l'API Hydrométrie retourne des valeurs null pour des champs comme 'altitude_ref_alti_station', 'code_systeme_alti_site', 'code_commune_station', 'libelle_commune', et 'code_departement', contrairement à la v1. (#191)~~
+- ~~Un correctif a été déployé pour corriger l'anomalie des champs null dans la v2 de l'API Hydrométrie. (#191)~~
+- ~~Les données de localisation administrative (communes, départements) et d'altitude, présentes dans la v1, étaient absentes dans la v2 avant la correction. (#191)~~
+- ~~Un module d'échange de données en amont de la PHyC a temporairement causé des retards de publication des données. (#196)~~
+- ~~Les données sont désormais transmises toutes les heures et exposées par Hub'eau dans les minutes suivantes. (#196)~~
+- ~~L'API Hydrométrie a rencontré un dysfonctionnement entraînant des erreurs 500 (internal server error) lors de la requête. (#197)~~
+- ~~Le problème a été corrigé par les équipes techniques en début de matinée du 12/11/2024. (#197)~~
+- ~~La version 2 de l'API Hydrométrie a connu une interruption des traitements d'alimentation des données, relancés ultérieurement. (#202)~~
+- ~~L'API Hydrométrie v2 présentait un bug empêchant la récupération correcte des stations via les filtres 'code_departement' ou 'code_region'. (#208)~~
+- ~~Les requêtes sans paramètres de filtrage retournaient des données attributaires incomplètes, probablement à l'origine du dysfonctionnement des filtres. (#208)~~
+- ~~L'API Hydrométrie a précédemment retourné des itérables avec des doublons de codes géographiques (ex: ['59', '59']), mais cette anomalie a été corrigée. (#209)~~
+- ~~L'API Hydrométrie a connu un dysfonctionnement temporaire de l'alimentation des données, entraînant des retards dans la mise à jour des mesures de débit et de hauteur. (#212)~~
+- ~~Les stations concernées (ex. V130521001) ont eu des données non mises à jour depuis plus de 12 heures, affectant la disponibilité des dernières observations. (#212)~~
+- ~~La v2 de l'API Hydrométrie a connu une interruption d'alimentation des données à partir de 9h, entraînant des résultats vides pour les requêtes en temps réel. (#213)~~
+- ~~La v2 est temporairement décalée par rapport à la v1 en termes de disponibilité des données (ex. : données jusqu'au 2025-02-13 dans la v2 contre 2025-02-19 dans la v1). (#213)~~
+- ~~Les utilisateurs ont été conseillés de basculer sur la v1 pendant la période de dysfonctionnement de la v2. (#213)~~
+- ~~La v2 de l'API Hydrométrie a connu un dysfonctionnement de l'alimentation des données en temps réel (#216)~~
+- ~~L'absence de données en temps réel a duré jusqu'au 11 mars 2025 (#216)~~
+- ~~L'API Hydrométrie a connu une interruption de la mise à jour des données sources à partir du 16 avril 2025, affectant les observations de débit (grandeur_hydro=Q). (#224)~~
+- ~~La version v1 de l'API a retrouvé une alimentation des données en temps réel le 23 avril 2025, tandis que la version v2 a nécessité des corrections déployées le 24 avril 2025. (#224)~~
+- ~~L'absence de données hydrométriques a impacté la gestion des crues et étiages par des organismes comme la VNF, nécessitant une communication régulière sur l'état de la panne. (#224)~~
+- ~~Les données de débit (Q) sont critiques pour l'hydrologie, et leur absence a bloqué des analyses et prises de décision en temps réel. (#224)~~
+- ~~L'erreur 'index0errorValue must be a number' dans la console API v2 est due à une incompatibilité de traitement des paramètres, mais la syntaxe URL reste inchangée par rapport à la v1 (#227)~~
+- ~~L'API Hydrométrie V2 ne supportait pas la grandeur 'HIXnJ' avant juin 2025. (#229)~~
+- ~~La grandeur 'HIXnJ' est désormais accessible via l'endpoint 'obs_elab' de l'API Hydrométrie. (#229)~~
+- ~~La hauteur instantanée maximale journalière (HIXnJ) est maintenant disponible pour les stations hydrométriques. (#229)~~
+- ~~Une panne dans le traitement des flux de données a provoqué une interruption temporaire de la mise à jour des observations en temps réel. (#239)~~
+- ~~Le traitement des données a été relancé, mais des lacunes persistaient pour les jours passés. (#239)~~
+- ~~La station F359000103 n'a pas de données de débit publiques (QmnJ) malgré la présence de données historiques sur Hydroportail, en raison de son droit de publication limité à la hauteur (HIXnJ). (#253)~~
+- ~~La station F459000101 avait des données historiques manquantes avant 2025-01-09, mais un chargement manuel a corrigé cette lacune. (#253)~~
+- ~~La requête API utilise le paramètre incorrect 'grandeur_hydro' au lieu de 'grandeur_hydro_elab' pour filtrer les données établies (elab). (#263)~~
+- ~~La valeur de filtrage 'QmJ' est obsolète ; la valeur correcte est 'QmnJ' pour obtenir les débits moyens journaliers (QmJ). (#263)~~
 
 ### Issues sources
 
-- **#7** [API hydro / observations_tr] Fuseau horaire différent pour les dates selon le type de requête — Cette issue a résolu une incohérence où l'API Hydrométrie renvoyait des dates dans des fuseaux horaires différents (UTC vs. Paris) selon l'utilisation du paramètre `fields`, harmonisant désormais toutes les dates au fuseau horaire de Paris. `[résolu]`
-- **#8** [API Hydro / observations_tr.csv] Les dates de ne contiennent pas les heures — Cette issue a résolu un bug où la méthode `observations_tr.csv` de l'API Hydrométrie ne renvoyait pas les heures dans les dates, contrairement à la version JSON, et a souligné l'importance des fuseaux horaires. `[résolu]`
-- **#9** gérer le pas de temps ? — Cette issue a permis de résoudre un bug de pagination dans l'API `observations_tr` lié au caractère '+' dans le curseur et d'ajouter un paramètre `timestep` pour gérer le pas de temps des données. `[résolu]`
-- **#11** NA dans une requête sur les sites — L'API Hydrométrie renvoie des données de site et de station via le paramètre `code_entite`, avec `code_station` à `null` pour les données de site, nécessitant un filtrage client pour séparer les types de données. `[information]`
-- **#13** Génération client à partir des spécifications Swagger — L'API Hydrométrie de Hub'Eau expose ses spécifications Swagger/OpenAPI via l'endpoint `/api-docs`, nécessitant parfois d'extraire le contenu du code source de la page pour la génération de clients. `[résolu]`
-- **#16** [API Hydro] - Documentation api swagger erreur — La documentation Swagger de l'API Hydrométrie présente un bug empêchant l'accès direct via navigateur, nécessitant un header 'Accept' spécifique pour un accès programmatique. `[information]`
-- **#17** [API Hydro] - Problème de pagination — L'API Hydrométrie présentait un bug où la propriété 'next' de la pagination était incorrectement renseignée même sur la dernière page. `[résolu]`
-- **#28** [API Hydro] Calcul du débit journalier à partir des observations_tr? — L'API Hydrométrie de Hub'Eau propose désormais un endpoint 'observations_elaborees' qui permet de récupérer les débits moyens journaliers (QmJ) et mensuels (QmM), répondant au besoin de données agrégées pour la modélisation hydrologique. `[résolu]`
-- **#35** API référentiel stations hydro - Réseaux récupérés — L'API Hydrométrie retourne des codes de réseaux SANDRE qui peuvent manquer un zéro initial et des codes POH/RIC non standardisés, dont la définition n'est pas disponible via le SANDRE. `[information]`
-- **#36** [API Hydro] Appels successifs automatiques — Un utilisateur a signalé des erreurs 500 lors d'appels successifs à l'API Hydrométrie via l'attribut `next`, mais l'équipe Hub'Eau n'a pas pu reproduire le problème. `[information]`
-- **#40** requête hubeau partiellement considérée en php — Cette issue met en évidence que les paramètres d'URL pour les requêtes Hub'Eau doivent utiliser le séparateur '&' et non '&amp;', et que l'API Hydrométrie renvoie différentes grandeurs hydro sur des lignes distinctes. `[résolu]`
-- **#41** requêtes avec H et Q sur des colonnes distinctes? — L'API Hydrométrie ne permet pas d'obtenir simultanément les observations de hauteur (H) et de débit (Q) pour un même enregistrement, car ces données sont souvent disponibles séparément pour un site et une date-heure donnés. `[résolu]`
-- **#47** [API Hydrométrie] Actualisation des données — L'API Hydrométrie de Hub'Eau utilise les mêmes données temps réel du SCHAPI que Vigicrues, ce qui explique les décalages d'actualisation observés et l'impossibilité de fournir des données plus fraîches. `[information]`
-- **#48** [API Hydrométrie] longitude_station et latitude_station null lorsqu'on filtre les champs à l'aide du paramètre "fields" — L'API Hydrométrie renvoyait des coordonnées géographiques nulles pour les stations lorsque les champs étaient filtrés via le paramètre `fields`, un problème qui a été résolu. `[résolu]`
-- **#53** API Hydrométrie KO — L'API Hydrométrie a connu une brève indisponibilité, rapidement résolue, affectant l'accès aux niveaux d'eau en quasi temps réel pour la gestion des crues à la station Austerlitz-Paris. `[résolu]`
-- **#55** Accès aux données d'archive — L'API Hydrométrie a été enrichie avec un endpoint "observations élaborées" permettant d'accéder aux débits journaliers et mensuels sur tout l'historique, résolvant ainsi le besoin d'accès aux données archivées. `[résolu]`
-- **#60** [API Hydrométrie] Récupération des observations récemment modifiées — L'API Hydrométrie V2 permet désormais de filtrer les observations temps réel par `code_statut` pour récupérer les données expertisées ou corrigées, ce qui n'était pas possible en V1. `[résolu]`
-- **#73** [API Hydrométrie] Les observations de débits sont doublonnées à chaque pas de temps — L'API Hydrométrie renvoie des observations doublonnées (une avec code_station=null) lorsque code_entite est un code_site, car elle inclut les données du site et de ses stations, et il faut utiliser un code_station pour éviter ce comportement. `[information]`
-- **#80** utilisation logo de hub-eau — L'utilisation du logo Hub'Eau est libre et Hub'Eau référence les applications utilisant ses APIs sur sa page 'ils-nous-utilisent' en échange de certaines informations (logo, nom, description, captures d'écran). `[résolu]`
-- **#83** Erreur en utilisant l'API d'hydrométrie pour récupérer les stations du référentiel — L'API Hydrométrie a rencontré une erreur "Internal server error" sur l'endpoint de récupération des stations du référentiel, mais le problème a été résolu. `[résolu]`
-- **#85** Erreur en utilisant l'API d'hydrométrie pour récupérer les stations du référentiel — L'API d'hydrométrie pour les stations de référence a rencontré un bug intermittent provoquant des erreurs 500, résolu temporairement par un redémarrage de service mais réapparaissant après quelques jours. `[résolu]`
-- **#86** Absence d'observations depuis le 14/12 via l'API d'hydrométrie — L'API Hydrométrie a connu une interruption de service et un trou de données entre le 14 et le 20 décembre 2021 en raison d'une faille de sécurité, mais le service a repris et les données manquantes ont été comblées pour les débits et sont en cours de comblement pour les hauteurs. `[résolu]`
-- **#87** [API Hydrometrie] grandeur_hydro "H" et "Q" résultats inversés — Cette issue clarifie que le paramètre `grandeur_hydro` de l'API Hydrométrie utilise bien 'H' pour la hauteur et 'Q' pour le débit, et que les données Hub'Eau sont cohérentes avec les sources nationales comme SCHAPI et Vigicrues. `[résolu]`
-- **#92** Internal server error avec l'API hydrométrie — L'API Hydrométrie a rencontré une erreur 500 sur l'endpoint `referentiel/stations` lorsque le paramètre `fields` était absent, un problème résolu mais qui a incité certains utilisateurs à privilégier l'usage systématique de ce paramètre. `[résolu]`
-- **#94** API des observations hydrométriques dysfonctionnelle — L'API Hydrométrie a rencontré des problèmes récurrents de disponibilité (erreurs 500/503) sur les endpoints d'observations et de stations, principalement dus à des plantages du cluster Solr et du serveur API, avec des solutions (mise à jour Solr et augmentation RAM) planifiées pour le second semestre 2022. `[information]`
-- **#95** Bug: Doublon de donnée en H et Q au même pas de temps pour des stations d'hydrométrie — L'API Hydrométrie renvoyait des doublons de données pour un même pas de temps en raison de la présence de différentes séries de validité, un problème résolu en ne diffusant que les données du meilleur statut. `[résolu]`
-- **#100** Superficie du Bassin Versant — L'issue clarifie que la superficie du bassin versant (`surface_bv`) est une donnée associée au site hydrométrique, et non à la station, soulignant la distinction entre ces deux entités dans le modèle de données. `[résolu]`
-- **#101** Utilisation de Wildcards * dans les recherches (un classic) — Les wildcards `*` ne sont pas systématiquement supportées dans les APIs Hub'Eau, étant limitées à certains champs de type code comme les codes entités de l'API Hydrométrie, mais non disponibles pour les libellés. `[information]`
-- **#102** [API Hydrométrie] Données manquantes pour les sites hydro — Un bug temporaire a causé des données de localisation manquantes pour les sites hydro dans l'API Hydrométrie, potentiellement lié à une confusion entre 'stations' et 'sites', mais le problème a été rapidement résolu. `[résolu]`
-- **#112** [API hydrométrie] : Internal server error — L'API Hydrométrie de Hub'Eau subit des interruptions temporaires et récurrentes ("Internal server error") affectant plusieurs endpoints, potentiellement dues à des surcharges, nécessitant des relances manuelles du service. `[résolu]`
-- **#114** Stations from referentiel not found in observations_tr — Cette issue clarifie l'utilisation du paramètre `code_entite` pour les observations hydrométriques, explique pourquoi une station `en_service` peut ne pas avoir de données en temps réel, et indique l'absence de filtre API pour les stations avec données temps réel. `[résolu]`
-- **#118** [API Hydrométrie] Comparaison HydroPortail et données élaborées API — Cette issue révèle des problèmes de synchronisation et de propagation des corrections de données entre l'HydroPortail et les APIs Hub'Eau Hydrométrie (`obs_elab` et `observations_tr`), détaillant les fréquences de mise à jour et les dépendances aux tags de correction de la source (SCHAPI/PHYC). `[résolu]`
-- **#120** API Hydrométrie : erreur 500 sur référentiel\stations — L'API Hydrométrie a rencontré une erreur 500 sur l'endpoint `referentiel/stations` lors de requêtes par `code_site` ou `code_station`, un problème qui a été corrigé mais a réapparu ultérieurement. `[résolu]`
-- **#126** API Hydrométrie : erreur 500 sur référentiel\stations (réouverture) — L'API Hydrométrie a rencontré des erreurs 500 sur l'endpoint `/referentiel/stations` et a modifié sa gestion des paramètres multiples, passant d'une liste CSV à des paramètres répétés. `[résolu]`
-- **#131** [API Piézométrie] Synchronisation des données — Les APIs Hub'Eau (Piézométrie, Hydrobiologie, Qualité des cours d'eau, Hydrométrie) manquent d'un filtre par date de mise à jour pour une synchronisation efficace des données, une fonctionnalité prévue pour l'API Hydrométrie mais pas à court terme pour la Piézométrie. `[information]`
-- **#133** [API Hydrométrie] données élaborées en doublonnées au 1er de chaque mois — L'issue clarifie que l'API Hydrométrie `obs_elab` renvoie par défaut à la fois les débits moyens journaliers et mensuels, ce qui peut créer des "doublons" pour le 1er de chaque mois si le paramètre `grandeur_hydro_elab` n'est pas utilisé pour filtrer. `[résolu]`
-- **#137** Package R pour requêter les APIs hubeau — Le package R `hubeau` version 0.4.0 est disponible sur le CRAN, permettant de requêter 10 des 12 APIs Hub'Eau avec une syntaxe simplifiée, et est utilisé par l'OFB pour des rapports mensuels sur l'écoulement des cours d'eau. `[résolu]`
-- **#138** [API Hydrométrie] Pb d'unité ? — Cette issue a identifié et résolu des problèmes de cohérence d'unité et de valeurs pour les débits hydrométriques (QmJ) dans l'API Hub'Eau, notamment après le passage à la v2, et a noté la présence de débits négatifs qualifiés de douteux. `[résolu]`
-- **#145** [API Hydrométrie] Pb métadonnées sur la Méthode (données QmJ) — L'API Hydrométrie v1 présentait une erreur dans les métadonnées de méthode (libellé et code) pour les débits journaliers, affichant 'Interpolation' au lieu de 'Expertisé' par rapport à Hydro Portail, problème résolu avec le passage à l'API v2. `[résolu]`
-- **#147** [API Hydrométrie] Les données du endpoint obs_elab ne sont plus mises à jour depuis le 05/07/2023 — L'endpoint `/hydrometrie/obs_elab` a connu une interruption de mise à jour des données élaborées (QmJ) pour plusieurs stations autour du 05/07/2023, un problème résolu lié à la source des données (Schapi). `[résolu]`
-- **#150** [API Hydrométrie] Récupération données élaborées au niveau du site selon calendrier HydroPortail — L'API Hub'Eau Hydrométrie ne gère pas la sélection de station au niveau du site via un "calendrier" comme HydroPortail, retournant les données de toutes les stations associées au site. `[information]`
-- **#153** [API Hydrométrie] Retards dans les données — Cette issue documente un incident technique sur l'API Hydrométrie ayant causé un retard dans les données temps réel, leur rechargement post-incident, et révèle l'absence actuelle d'un moyen public de connaître le statut de la plateforme en cas de panne. `[résolu]`
-- **#157** [API Hydrométrie] — L'endpoint `observations_tr` de l'API Hydrométrie est fonctionnel malgré une anomalie temporaire dans sa console de test, et accepte le paramètre `format` pour la sortie. `[résolu]`
-- **#161** [API Hydrométrie] Données indisponibles via l'API mais présentes sur l'Hydroportail — L'issue clarifie que l'endpoint `/hydrometrie/obs_elab` fournit uniquement des débits élaborés, tandis que `/hydrometrie/observations_tr` offre des hauteurs et débits récents (30 jours max), les données de hauteurs historiques étant disponibles sur l'Hydroportail. `[résolu]`
-- **#162** [API Hydrométrie] Inversion longitude/latitude et réglage altitude — L'API Hydrométrie présente un bug d'inversion longitude/latitude pour les stations en WGS84 (code_projection=31) et expose des altitudes non uniformisées ou manquantes que Hub'Eau ne corrige pas, restituant les données sources telles quelles. `[en_cours]`
-- **#164** [API Hydrométrie] Maintenance sur la PHyC du 20/02/2024 au 22/02/2024 — Une maintenance sur la Plate-forme HYDRO Centrale (PHyC) du 20 au 22 février 2024 a pu entraîner de brèves coupures des données d'hydrométrie temps réel, l'intervention étant désormais terminée. `[résolu]`
-- **#167** [API Hydrométrie] Absence des données élaborées depuis le 25 février 2024 — L'API Hub'Eau Hydrométrie a subi une interruption de service pour les données élaborées de débit moyen journalier (QmJ) entre fin février et mi-mars 2024 en raison d'un recalcul de masse sur la plateforme source PHyC, avec une solution temporaire via les données temps réel. `[résolu]`
-- **#168** [API Hydrométrie] Disponibilité durant les crues — L'API Hydrométrie de Hub'Eau reflète les données de PHyC; les problèmes de disponibilité, comme un incident sur la station V131502001, sont souvent liés à des dysfonctionnements en amont de la collecte des données, qui peuvent être corrigés par les producteurs. `[résolu]`
-- **#170** [API Hydrométrie] interrogation Duckdb — L'API Hub'Eau ne supporte pas les requêtes HTTP Range, ce qui empêche l'interrogation directe des fichiers CSV par des outils comme DuckDB ; la solution consiste à télécharger les fichiers localement avant traitement. `[résolu]`
-- **#171** [API Hydrométrie] accès aux statistiques — L'API Hydrométrie de Hub'Eau ne proposera pas d'accès aux fonctions statistiques (crucal) ni aux fiches de synthèse dans un futur proche. `[information]`
-- **#173** [API Hydrométrie] erreur serveur (Internal server error) — L'API Hydrométrie a connu une panne temporaire sur son endpoint `observations_tr` (Observations temps réel) le 18 avril 2024, renvoyant des erreurs 500, mais le service a été rapidement rétabli. `[résolu]`
-- **#177** [API Hydrométrie] erreur serveur (Internal server error) — L'API Hydrométrie a rencontré une erreur serveur 500 sur le endpoint `observations_tr` du 18 juillet 2024 à 22h au 19 juillet 2024 avant 6h27 UTC, qui a été rapidement résolue. `[résolu]`
-- **#183** Erreur de connection à l'API hydrométrie — L'API Hydrométrie a connu une panne de service sur l'endpoint `observations_tr` retournant des erreurs 500, mais le problème a été résolu le même jour. `[résolu]`
-- **#184** [API Hydrométrie] [API piézométrie] Erreur de connexion a hub'eau — Les API Hydrométrie et Piézométrie de Hub'Eau ont connu une indisponibilité générale avec des erreurs 500, qui a été résolue par les équipes techniques. `[résolu]`
-- **#187** API hydrométrie - problèmes de connections — L'API Hydrométrie peut subir des dégradations de performance et des indisponibilités (jusqu'à 48h) dues à un volume inhabituel de requêtes, se manifestant par des temps de réponse élevés, des time-outs ou des erreurs SSL. `[résolu]`
-- **#188** [API Hydrométrie] Problème données sur certaines stations hydrométriques — L'API Hydrométrie a connu un dysfonctionnement de sa chaîne d'alimentation, entraînant des manques de données pour certaines stations sans comblement des données historiques perdues. `[résolu]`
-- **#189** [API Hydrométrie] Message d'erreur serveur. — L'API Hydrométrie a connu une indisponibilité de plusieurs heures (08/10 22h00 - 09/10 10h45) due à une anomalie d'infrastructure, retournant des erreurs 500, avant d'être rétablie. `[résolu]`
-- **#190** [API Hydrométrie] Disponibilité de la version 2 — L'API Hydrométrie V2 est disponible avec de nouvelles fonctionnalités et un format Sandre v2, nécessitant des ajustements d'URL et de paramètres, et la V1 sera maintenue jusqu'en avril 2025, après une brève interruption de service résolue pour la V2. `[résolu]`
-- **#191** [API Hydrométrie] stations - Problème de champs à null en v2 — L'API Hydrométrie v2 renvoyait des champs géographiques et altimétriques à null pour les stations, un bug qui a été corrigé et permet désormais d'obtenir des données complètes via les endpoints `/referentiel/sites` et `/referentiel/stations`. `[résolu]`
-- **#196** [API Hydrométrie] Disponibilité de l'api — Cette issue détaille des problèmes de disponibilité et des erreurs SSL sur l'API Hydrométrie, résolus par un contournement d'un problème en amont, avec une garantie de publication des données au moins horaire. `[résolu]`
-- **#197** [API Hydrométrie] Problème d'accès aux données — L'API Hydrométrie a rencontré une erreur 500 (internal server error) lors de l'accès aux observations, un dysfonctionnement qui a été résolu le 12/11/2024 à 10:00. `[résolu]`
-- **#202** [API Hydrométrie] Plus de données depuis 2024-11-27T20:00:00Z — L'API Hydrométrie v2 a subi une interruption des traitements d'alimentation fin novembre 2024, entraînant une absence de données récentes, mais les traitements ont été relancés et la v1 restait disponible, bien que la v2 soit préconisée. `[résolu]`
-- **#203** [Site Web] Demande de référencement sur la page "Cas d'usage". — Le projet SUBLIM utilise les APIs Hub'Eau Hydrométrie et Piézométrie, combinées à des données météorologiques, pour développer un démonstrateur de prévision hydrologique automatisée par réseaux de neurones artificiels. `[résolu]`
-- **#206** [API Hydrométrie] Récupération automatique des données  — L'API Hydrométrie/obs_elab ne fournit pas directement les hauteurs (H) ni les débits horaires (QmnH), mais des alternatives existent via l'endpoint observations_tr (limité à 30j) ou le téléchargement de la base PhyC, et des grandeurs de hauteur/débit extrêmes sont prévues pour obs_elab en Q1 2025. `[information]`
-- **#208** [API Hydrométrie] Récupération des stations - erreur globale des données attributaires — Un bug a été corrigé sur l'API Hydrométrie v2, résolvant le problème des données attributaires vides et des filtres géographiques non fonctionnels pour les endpoints de référence des stations et des sites. `[résolu]`
-- **#209** [API Hydrométrie] - Récupération des stations - doublons dans les retours des codes département/région/commune — L'API Hydrométrie a corrigé le retour de doublons dans les itérables de codes géographiques, mais continue de retourner des codes multiples et uniques pour les sites situés sur des frontières administratives. `[résolu]`
-- **#212** API: mesures de hauteur + débit en retard sur plusieurs stations — L'API Hydrométrie a connu un dysfonctionnement temporaire de son alimentation, entraînant un retard dans la mise à jour des données de hauteur et de débit sur plusieurs stations, problème qui a été rapidement résolu. `[résolu]`
-- **#213** [API Hydrométrie] - v2 non fonctionnelle à partir de 9h ? — L'API Hydrométrie v2 a subi des interruptions récurrentes de son alimentation en données pour les endpoints `observations_tr` et `obs_elab`, nécessitant des rechargements et soulignant le fonctionnement parallèle et distinct des versions v1 et v2. `[résolu]`
-- **#216** [API Hydrométrie] Absence de nouvelles données d'observation en temps réel depuis 2 jours — L'API Hydrométrie v2 a subi une interruption de l'alimentation des données d'observations en temps réel du 4 au 11 mars 2025, et il est rappelé que l'API v1 sera mise hors ligne courant avril. `[résolu]`
-- **#222** [API Hydrométrie] Arrêt de la version 1 — L'API Hydrométrie version 1 a été arrêtée fin avril 2025 et est remplacée par la version 2, nécessitant une mise à jour des URL et des paramètres, et offrant de nouvelles fonctionnalités comme le format Sandre v2 et des observations élaborées. `[information]`
-- **#224** [API Hydrométrie] Plus aucune donnée reçue pour les débits — Une panne majeure de l'API Hydrométrie (v1 et v2) a interrompu la fourniture des données de débit pendant plusieurs jours en avril 2025 en raison d'un problème d'accès aux sources, avec des précisions sur la différence entre Hub'Eau et l'API Vigicrues. `[résolu]`
-- **#227** [API hydrometrie v2] observations_tr: Breaking change sur le format du champ bbox — La syntaxe du paramètre `bbox` pour l'API Hydrométrie v2 n'a pas changé par rapport à la v1 (coordonnées séparées par des virgules), et les réponses vides peuvent être dues à l'absence de données plutôt qu'à une erreur de syntaxe ou un changement de format. `[résolu]`
-- **#229** [API Hydrométrie]  Récupération des Hauteur instantanée maximale journalière (HIXnJ) — Les observations `HIXnJ` (Hauteur instantanée maximale journalière) sont désormais disponibles via le endpoint `obs_elab` de l'API Hydrométrie V2. `[résolu]`
-- **#237** [toutes API] interruption de service mar. 24/06/2025 12h-15h — Une maintenance planifiée pour toutes les API Hub'Eau le 24/06/2025 a été terminée plus tôt que prévu, et un incident distinct ayant causé un manque de données hydrométriques temps réel a également été résolu le même jour. `[résolu]`
-- **#238** [API Hydrométrie] Accès aux débits caractéristiques des stations (Qmod, Q2, Q5,...) — L'API Hydrométrie ne fournit pas les débits caractéristiques (Qmod, Q2, Q5,...) des stations car ces données ne sont pas traitées par Hub'Eau et doivent être consultées sur HydroPortail. `[information]`
-- **#239** Realtime measurements Hydrometrie observations — Un dysfonctionnement du processus de traitement des flux de données a entraîné l'arrêt des mises à jour des observations hydrométriques en temps réel et journalières sur Hub'Eau, nécessitant des interventions pour relancer et stabiliser le job de chargement. `[résolu]`
-- **#240** Bibliothèque javascript Débi'Clic à intégrer aux cas d'usages sur le site Hub'Eau — Débi’Clic est une bibliothèque JavaScript open source développée par le SMMAR qui simplifie l'intégration et l'affichage des données hydrométriques en temps réel de l'API Hub’Eau sur des sites web. `[résolu]`
-- **#242** [API Hydrométrie] Filtre avec plusieurs grandeur_hydro_elab — L'API Hydrométrie ne permet pas actuellement de filtrer par plusieurs valeurs de `grandeur_hydro_elab` pour le endpoint `_obs_elab_`, bien que le besoin soit identifié pour de futures évolutions. `[information]`
-- **#243** [API Hydrométrie] Q<0 à la station M410191040 — L'API Hydrométrie peut exposer des débits négatifs, qui sont des données réelles reflétant des phénomènes hydrologiques comme les crues ou l'influence maritime, et sont cohérentes avec HydroPortail. `[résolu]`
-- **#245** [API Hydrométrie] date_obs buggé sur les obversations — Cette issue clarifie le comportement attendu du champ `date_obs` dans l'API Hub'Eau Hydrométrie, détaille l'utilisation du filtre `code_entite`, et met en évidence la variabilité de la disponibilité des données (hauteur vs. débit) pour les stations hydrologiques. `[résolu]`
-- **#253** [API Hydrometrie] Missing Obs elab data on the station F459000101 — Cette issue clarifie que l'absence de données historiques de débits dans l'API Hydrométrie peut être due à des droits de publication restreints pour certaines stations ou à des anomalies de synchronisation, et détaille le processus d'alimentation des données élaborées depuis PHyC. `[résolu]`
-- **#262** [API Hydrométrie] Récupération de la Hauteur moyenne journalière — L'API Hydrométrie de Hub'Eau ne fournit pas la Hauteur moyenne journalière et n'a pas l'intention de l'intégrer, mais cette donnée est accessible via HydroPortail. `[résolu]`
-- **#263** [API Hydrométrie] Renvoi de plusieurs valeurs pour un même pas de temps lors d'une requête de QmJ (donnees_elab) — L'API Hub'Eau Hydrométrie v2 `/obs_elab` nécessite d'utiliser le paramètre `grandeur_hydro_elab` avec la valeur `QmnJ` pour filtrer le débit moyen journalier, contrairement à la v1 qui utilisait `grandeur_hydro=QmJ`. `[résolu]`
-- **#264** [API Hydrométrie] format GeoJson pour les observations — L'API Hydrométrie de Hub'Eau propose désormais une sortie au format GeoJSON pour les observations hydrométriques via les endpoints `obs_elab` et `observations_tr`. `[information]`
-- **#265** [API Hydrométrie] Observation élaborées filtrables par date d'intégration — L'API Hydrométrie permet désormais de filtrer les observations élaborées par leur date d'intégration (`date_debut_prod`, `date_fin_prod`), correspondant à la date de collecte par Hub'eau, avec la particularité que cette date peut être actualisée lors de recalculs ou rechargements. `[information]`
-- **#267** [API hydrométrie] question sur l'unité zéro échelle limni — Le champ `altitude_ref_alti_station` de l'API Hydrométrie, bien que documenté en mètres, peut contenir des valeurs en millimètres en raison d'incohérences dans les données sources, une correction est en cours pour standardiser l'unité en mètres. `[résolu]`
-- **#272** Problème d'accès à l'API Hub'Eau Hydrométrie — Un problème d'accès à l'API Hydrométrie, signalant l'absence de valeurs lors de crues, n'a pas pu être reproduit par l'équipe Hub'Eau et le ticket a été clôturé. `[résolu]`
+- **#7** [API hydro / observations_tr] Fuseau horaire différent pour les dates selon le type de requête (2018-07-24) — L'API Hydrométrie de Hub'Eau présentait une incohérence dans le fuseau horaire des dates selon la présence du paramètre 'fields', corrigée en 2018.
+- **#9** gérer le pas de temps ? (2018-12-18) — L'API Hydrométrie a ajouté un paramètre 'timestep' pour gérer efficacement le volume de données en fonction de l'intervalle temporel souhaité.
+- **#11** NA dans une requête sur les sites (2018-10-17) — L'API Hydrométrie retourne des valeurs null pour code_station lorsqu'on interroge des sites (8 caractères) car elle inclut à la fois les données de site et les stations associées.
+- **#13** Génération client à partir des spécifications Swagger (2018-10-22) — Une erreur technique dans le fichier XML de l'API Hydrométrie a été identifiée et résolue, permettant la génération correcte des clients Java via Swagger.
+- **#16** [API Hydro] - Documentation api swagger erreur (2018-12-18) — La documentation Swagger de l'API Hydrométrie présente un problème technique d'accès via les navigateurs, nécessitant un en-tête spécifique pour être utilisée depuis une application.
+- **#17** [API Hydro] - Problème de pagination (2018-12-18) — L'API Hydrométrie de Hub'Eau présentait un bug de pagination où la propriété 'next' était toujours renvoyée, même en fin de liste, mais ce problème a été corrigé.
+- **#28** [API Hydro] Calcul du débit journalier à partir des observations_tr? (2022-07-05) — L'API Hydrométrie permet de récupérer des données à pas de temps variable, mais un endpoint dédié aux débits moyens journaliers a été ajouté pour répondre aux besoins hydrologiques.
+- **#35** API référentiel stations hydro - Réseaux récupérés (2020-04-29) — Les codes de réseaux hydrométriques POH/RIC ne sont pas standardisés par SANDRE, et les codes SANDRE nécessitent un '0' initial pour être corrects.
+- **#36** [API Hydro] Appels successifs automatiques (2020-08-13) — L'API Hydrométrie de Hub'Eau peut générer des erreurs 500 lors de requêtes successives avec pagination, suggérant une limite non documentée ou un problème serveur.
+- **#40** requête hubeau partiellement considérée en php (2020-07-29) — L'issue met en évidence un problème de codage URL (&amp; au lieu de &) dans une requête PHP vers l'API Hydrométrie, entraînant une récupération incorrecte des données.
+- **#41** requêtes avec H et Q sur des colonnes distinctes? (2020-08-03) — L'API Hydrométrie ne permet pas de récupérer simultanément les valeurs de hauteur et de débit dans des colonnes distinctes pour le même enregistrement.
+- **#44** Plantage de l'API cours d'eau (2020-09-21) — L'issue a permis de confirmer la résolution d'un problème technique affectant la station 04204300 dans l'API Hydrométrie.
+- **#47** [API Hydrométrie] Actualisation des données (2021-04-02) — L'API Hydrométrie de Hub'Eau présente un retard d'actualisation des données en raison du traitement de la source commune SCHAPI, limitant la fréquence d'actualisation à des intervalles supérieurs à la périodicité de collecte.
+- **#48** [API Hydrométrie] longitude_station et latitude_station null lorsqu'on filtre les champs à l'aide du paramètre "fields" (2022-07-05) — L'utilisation du paramètre 'fields' dans l'API Hydrométrie entraînait des valeurs null pour les coordonnées géographiques, mais ce problème a été résolu.
+- **#53** API Hydrométrie KO (2021-01-04) — L'API Hydrométrie a été temporairement indisponible le 4 janvier 2021, affectant l'accès aux données en temps réel sur les niveaux d'eau pour la gestion des crues à Paris.
+- **#55** Accès aux données d'archive (2022-07-21) — L'API Hydrométrie a introduit un endpoint pour les observations élaborées, permettant l'accès aux données historiques de débits, avec des tests en cours pour élargir la disponibilité temporelle.
+- **#60** [API Hydrométrie] Récupération des observations récemment modifiées (2024-10-16) — La version 2 de l'API Hydrométrie permet maintenant de filtrer les observations par leur statut (corrigée, validée, etc.), répondant au besoin de récupérer des données mises à jour sans requêter l'intégralité des ensembles.
+- **#73** [API Hydrométrie] Les observations de débits sont doublonnées à chaque pas de temps (2021-08-06) — L'API Hydrométrie génère des doublons lors de requêtes avec un code_entite correspondant à un code_site, car elle combine les données du site et de ses stations.
+- **#83** Erreur en utilisant l'API d'hydrométrie pour récupérer les stations du référentiel (2021-12-06) — Une erreur serveur interne a été résolue sur l'API Hydrométrie concernant la récupération des stations du référentiel.
+- **#85** Erreur en utilisant l'API d'hydrométrie pour récupérer les stations du référentiel (2022-01-06) — L'API Hydrométrie de Hub'Eau présente un bug intermittent provoquant des erreurs serveur lors de certaines requêtes, malgré des interventions temporaires.
+- **#86** Absence d'observations depuis le 14/12 via l'API d'hydrométrie (2021-12-20) — Une faille de sécurité a provoqué une interruption des données hydrométriques temps réel du 14/12 au 20/12, avec un comblement partiel des données après réparation.
+- **#87** [API Hydrometrie] grandeur_hydro "H" et "Q" résultats inversés (2022-01-11) — L'API Hydrométrie a inversé les paramètres 'H' et 'Q', mais l'issue a été résolue après vérification des données et clarification de l'utilisateur.
+- **#92** Internal server error avec l'API hydrométrie (2022-01-06) — L'API Hydrométrie a connu un bug provoquant une erreur 500 sans le paramètre `fields`, mais ce problème a été corrigé.
+- **#94** API des observations hydrométriques dysfonctionnelle (2022-07-05) — L'API Hydrométrie de Hub'Eau présente des dysfonctionnements récurrents (codes 503 et 500) liés à des problèmes techniques sur le cluster Solr et le serveur API, affectant sa disponibilité.
+- **#95** Bug: Doublon de donnée en H et Q au même pas de temps pour des stations d'hydrométrie (2022-07-05) — L'API Hydrométrie de Hub'Eau affiche des doublons de données (H et Q) en raison de différents statuts de validité, mais un correctif filtrant les meilleures séries est en cours.
+- **#100** Superficie du Bassin Versant (2022-03-01) — La superficie des bassins versants associés aux stations hydrométriques est accessible via l'attribut `surface_bv` dans l'API Hydrométrie, mais elle est liée au site et non à la station.
+- **#101** Utilisation de Wildcards * dans les recherches (un classic) (2022-07-05) — Les wildcards * sont partiellement supportés dans certaines APIs de Hub'Eau, notamment pour les codes hydrométriques mais pas pour les libellés de lieux de surveillance littorale.
+- **#102** [API Hydrométrie] Données manquantes pour les sites hydro (2022-02-16) — L'issue a révélé un problème temporaire de champs vides dans l'API Hydrométrie pour les données de localisation, désormais résolu.
+- **#112** [API hydrométrie] : Internal server error (2022-06-15) — L'API Hydrométrie a présenté des dysfonctionnements intermittents avec des erreurs 500, nécessitant des interventions techniques pour être rétablie.
+- **#114** Stations from referentiel not found in observations_tr (2022-07-06) — L'API Hydrométrie utilise code_entite et non code_station pour les requêtes observations_tr, et le statut 'en_service' ne garantit pas la disponibilité de données en temps réel.
+- **#118** [API Hydrométrie] Comparaison HydroPortail et données élaborées API (2022-08-05) — Les différences entre les données de l'HydroPortail et l'API 'hydro_elab' étaient dues à un retard de synchronisation des corrections, résolu par une réinitialisation des données élaborées.
+- **#120** API Hydrométrie : erreur 500 sur référentiel\stations (2022-08-03) — L'API Hydrométrie a temporairement renvoyé une erreur 500 lors de requêtes sur /referentiel/stations, mais le problème a été résolu le 3 août 2022.
+- **#126** API Hydrométrie : erreur 500 sur référentiel\stations (réouverture) (2024-02-26) — L'API Hydrométrie de Hub'Eau génère des erreurs 500 sur l'endpoint '/referentiel/stations' et a modifié la manière dont les codes de station sont transmis dans les URLs.
+- **#131** [API Piézométrie] Synchronisation des données (2025-08-20) — L'API Piézométrie manque d'une fonctionnalité de filtrage par date de mise à jour, rendant les synchronisations inefficaces, alors que cette fonctionnalité est en cours d'étude pour l'API Hydrométrie.
+- **#133** [API Hydrométrie] données élaborées en doublonnées au 1er de chaque mois (2023-02-08) — L'API Hydrométrie retourne des doublons pour les 1er de mois en raison de la coexistence de débits journaliers et mensuels non filtrés, mais cela résulte d'une particularité métier des données.
+- **#137** Package R pour requêter les APIs hubeau (2023-05-30) — Un package R permettant d'accéder à 10 APIs Hub'Eau a été publié, avec des exemples d'utilisation et une intégration dans des rapports hydrologiques.
+- **#138** [API Hydrométrie] Pb d'unité ? (2025-03-04) — L'issue révèle une erreur de gestion des unités et des anomalies de données dans l'API Hydrométrie, avec des corrections partielles et des problèmes persistants sur d'autres stations.
+- **#145** [API Hydrométrie] Pb métadonnées sur la Méthode (données QmJ) (2025-03-04) — L'API Hydrométrie a corrigé une erreur de code_methode (12 → 10) entre la version 1 et 2, alignant ainsi les données avec HydroPortail.
+- **#147** [API Hydrométrie] Les données du endpoint obs_elab ne sont plus mises à jour depuis le 05/07/2023 (2023-07-12) — L'API Hydrométrie (endpoint obs_elab) a connu une interruption de mise à jour des données à partir du 5 juillet 2023, affectant de nombreuses stations, mais le problème a été résolu avant le 12 juillet.
+- **#150** [API Hydrométrie] Récupération données élaborées au niveau du site selon calendrier HydroPortail (2023-07-25) — L'API Hydrométrie ne prend pas en compte les informations de calendrier HydroPortail pour sélectionner automatiquement la station à utiliser, nécessitant une sélection manuelle via le code de la station.
+- **#153** [API Hydrométrie] Retards dans les données (2023-09-04) — L'API Hydrométrie a connu un incident technique entraînant un retard de données, résolu par un rechargement des données, avec un manque de système de surveillance du statut de la plateforme.
+- **#157** [API Hydrométrie] (2023-12-15) — L'API Hydrométrie fonctionne pour l'export XML de 'observations_tr', mais une erreur de console persiste et est en cours de correction.
+- **#161** [API Hydrométrie] Données indisponibles via l'API mais présentes sur l'Hydroportail (2023-11-30) — L'API Hydrométrie distingue clairement les endpoints pour les données de débit et de hauteur, avec des limitations temporelles pour les observations de hauteur.
+- **#162** [API Hydrométrie] Inversion longitude/latitude et réglage altitude (2024-01-10) — L'API Hydrométrie de Hub'Eau présente des erreurs de coordonnées inversées et des incohérences d'unités pour les altitudes, nécessitant une correction externe.
+- **#164** [API Hydrométrie] Maintenance sur la PHyC du 20/02/2024 au 22/02/2024 (2024-02-26) — Une maintenance sur le système PHyC a entraîné des interruptions temporaires des données d'hydrométrie en temps réel entre le 20 et le 22 février 2024, désormais résolues.
+- **#167** [API Hydrométrie] Absence des données élaborées depuis le 25 février 2024 (2024-03-19) — Une interruption temporaire des données de débit moyen journalier (QmJ) via l'API Hydrométrie a été causée par un recalcul de masse sur la plateforme PHyC, résolu le 14 mars 2024.
+- **#168** [API Hydrométrie] Disponibilité durant les crues (2024-03-12) — L'absence de données durant les crues pour certaines stations a été résolue après correction des sources upstream, confirmant la dépendance de l'API Hydrométrie à la plateforme PhyC.
+- **#170** [API Hydrométrie] interrogation Duckdb (2024-05-16) — L'API Hydrométrie ne supporte pas les requêtes HTTP 'range', limitant l'utilisation de certains outils comme DuckDB pour interroger directement les flux CSV.
+- **#171** [API Hydrométrie] accès aux statistiques (2024-03-29) — L'API Hydrométrie ne prévoit pas, à court ou moyen terme, l'intégration de fonctions statistiques comme les fiches de synthèse.
+- **#173** [API Hydrométrie] erreur serveur (Internal server error) (2024-04-18) — Un incident technique a temporairement rendu inaccessible le endpoint 'Observations temps réel' de l'API Hydrométrie, mais a été résolu rapidement.
+- **#177** [API Hydrométrie] erreur serveur (Internal server error) (2024-07-19) — Une erreur serveur temporaire a affecté l'API Hydrométrie pour le endpoint des observations temps réel, mais a été résolue rapidement par l'équipe technique.
+- **#183** Erreur de connection à l'API hydrométrie (2024-09-10) — Une panne temporaire du endpoint 'observations_tr' de l'API Hydrométrie a été résolue après intervention technique.
+- **#184** [API Hydrométrie] [API piézométrie] Erreur de connexion a hub'eau (2024-09-11) — Les API Hydrométrie et Piézométrie de Hub'Eau ont été temporairement indisponibles en raison d'un dysfonctionnement technique, résolu par les équipes.
+- **#187** API hydrométrie - problèmes de connections (2024-09-23) — L'API Hydrométrie a connu une dégradation de performance due à un pic de demande, résolu après quelques heures avec un retour aux temps de réponse normaux.
+- **#188** [API Hydrométrie] Problème données sur certaines stations hydrométriques (2024-10-08) — Un dysfonctionnement technique de l'API Hydrométrie a provoqué des manques de données sur certaines stations, résolu sans comblement des données manquantes.
+- **#189** [API Hydrométrie] Message d'erreur serveur. (2024-10-09) — Une panne temporaire de l'API Hydrométrie due à une anomalie d'infrastructure a été résolue le 9 octobre 2024.
+- **#190** [API Hydrométrie] Disponibilité de la version 2 (2024-12-02) — La version 2 de l'API Hydrométrie est disponible avec des améliorations techniques et fonctionnelles, mais a connu une interruption temporaire de données en décembre 2024.
+- **#191** [API Hydrométrie] stations - Problème de champs à null en v2 (2025-01-14) — L'API Hydrométrie v2 présentait des champs null pour des informations administratives et géographiques, mais ce problème a été corrigé.
+- **#196** [API Hydrométrie] Disponibilité de l'api (2024-11-29) — L'API Hydrométrie de Hub'Eau présente des interruptions SSL récurrentes à 01:00 UTC, résolues par un contournement technique permettant la transmission des données toutes les heures.
+- **#197** [API Hydrométrie] Problème d'accès aux données (2024-11-22) — L'API Hydrométrie a temporairement généré des erreurs 500, mais le problème a été résolu en début de matinée du 12 novembre 2024.
+- **#202** [API Hydrométrie] Plus de données depuis 2024-11-27T20:00:00Z (2024-12-11) — L'API Hydrométrie v2 a connu une interruption temporaire des données postérieures à 2024-11-27, résolue par relance des traitements, avec recommandation de privilégier la v2 une fois rétablie.
+- **#203** [Site Web] Demande de référencement sur la page "Cas d'usage". (2024-12-11) — Le projet SUBLIM est un exemple d'utilisation des API Hub'Eau pour des simulations hydrologiques basées sur l'intelligence artificielle.
+- **#206** [API Hydrométrie] Récupération automatique des données  (2025-03-21) — L'API Hydrométrie permet actuellement la récupération de débits moyens, mais pas de hauteurs ou de données horaires, avec des plans de développement pour 2025 et une alternative via la base PhyC.
+- **#208** [API Hydrométrie] Récupération des stations - erreur globale des données attributaires (2025-01-14) — Un bug dans l'API Hydrométrie v2 empêchait la récupération des stations via les codes département ou région, mais a été corrigé.
+- **#209** [API Hydrométrie] - Récupération des stations - doublons dans les retours des codes département/région/commune (2025-12-23) — L'API Hydrométrie a corrigé le problème des doublons de codes géographiques, mais certains sites restent associés à plusieurs codes en raison de leur localisation sur des frontières administratives.
+- **#212** API: mesures de hauteur + débit en retard sur plusieurs stations (2025-02-12) — L'API Hydrométrie a connu un dysfonctionnement temporaire de l'alimentation des données, entraînant des retards dans la mise à jour des mesures de débit et de hauteur.
+- **#213** [API Hydrométrie] - v2 non fonctionnelle à partir de 9h ? (2025-03-28) — L'API v2 de Hydrométrie a connu des interruptions et des retards d'alimentation des données, nécessitant un basculement temporaire sur la v1, avant d'être résolue en début de semaine.
+- **#216** [API Hydrométrie] Absence de nouvelles données d'observation en temps réel depuis 2 jours (2025-03-28) — L'API Hydrométrie a connu une interruption temporaire de ses données en temps réel, résolue le 11 mars 2025, avec une transition planifiée vers la v1 de l'API en avril.
+- **#222** [API Hydrométrie] Arrêt de la version 1 (2025-05-05) — La version 1 de l'API Hydrométrie est officiellement arrêtée, avec une migration obligatoire vers la version 2 incluant des améliorations techniques et fonctionnelles.
+- **#224** [API Hydrométrie] Plus aucune donnée reçue pour les débits (2025-05-05) — L'API Hydrométrie de Hub'Eau a connu une interruption de données en avril 2025, résolue en mai 2025, affectant la disponibilité des débits et nécessitant une communication proactive avec les utilisateurs.
+- **#227** [API hydrometrie v2] observations_tr: Breaking change sur le format du champ bbox (2025-04-24) — L'API Hydrométrie v2 a modifié la syntaxe du paramètre 'bbox', nécessitant une adaptation des outils de requêtage pour les utilisateurs.
+- **#229** [API Hydrométrie]  Récupération des Hauteur instantanée maximale journalière (HIXnJ) (2025-06-19) — La grandeur HIXnJ (hauteur instantanée maximale journalière) est désormais accessible via l'API Hydrométrie après avoir été initialement indisponible.
+- **#238** [API Hydrométrie] Accès aux débits caractéristiques des stations (Qmod, Q2, Q5,...) (2025-10-06) — L'API Hydrométrie ne permet pas d'accéder aux débits caractéristiques des stations, ces données doivent être consultées via HydroPortail.
+- **#239** Realtime measurements Hydrometrie observations (2025-07-16) — Une interruption temporaire du traitement des données en temps réel pour l'API Hydrométrie a été résolue, mais des lacunes persistaient pour les données historiques.
+- **#240** Bibliothèque javascript Débi'Clic à intégrer aux cas d'usages sur le site Hub'Eau (2025-08-06) — L’issue présente Débi’Clic, une bibliothèque JavaScript utilisant l’API Hub’Eau pour intégrer des données hydrologiques interactives sur les sites web.
+- **#242** [API Hydrométrie] Filtre avec plusieurs grandeur_hydro_elab (2025-07-07) — L'API Hydrométrie actuelle ne permet pas de filtrer sur plusieurs grandeur_hydro_elab simultanément, mais ce besoin est noté pour les prochaines évolutions.
+- **#243** [API Hydrométrie] Q<0 à la station M410191040 (2025-07-10) — La présence de débits négatifs à la station M410191040 en juin 2016 est due à un phénomène hydrologique de crue inversant le sens du débit, et non à une erreur de l'API.
+- **#245** [API Hydrométrie] date_obs buggé sur les obversations (2025-08-06) — L'API Hydrométrie de Hub'Eau présente un bug sur le champ date_obs, qui ne varie pas pour les observations d'une même période, affectant l'analyse temporelle, et des limites de disponibilité des données selon les stations.
+- **#253** [API Hydrometrie] Missing Obs elab data on the station F459000101 (2025-09-15) — L'issue révèle des limites d'accès aux données historiques via l'API Hydrométrie (absence de données avant 2025 pour F459000101 et restriction de publication pour F359000103), ainsi que des comportements techniques comme les mises à jour incrémentielles de la base PHyC.
+- **#262** [API Hydrométrie] Récupération de la Hauteur moyenne journalière (2025-12-11) — L'API Hydrométrie ne permet pas de récupérer la hauteur moyenne journalière, mais cette donnée est accessible via HydroPortail.
+- **#263** [API Hydrométrie] Renvoi de plusieurs valeurs pour un même pas de temps lors d'une requête de QmJ (donnees_elab) (2025-12-17) — L'issue révèle une erreur de paramétrage API liée à l'utilisation incorrecte des codes de grandeur hydrologique, entraînant des résultats multiples pour une même date.
+- **#264** [API Hydrométrie] format GeoJson pour les observations (2025-12-23) — L'API Hydrométrie de Hub'Eau intègre désormais un format GeoJSON pour les observations hydrométriques, facilitant leur utilisation dans des contextes géospatiaux.
+- **#265** [API Hydrométrie] Observation élaborées filtrables par date d'intégration (2025-12-23) — L'API Hydrométrie permet désormais de filtrer les observations élaborées par leur date d'intégration, avec une note sur les impacts potentiels des recalculs ou rechargements de données.
+- **#267** [API hydrométrie] question sur l'unité zéro échelle limni (2026-01-21) — L'API Hydrométrie présente des incohérences d'unité pour le paramètre `altitude_ref_alti_station`, avec des données sources mélangeant mètres et millimètres, bien que l'altitude doive être exprimée en mètres.
+- **#272** Problème d'accès à l'API Hub'Eau Hydrométrie (2026-02-13) — L'API Hydrométrie a connu une panne de données critique pendant des crues, sans confirmation de résolution par l'équipe technique.
 
 </details>

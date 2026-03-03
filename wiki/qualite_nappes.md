@@ -1,24 +1,41 @@
 # Qualité des nappes
 
-> 22 issues analysées
+> 20 issues analysées
 
 ## Guide
 
 ### Comportement actuel
 
-L'API Qualité des nappes d'eau souterraines propose des endpoints pour les analyses et les stations de mesure (#186). Le endpoint `/stations` supporte le format GeoJSON, facilitant son intégration dans les SIG. Les coordonnées des captages d'eau potable sont floutées et remplacées par celles du chef-lieu de la commune pour des raisons réglementaires ; le champ `precision_coordonnees` (valeurs '0' pour réelles, '18' pour floutées, selon Sandre 916) indique cette précision (#270). Le filtrage des stations par `nom_reseau` est actuellement disponible (#63, #210).
+L'API Qualité des nappes permet d'accéder aux données via des endpoints comme `/stations` et `/analyses`, en utilisant des codes BSS pour identifier les stations. Les résultats incluent des données géographiques (longitude, latitude), administratives (code INSEE) et des informations sur les masses d'eau associées. La pagination est gérée via l'attribut `next`, mais il peut être généré même sans page suivante (#15). Le format GeoJSON n'est pas supporté sur l'endpoint `analyses` (#186), et les requêtes sont limitées à 20 000 résultats maximum par appel (#57). Le paramètre `fields` exige des noms de champs précis (ex: `code_param` au lieu de `code_parametre`) (#214).
 
 ### Pièges à éviter
 
-L'API ne fournit pas les attributs 'laboratoire', 'préleveur' ni le 'support de l'analyse' (#51). Le endpoint `/analyses` ne supporte pas le format GeoJSON ; toute requête avec `format=geojson` retournera du JSON standard (#186). Une limitation de 20 000 résultats par requête (`page * size`) impose de fractionner les requêtes volumineuses (#204). Le filtrage des stations par `code_reseau` n'est pas encore implémenté, seule la recherche par `nom_reseau` est possible (#63, #210). Le champ "heure de prélèvement" est manquant, ce qui peut compliquer la comparaison avec d'autres sources et la différenciation de prélèvements multiples le même jour sur un même site (#235). L'accès aux métadonnées (années, producteurs, paramètres) par station est actuellement inefficace et un endpoint dédié est en cours de développement pour d'autres APIs avant d'être étendu aux nappes (#204).
+- **Pagination incorrecte** : L'attribut `next` peut être généré même si aucune page suivante n'existe, ce qui peut entraîner des boucles infinies. Vérifiez toujours si `data` est vide avant d'appliquer `next`.  
+- **Limite de 20 000 résultats** : Les requêtes dépassant cette limite retournent une erreur `InvalidRequest`. Utilisez des tranches de 10 000 éléments pour accéder à de grandes quantités de données (#57).  
+- **Absence de l'heure de prélèvement** : Les données de ADES ne transmettent pas le champ `heure de prélèvement`, rendant impossible la distinction de prélèvements simultanés sur une même station (#235).  
+- **Format GeoJSON non supporté sur `analyses`** : Utiliser `format=geojson` sur cet endpoint retourne un JSON standard, pas un GeoJSON (#186).
 
 ### Bonnes pratiques
 
-Pour pallier l'absence du 'support de l'analyse', sachez que le 'code support' est généralement '3' (eau), et peut être reconstitué à partir du 'code fraction' (ex: 3, 22, 23) (#51). En l'absence de filtrage par `code_reseau` pour les stations, utilisez des listes de codes BSS comme solution de contournement (#63). Il est recommandé de privilégier l'API Hub'Eau Qualité des nappes plutôt que le WS getData d'ADES, ce dernier étant connu pour sa lenteur et ses timeouts (#51).
+Utilisez le paramètre `date_debut_prelevement` pour filtrer les analyses par date, évitant de charger l'ensemble de l'historique (#52). Pour des volumes importants, fractionnez les requêtes en tranches de 10 000 éléments. Vérifiez la disponibilité des données via des sources externes comme ADES ou Naïades pour les paramètres spécifiques (ex: PFAS) (#217). Si des métadonnées comme les années de mesure sont manquantes, consultez directement les organismes gestionnaires (#204).
 
 ### Contexte métier
 
-Les données de qualité des eaux souterraines sont issues de la base ADES (#51, #235). Les réseaux de surveillance sont identifiables par un 'code réseau' et un 'nom de réseau', et leurs fiches sont consultables sur ades.eaufrance.fr (#63, #210). Le 'code support 3' correspond à l'eau, et les codes fraction 3, 22, 23 y sont associés (#51). Le champ `precision_coordonnees` utilise la nomenclature Sandre 916 pour indiquer la précision des coordonnées, notamment le floutage des captages AEP pour des raisons réglementaires (#270). Les utilisateurs ont besoin de métadonnées telles que les années de données, les producteurs et les paramètres analysés par station pour optimiser leurs requêtes (#204).
+Les codes BSS identifient les stations de mesure, tandis que les codes SANDRE standardisent les paramètres analytiques. Les données proviennent principalement de ADES et de réseaux comme 0400000020 (Bretagne, BRGM). Les masses d'eau sont associées aux stations via des codes comme `codes_masse_eau_rap`. Les stations de captage d'eau potable ont leurs coordonnées floutées pour des raisons de sécurité (#270).
+
+### Évolutions récentes
+
+- **2026-02-02** : Floutage des coordonnées des captages d'eau potable, remplacées par celles du chef-lieu de la commune (#270).  
+- **2025-06-02** : Absence du champ `heure de prélèvement` dans les données de ADES, limitant la précision des analyses (#235).  
+- **2025-05-14** : Impossibilité de filtrer directement les données PFAS via l'API, nécessitant des requêtes par groupe de paramètres (#217).  
+- **2024-09-05** : Format GeoJSON non supporté sur l'endpoint `analyses` (#186).
+
+### Historique notable
+
+- **2025-02-17** : Correction du bug liant le paramètre `fields` à des noms de champs précis (ex: `code_param` au lieu de `code_parametre`) (#214).  
+- **2021-02-04** : Ajout du filtre `date_debut_prelevement` pour sélectionner les analyses par date (#52).  
+- **2019-02-06** : Correction d'une désynchronisation des données entraînant des variations aléatoires du nombre de résultats (#14).  
+- **2020-08-19** : Réindexation des serveurs pour résoudre les incohérences de `count` dues à la duplication des données (#42).
 
 ---
 
@@ -27,155 +44,76 @@ Les données de qualité des eaux souterraines sont issues de la base ADES (#51,
 
 ### Faits actuels
 
-- L'API Qualité des nappes ne renvoie pas les attributs 'laboratoire' et 'préleveur'. (#51)
-- L'API Qualité des nappes ne renvoie pas le 'support de l'analyse'. (#51)
-- Le 'code support' peut être reconstitué à partir du 'code fraction' (ex: code fraction 3, 22, 23 -> code support 3). (#51)
-- Le 'code support' est a priori toujours égal à 3 (eau) dans l'API Qualité des nappes. (#51)
-- Le code support 3 correspond à l'eau. (#51)
-- Les codes fraction 3, 22, 23 sont associés au code support 3 (eau). (#51)
-- Le WS getData d'ADES est connu pour être lent et sujet aux timeouts, incitant à l'utilisation de l'API Hub'Eau Qualité des nappes. (#51)
-- L'API Piézométrie ne permettait pas de filtrer les stations ou les chroniques par code_reseau. (#63)
-- L'API Qualité des nappes ne permettait pas de filtrer les stations par code_reseau (mais le permettait pour les analyses). (#63)
-- L'API Qualité des nappes permettait de filtrer les stations par nom_reseau. (#63)
-- Les informations sur les réseaux de mesure (code, mnémo, nom) sont présentes dans l'index sous-jacent de Hub'Eau. (#63)
-- L'ajout de filtres par code_reseau et l'inclusion des détails du réseau dans les réponses API étaient envisagés mais non prioritaires. (#63)
-- La base ADES permet de consulter et d'extraire les données par code_reseau. (#63)
-- Les réseaux de mesure ont des fiches consultables publiquement sur ades.eaufrance.fr (ex: 0400000020 pour le réseau Bretagne). (#63)
-- Le filtrage par code_reseau est jugé plus pratique que par nom_reseau. (#63)
-- Les utilisateurs peuvent utiliser des listes de codes BSS comme solution de contournement en l'absence de filtrage par réseau. (#63)
-- Le format GeoJSON n'est pas implémenté pour le endpoint `/analyses` de l'API Qualité des nappes d'eau souterraines. (#186)
-- L'utilisation du paramètre `format=geojson` sur le endpoint `/analyses` de l'API Qualité des nappes d'eau souterraines entraîne une réponse au format JSON standard, et non GeoJSON. (#186)
-- Le endpoint `/stations` de l'API Qualité des nappes d'eau souterraines supporte le format GeoJSON. (#186)
-- L'API Qualité des nappes d'eau souterraines fournit des données d'analyses et de stations. (#186)
-- L'API Qualité des nappes peut nécessiter de nombreuses requêtes pour obtenir des métadonnées (années, producteurs, paramètres) par station, pouvant entraîner des résultats vides. (#204)
-- Il existe une limitation à 20 000 résultats par requête sur l'API Qualité des nappes, nécessitant le fractionnement des requêtes. (#204)
-- Un nouveau endpoint "_parametres" est prévu pour les APIs de qualité (rivières, nappes, eau potable) afin d'optimiser les interrogations. (#204)
-- Le endpoint "_parametres" sera d'abord ajouté à l'API Qualité des cours d'eau. (#204)
-- Les remarques de l'utilisateur concernant les métadonnées (années, producteurs, paramètres) seront prises en compte pour l'implémentation du endpoint "_parametres" sur l'API Qualité des nappes. (#204)
-- Les utilisateurs de l'API Qualité des nappes ont besoin de connaître les années de données disponibles, les producteurs d'analyses et les paramètres analysés pour chaque station de mesure afin d'optimiser leurs requêtes. (#204)
-- L'API Qualité des nappes d'eau souterraines ne permet pas actuellement de filtrer les données par 'code réseau'. (#210)
-- Le filtrage par 'nom de réseau' est actuellement disponible dans l'API Qualité des nappes d'eau souterraines. (#210)
-- Une demande d'évolution a été enregistrée pour ajouter le filtrage par 'code réseau' sur les deux endpoints de l'API Qualité des nappes d'eau souterraines. (#210)
-- Les réseaux de surveillance de la qualité des nappes d'eau souterraines sont identifiables par un 'code réseau' en plus d'un 'nom de réseau'. (#210)
-- Le champ "heure de prélèvement" n'est pas exposé dans l'API Hub'Eau 'Qualité des Nappes' pour les données d'analyses issues de la banque ADES. (#235)
-- Le champ "heure de prélèvement" est présent sur la plateforme ADES pour les données d'analyses. (#235)
-- Les exports SISE-EAUX (ARS) incluent le champ "heure de prélèvement". (#235)
-- L'absence du champ "heure de prélèvement" dans l'API Hub'Eau empêche une comparaison précise avec les données SISE-EAUX. (#235)
-- Plusieurs prélèvements peuvent avoir lieu le même jour sur un même captage ou station. (#235)
-- Sans l'heure de prélèvement, les prélèvements multiples du même jour sur un même site peuvent être fusionnés ou confondus. (#235)
-- L'heure de prélèvement est cruciale pour la traçabilité et la reconstitution fidèle des séries de mesures, notamment pour les analyses de dépassements, le suivi qualité et les diagnostics temporels. (#235)
-- Les coordonnées des points d'eau retournées par les endpoints 'Analyses' et 'Stations' de l'API Qualité des nappes sont désormais floutées lorsqu'elles concernent un captage d'eau potable. (#270)
-- Le floutage des coordonnées consiste à remplacer les coordonnées réelles du point d'eau par les coordonnées du chef-lieu de la commune sur laquelle le captage est implanté. (#270)
-- Un nouveau champ 'precision_coordonnees' est disponible pour indiquer l'état de floutage d'un point d'eau. (#270)
-- La valeur '0' pour le champ 'precision_coordonnees' indique des coordonnées réelles (précision inconnue). (#270)
-- La valeur '18' pour le champ 'precision_coordonnees' indique des coordonnées floutées (coordonnées du chef-lieu de la commune). (#270)
-- Le floutage des coordonnées des captages d'eau potable est appliqué en application des réglementations françaises et européennes. (#270)
-- Le champ 'precision_coordonnees' repose sur la nomenclature Sandre 916. (#270)
+- L'API Qualité des eaux souterraines permet de récupérer des informations via l'endpoint '/stations' en utilisant un code BSS. (#10)
+- L'API Piézométrie fournit moins d'informations sur les masses d'eau comparée à l'API Qualité des eaux souterraines. (#10)
+- L'attribut 'next' est généré dans l'URL de réponse même lorsque la page suivante n'existe pas (par exemple, lorsque 'data' est vide). (#15)
+- L'API ne fournit pas les champs 'laboratoire' et 'préleveur' pour les données de qualité des nappes. (#51)
+- Le code de support n'est pas renvoyé par l'API car il peut être déduit du code fraction (ex. 3, 22, 23 → code support 3). (#51)
+- Le code de support est toujours égal à 3 (eau) selon les informations fournies par l'API. (#51)
+- La station BSS000LGJB a 21 347 mesures disponibles, nécessitant une pagination avec des tranches de 10 000 éléments. (#57)
+- L'API Piézométrie ne permet pas actuellement de filtrer les stations ou chroniques par code réseau de mesure, bien que les données des réseaux soient présentes dans l'index interne (liste_code_reseau, liste_mnemo_reseau, liste_nom_reseau). (#63)
+- Dans l'API Qualité des nappes, le paramètre 'code_reseau' est absent pour la requête 'stations', mais disponible pour 'analyses'. (#63)
+- Les réseaux de mesure (ex: 0400000020) sont associés à des stations via des codes réseau, et ces informations sont déjà stockées dans l'index Hub'Eau. (#63)
+- Le réseau 0400000020 (Bretagne, MO BRGM) est régulièrement intégré dans les données ADES et consultable via une fiche publique. (#63)
+- Le paramètre '_format' permet d'obtenir du GeoJSON via les URLs API, mais cette fonctionnalité n'est pas systématiquement implémentée sur toutes les APIs. (#149)
+- Les couches chargées dans QGIS via les APIs sont limitées à 20000 entités sans automatisation des échanges de données. (#149)
+- Le format GeoJSON n'est pas implémenté sur l'endpoint 'analyses' de l'API Qualité des nappes. L'utilisation de 'format=geojson' retourne un format JSON au lieu de GeoJSON. (#186)
+- L'API Qualité des nappes ne fournit pas actuellement des informations sur les années de mesure, les producteurs ou les paramètres analysés pour chaque station. (#204)
+- Un endpoint _parametres_ est en cours de développement pour les APIs de qualité (rivières et nappes) afin d'optimiser les requêtes. (#204)
+- L'absence de données sur les années de mesure et les producteurs oblige les utilisateurs à effectuer des requêtes supplémentaires pour identifier les stations pertinentes. (#204)
+- L'API Hub'eau ne permet pas de filtrer directement les données par critère PFAS, uniquement par groupe de paramètres. (#217)
+- Les paramètres PFAS sont gérés par le référentiel analytique Sandre et l'organisme Aquaref, et non directement disponibles via l'API Hub'eau. (#217)
+- L'API Hub'Eau ne fournit pas de méthode de calcul automatisée pour agréger les concentrations de polluants mesurées par plusieurs stations sur une journée donnée. (#220)
+- La concentration journalière globale d'un paramètre comme le métolachlore ESA nécessite une approche métier spécifique, non standardisée par l'API, et dépend des besoins opérationnels (ex: moyenne, interpolation spatiale). (#220)
+- Les données de qualité de l'eau (paramètres chimiques) sont collectées par des stations hétérogènes en termes de localisation et de fréquence de mesure, ce qui complique l'agrégation temporelle/spatiale. (#220)
+- L'API est fréquemment inaccessible (4 à 5 heures de downtime 1 à 3 fois par semaine) en raison de sollicitations massives et intensives. (#231)
+- La réponse technique mentionne un possible blocage d'IP si le problème persiste. (#231)
+- L'utilisateur effectue des requêtes régulières et lourdes depuis plusieurs mois sur l'API. (#231)
+- L'API Qualité des nappes ne transmet pas le champ 'heure de prélèvement' provenant de la source ADES. (#235)
+- L'absence de l'heure de prélèvement empêche la comparaison précise avec les données de SISE-EAUX (ARS). (#235)
+- Plusieurs prélèvements sur la même station le même jour sont fusionnés sans l'heure, perdant leur distinction. (#235)
+- L'heure est nécessaire pour la traçabilité et la reconstitution des séries de mesures. (#235)
+- Les coordonnées des captages d'eau potable sont remplacées par celles du chef-lieu de la commune dans les endpoints _Analyses_ et _Stations_ de l'API Qualité des nappes. (#270)
+- Le champ `precision_coordonnees` utilise la valeur 18 pour indiquer que les coordonnées sont floutées (code Sandre 916). (#270)
+- La réglementation française et européenne impose le floutage des coordonnées des captages d'eau potable pour protéger leur localisation. (#270)
+- Les coordonnées floutées peuvent affecter l'analyse spatiale des données hydrologiques liées aux captages. (#270)
 
 ### Historique des problèmes résolus
 
-- ~~L'opération `qualite_nappes/stations` de l'API Qualité des nappes permet de récupérer des informations détaillées sur un point d'eau à partir de son code BSS. (#10)~~
-- ~~L'API Qualité des nappes fournit des informations complètes sur les points d'eau de type qualitomètre, incluant des données géographiques, administratives et hydrogéologiques (ex: masses d'eau, entités BDLISA). (#10)~~
-- ~~L'API Piézométrie fournissait, au moment de l'issue, moins d'informations sur les points d'eau (notamment les masses d'eau) que l'API Qualité des nappes. (#10)~~
-- ~~Un code BSS (BSS_ID) identifie un point d'eau souterraine et peut être utilisé pour interroger ses caractéristiques. (#10)~~
-- ~~Les points d'eau souterraine sont associés à des masses d'eau (codes_masse_eau_rap, codes_masse_eau_edl) et des entités hydrogéologiques BDLISA. (#10)~~
-- ~~Les données de qualité des eaux souterraines proviennent de la base ADES. (#10)~~
-- ~~L'API Qualité des nappes a rencontré un bug où l'attribut `count` variait pour une même requête. (#14)~~
-- ~~Ce problème était dû à une désynchronisation des multiples copies de données utilisées par Hub'Eau pour augmenter la sécurité et les temps de réponse. (#14)~~
-- ~~Le problème de désynchronisation des données a été corrigé par l'équipe Hub'Eau, assurant des résultats consistants. (#14)~~
-- ~~L'attribut 'next' de la pagination est généré avec une URL même lorsque la page de données est vide, contrairement à la documentation qui indique 'null'. (#15)~~
-- ~~Ce comportement est lié à des inconsistances dans le 'count' total des résultats renvoyés par l'API. (#15)~~
-- ~~Lorsque le 'count' change sur la dernière page, l'API peut générer un 'next' infini et un 'last' nul. (#15)~~
-- ~~Contournement possible : vérifier que `page * size` ne dépasse pas le 'count' obtenu lors du premier appel. (#15)~~
-- ~~Contournement possible : utiliser de grandes valeurs pour 'size' (5000-20000) pour réduire le nombre de pages et l'impact des inconsistances de 'count'. (#15)~~
-- ~~L'utilisation de très grandes valeurs pour 'size' peut potentiellement entraîner des timeouts. (#15)~~
-- ~~L'API Qualité des nappes peut retourner un nombre total de résultats (count) incohérent pour une même requête si le paramètre size est modifié. (#42)~~
-- ~~Les données Hub'Eau sont dupliquées sur plusieurs serveurs pour la tolérance aux pannes et l'accélération des réponses. (#42)~~
-- ~~Des désynchronisations d'index entre les serveurs de données peuvent entraîner des incohérences dans les résultats des requêtes (ex: count incorrect). (#42)~~
-- ~~La résolution des problèmes de désynchronisation d'index implique une ré-indexation complète des données. (#42)~~
-- ~~Les stations de suivi des nappes sont identifiées par un bss_id (code BSS). (#42)~~
-- ~~Les analyses de qualité des nappes peuvent être filtrées par code_param. (#42)~~
-- ~~L'API Hub'Eau Qualité des nappes (endpoint /analyses) dispose d'un filtre `date_debut_prelevement` qui permet de récupérer les analyses dont la date de début de prélèvement est égale ou postérieure à la date spécifiée. (#52)~~
-- ~~Les filtres `date_max_maj` et `date_min_maj` de l'API Qualité des nappes se réfèrent à la date de mise à jour des données et non à la date de prélèvement. (#52)~~
-- ~~L'API Qualité des nappes ne propose pas de filtres `date_debut_prelevement_min` ou `date_debut_prelevement_max`. (#52)~~
-- ~~Il est possible de filtrer les données de qualité des eaux souterraines par la date de début de prélèvement pour n'obtenir que les données les plus récentes ou celles d'une période spécifique. (#52)~~
-- ~~La multiplication des paramètres `page` et `size` dans les requêtes Hub'Eau ne peut excéder 20 000 enregistrements (profondeur d'accès aux résultats). (#57)~~
-- ~~Dépasser la limite `page * size > 20000` entraîne une erreur `InvalidRequest` avec le code `ValidatePageDepth`. (#57)~~
-- ~~Cette limite est imposée pour ne pas surcharger le serveur. (#57)~~
-- ~~Pour récupérer plus de 20 000 enregistrements, il faut découper la requête en utilisant des critères plus discriminants, comme `date_debut_prelevement`. (#57)~~
-- ~~L'API peut retourner des URLs erronées dans les attributs 'last' et 'next' lorsque la limite `page * size` est dépassée. (#57)~~
-- ~~Certaines stations (ex: BSS000LGJB) peuvent avoir un très grand nombre de mesures (plus de 20 000). (#57)~~
-- ~~L'API qualite_nappes pouvait retourner un nombre variable d'enregistrements pour une même requête exécutée à quelques secondes d'intervalle. (#79)~~
-- ~~L'anomalie de consistance des résultats pour l'API qualite_nappes a été corrigée. (#79)~~
-- ~~L'API Hub'Eau ne traitait pas correctement les paramètres de requête avec plusieurs valeurs séparées par des virgules (ex: code_bss=val1,val2) pour l'endpoint niveaux_nappes/chroniques de l'API Piézométrie. (#132)~~
-- ~~Ce dysfonctionnement était une régression suite à une migration technique réalisée en décembre 2022. (#132)~~
-- ~~La même anomalie affectait l'endpoint _analyses_ de l'API Qualité des nappes d'eau souterraines et les endpoints 'stations' de diverses APIs. (#132)~~
-- ~~Une solution de contournement temporaire était d'effectuer des appels API séparés pour chaque valeur unitaire. (#132)~~
-- ~~L'anomalie a été corrigée en mars 2023, et la recherche avec plusieurs valeurs séparées par des virgules est de nouveau fonctionnelle. (#132)~~
-- ~~Le paramètre code_bss est utilisé pour filtrer les chroniques piézométriques. (#132)~~
-- ~~Les endpoints 'stations' permettent de lister les points de mesure selon des critères comme la masse d'eau ou le département. (#132)~~
-- ~~Le package R `hubeau` version 0.4.0 est disponible sur le CRAN. (#137)~~
-- ~~Le package `hubeau` permet de requêter 10 des 12 APIs Hub'Eau. (#137)~~
-- ~~La syntaxe des fonctions de requête du package `hubeau` est `get_[API]_[Operation](champ1 = valeur1, champ2 = valeur2...)`. (#137)~~
-- ~~Le package `hubeau` est documenté avec des exemples d'utilisation et des vignettes. (#137)~~
-- ~~Le code source du package `hubeau` est disponible sur GitHub à l'adresse `https://github.com/inrae/hubeau`. (#137)~~
-- ~~Les éléments descriptifs du package R `hubeau` ont été ajoutés à la page de réutilisations GitHub du projet Hub'eau (`https://github.com/BRGM/hubeau/tree/master/re-utilisations`) et non sur le site éditorial. (#137)~~
-- ~~Le package R `hubeau` couvre les APIs suivantes : Écoulement des cours d'eau, Hydrométrie, Indicateurs des services, Piézométrie, Poisson, Prélèvements en eau, Qualité de l'eau potable, Qualité des nappes d'eau souterraines, Température des cours d'eau. (#137)~~
-- ~~L'OFB DR Normandie utilise le package R `hubeau` pour réaliser un rapport de situation mensuelle de l'écoulement des cours d'eau des bassins versants bretons. (#137)~~
-- ~~Une vignette du package `hubeau` propose une application sur l'API Écoulement, incluant la réalisation de cartes et de graphiques synthétiques. (#137)~~
-- ~~Le paramètre _format_=geojson permet d'obtenir des données au format GeoJSON via les API Hub'Eau. (#149)~~
-- ~~Le format GeoJSON n'est pas implémenté pour toutes les API Hub'Eau ; dans ce cas, la syntaxe _format_=geojson retourne des données au format JSON standard. (#149)~~
-- ~~Seules les données GeoJSON diffusées par certaines API Hub'Eau peuvent être chargées directement dans QGIS. (#149)~~
-- ~~Sans automatisation des échanges de données, les couches chargées dans QGIS sont limitées à 20 000 entités. (#149)~~
-- ~~L'utilisation des API Hub'Eau avec QGIS est un cas d'usage pour l'intégration de données hydrologiques dans un SIG. (#149)~~
-- ~~Les données de qualité des nappes peuvent être filtrées par numéro de département (ex: num_departement=23). (#149)~~
-- ~~L'argument 'fields' de l'API Qualité des nappes (endpoint /analyses) est une fonctionnalité expérimentale. (#214)~~
-- ~~L'argument 'fields' de l'API Qualité des nappes (endpoint /analyses) nécessite l'utilisation des noms de champs exacts pour être pris en compte. (#214)~~
-- ~~Des noms de champs incorrects (ex: 'code_parametre', 'resultat_numerique', 'date_prelevement') entraînent l'ignorance de l'argument 'fields' et le retour de toutes les données. (#214)~~
-- ~~Les noms de champs corrects pour l'exemple donné sont 'code_param', 'resultat' et 'date_debut_prelevement'. (#214)~~
-- ~~Les APIs Hub'Eau ne fournissent pas de concentrations journalières agrégées à l'échelle départementale pour des paramètres spécifiques comme le métolachlore ESA. (#220)~~
-- ~~Le rôle de Hub'Eau est de donner accès aux données brutes ou semi-brutes, et non de fournir des analyses hydrologiques complexes ou des agrégations de données à l'échelle départementale. (#220)~~
-- ~~L'estimation d'une concentration journalière globale pour un paramètre (ex: métolachlore ESA) sur un département entier à partir de mesures de stations multiples nécessite une méthodologie spécifique. (#220)~~
-- ~~La simple moyenne des concentrations mesurées par toutes les stations un jour donné n'est pas nécessairement la méthode la plus pertinente pour estimer une concentration départementale globale. (#220)~~
-- ~~Pour les questions méthodologiques concernant l'interprétation et l'agrégation des données de qualité de l'eau (eaux souterraines ou superficielles), il convient de contacter directement les équipes expertes d'Ades (eaux souterraines) ou de Naïades (eaux superficielles). (#220)~~
-- ~~L'API Qualité des nappes peut être fréquemment inaccessible (1 à 3 fois par semaine) pendant plusieurs heures (4 à 5 heures). (#231)~~
-- ~~Des sollicitations intensives et des collectes massives de données à un rythme soutenu dégradent les performances de l'API Qualité des nappes. (#231)~~
-- ~~Hub'Eau peut bloquer des adresses IP en cas de sollicitations excessives dégradant l'API. (#231)~~
-- ~~L'API Qualité des nappes est utilisée pour des requêtes 'lourdes' et longues à exécuter. (#231)~~
-- ~~Le changelog de l'API Qualité des nappes pour la version 1.3.0 était initialement manquant. (#269)~~
-- ~~La documentation de l'API Qualité des nappes a été mise à jour pour inclure les changements de la version 1.3.0. (#269)~~
-- ~~La version 1.3.0 de l'API Qualité des nappes introduit le floutage des coordonnées des captages AEP. (#269)~~
-- ~~Le floutage des coordonnées des captages AEP s'effectue au niveau du chef-lieu de la commune. (#269)~~
-- ~~L'API Hub'Eau 'Qualité des nappes' peut subir des chargements partiels de données depuis ADES suite à des anomalies dans les traitements d'alimentation. (#271)~~
-- ~~Ces anomalies peuvent entraîner une sous-estimation significative du nombre d'analyses disponibles via l'API par rapport à la source ADES. (#271)~~
-- ~~Les problèmes de volumétrie sont généralement résolus après correction des traitements d'alimentation. (#271)~~
-- ~~Les données de qualité des nappes de Hub'Eau sont issues du système ADES. (#271)~~
-- ~~Les points de mesure des nappes sont identifiés par un code BSS (ex: BSS000JGAH). (#271)~~
-- ~~La volumétrie des analyses pour un point BSS peut évoluer dans le temps (ex: pour BSS000JGAH, de 80 000 à plus de 100 000 analyses en un an). (#271)~~
+- ~~Un point BSS peut être associé à une masse d'eau via des codes comme 'codes_masse_eau_rap' et 'noms_masse_eau_rap'. (#10)~~
+- ~~Les données incluent des informations géographiques (longitude, latitude) et administratives (code INSEE, nom de commune). (#10)~~
+- ~~L'API Qualité des nappes présentait une désynchronisation entre les copies de données, entraînant des variations aléatoires du nombre de résultats (attribut count) pour les mêmes paramètres de requête. (#14)~~
+- ~~La duplication des données sur plusieurs serveurs peut entraîner une désynchronisation des index, provoquant des incohérences dans les résultats de l'API (ex. : count différent selon la valeur du paramètre size). (#42)~~
+- ~~L'API Qualité des nappes permet de filtrer les données par la date de prélèvement via le paramètre 'date_debut_prelevement'. (#52)~~
+- ~~L'API impose une limite de 20 000 enregistrements par requête (page * size), ce qui empêche la récupération de plus de 20 000 résultats même si la pagination suggère une page supérieure. (#57)~~
+- ~~Une erreur 'InvalidRequest' est retournée dès que le produit de 'page' et 'size' dépasse 20 000. (#57)~~
+- ~~L'API qualité-nappes présentait une instabilité dans le nombre de résultats renvoyés pour des requêtes identiques, due à un bug corrigé. (#79)~~
+- ~~L'argument 'fields' de l'API ne filtre pas les résultats comme prévu si les noms des champs ne correspondent pas exactement aux noms attendus par l'API (ex. 'code_parametre' doit être 'code_param') (#214)~~
+- ~~La version 1.3.0 de l'API a introduit un floutage des coordonnées des captages AEP (eau potable) pour protéger la localisation précise des sources. (#269)~~
+- ~~Le floutage des coordonnées des captages AEP réduit la précision géospatiale des données, impactant les analyses de proximité ou de vulnérabilité des nappes phréatiques. (#269)~~
+- ~~Un problème de chargement partiel des données a été identifié dans l'alimentation de Hub'Eau à partir des données ADES, entraînant une sous-estimation temporaire du nombre d'analyses renvoyées par l'API. (#271)~~
 
 ### Issues sources
 
-- **#10** caractéristiques hydrogéologiques  — L'API Qualité des nappes permet de récupérer des informations hydrogéologiques détaillées pour un code BSS, incluant les masses d'eau, contrairement à l'API Piézométrie qui était plus limitée à l'époque de l'issue. `[résolu]`
-- **#14** [API Qualité des nappes d'eau souterraine] Nombre de résultats aléatoire — L'API Qualité des nappes a connu un bug où l'attribut `count` variait pour une même requête à cause d'une désynchronisation des copies de données, problème qui a été résolu. `[résolu]`
-- **#15** L'attribut 'next' est toujours généré même sans page suivante — L'API Hub'Eau génère un attribut 'next' non nul même sans page suivante, un comportement lié à des inconsistances de comptage, avec des contournements possibles. `[résolu]`
-- **#42** [API Qualité Nappe] — Cette issue révèle que l'API Qualité des nappes peut présenter des incohérences dans le count des résultats dues à des désynchronisations d'index entre les serveurs de données, résolues par une ré-indexation. `[résolu]`
-- **#51** API Qualité eau souterraine — L'API Qualité des nappes ne fournit pas les champs 'laboratoire', 'préleveur' ni le 'support de l'analyse', ce dernier pouvant être reconstitué via le 'code fraction' et étant généralement 'eau' (code 3). `[information]`
-- **#52** API Qualité eau souterraine — L'API Hub'Eau Qualité des nappes permet de filtrer les analyses par date de début de prélèvement (`date_debut_prelevement`) pour récupérer les données postérieures à une date donnée, évitant ainsi de télécharger tout l'historique. `[résolu]`
-- **#57** [API qualite_nappes] Erreur avec la dernière page — L'API Hub'Eau `qualite_nappes` (et potentiellement d'autres) impose une limite de 20 000 enregistrements pour le produit `page * size`, nécessitant de découper les requêtes volumineuses avec des critères plus discriminants. `[résolu]`
-- **#63** [API Piezométrie] Ajout d'un filtre par code réseau de mesure — L'API Piézométrie et l'API Qualité des nappes ne permettaient pas de filtrer par code réseau de mesure pour les stations, bien que l'information soit présente dans l'index sous-jacent et que la Qualité des nappes permette de filtrer par nom de réseau. `[information]`
-- **#79** [api-qualite-nappes] nombre de résultats différents avec la même requête — L'API qualité-nappes présentait une anomalie où le nombre de résultats variait pour une même requête, problème qui a été résolu pour garantir la consistance des données. `[résolu]`
-- **#132** API Hub'Eau - Piézométrie — Une régression technique a temporairement empêché l'utilisation de multiples valeurs séparées par des virgules pour certains paramètres (ex: code_bss) sur plusieurs APIs Hub'Eau (Piézométrie, Qualité des nappes, endpoints 'stations'), mais l'anomalie a été corrigée. `[résolu]`
-- **#137** Package R pour requêter les APIs hubeau — Le package R `hubeau` version 0.4.0 est disponible sur le CRAN, permettant de requêter 10 des 12 APIs Hub'Eau avec une syntaxe simplifiée, et est utilisé par l'OFB pour des rapports mensuels sur l'écoulement des cours d'eau. `[résolu]`
-- **#149** Tutoriel utilisation des API avec QGIS information #2 by tvilmus was closed on Jul 5, 2022 — Cette issue explique comment obtenir des données GeoJSON via les API Hub'Eau en utilisant le paramètre _format_ pour une intégration dans QGIS, tout en précisant les limitations de ce format et du volume de données. `[résolu]`
-- **#186** [API Qualité des nappes d'eau souterraines] Problème de connexion sur QGIS — Le endpoint `/analyses` de l'API Hub'Eau Qualité des nappes d'eau souterraines ne supporte pas le format GeoJSON et retourne du JSON même si le paramètre `format=geojson` est spécifié. `[information]`
-- **#204** [API Qualité des nappes d'eau souterraines] Ajout d'élément à la liste des stations de mesure — L'issue met en évidence le besoin de métadonnées (années, producteurs, paramètres) pour les stations de qualité des nappes afin d'optimiser les requêtes et contourner la limite de 20 000 résultats, et Hub'Eau prévoit un nouveau endpoint "_parametres" pour les APIs de qualité, d'abord sur les cours d'eau. `[en_cours]`
-- **#210** [API Qualité des nappes d'eau souterraines] Filtre par code réseau et endpoint réseau — L'API Qualité des nappes d'eau souterraines ne permet pas de filtrer par code réseau, seulement par nom de réseau, et une évolution est demandée pour ajouter ce filtre. `[en_cours]`
-- **#214** [API Qualité des nappes] - argument fields non pris en compte (fonctionnalité expérimentale) — L'argument 'fields' de l'API Hub'Eau Qualité des nappes (endpoint /analyses) est une fonctionnalité expérimentale qui requiert l'utilisation des noms de champs exacts pour fonctionner correctement. `[résolu]`
-- **#220** Question sur le calcul de la concentration journalière du métolachlore ESA du departement de Finistère de toutes les stations present. — Hub'Eau ne fournit pas de concentrations journalières agrégées à l'échelle départementale et redirige vers Ades ou Naïades pour les questions méthodologiques d'interprétation des données de qualité de l'eau. `[résolu]`
-- **#231** [API Qualité des Nappes] Données fréquemment inaccessibles — L'API Qualité des nappes subit des indisponibilités fréquentes et des dégradations de performance dues à des sollicitations intensives, pouvant entraîner des blocages d'IP. `[résolu]`
-- **#235** [API Qualité des Nappes] Manque du champ “heure de prélèvement” dans les données venant de ADES — L'API Hub'Eau 'Qualité des Nappes' ne fournit pas le champ "heure de prélèvement" des données ADES, ce qui limite la comparaison avec SISE-EAUX, la différenciation des prélèvements journaliers et la traçabilité des mesures. `[en_cours]`
-- **#269** [API Qualité des nappes d'eau souterraine] - changelog manquant sur la 1.3.0 — La version 1.3.0 de l'API Qualité des nappes a introduit le floutage des coordonnées des captages AEP au niveau du chef-lieu de la commune, et la documentation a été mise à jour pour refléter ce changement. `[résolu]`
-- **#270** [API Qualité des Nappes] Floutage des coordonnées de captages — L'API Qualité des nappes floute désormais les coordonnées des captages d'eau potable, les remplaçant par celles du chef-lieu de la commune, et un champ 'precision_coordonnees' indique l'état de floutage. `[information]`
-- **#271** [Qualité des nappes] Incohérence de volumétrie entre Hub'Eau et ADES — L'API Hub'Eau 'Qualité des nappes' a rencontré une incohérence de volumétrie de données pour la station BSS000JGAH due à une anomalie dans les traitements d'alimentation depuis ADES, mais la situation a été rétablie. `[résolu]`
+- **#10** caractéristiques hydrogéologiques  (2018-10-08) — L'API Qualité des nappes permet de récupérer des caractéristiques hydrogéologiques via un code BSS, y compris les masses d'eau associées.
+- **#14** [API Qualité des nappes d'eau souterraine] Nombre de résultats aléatoire (2019-02-06) — L'API Qualité des nappes a eu un problème de désynchronisation des données corrigé en 2019, affectant la fiabilité des résultats retournés.
+- **#15** L'attribut 'next' est toujours généré même sans page suivante (2018-12-18) — L'API Hub'Eau génère incorrectement l'attribut 'next' lorsqu'il n'y a pas de page suivante, affectant la navigation paginée des résultats.
+- **#42** [API Qualité Nappe] (2020-08-19) — Un bug lié à la désynchronisation des index entre serveurs a été corrigé par une re-indexation complète, résolvant les incohérences de count dans l'API Qualité des nappes.
+- **#51** API Qualité eau souterraine (2021-02-04) — L'API Qualité des nappes ne fournit pas les informations sur le laboratoire, le préleveur et le code de support, ce qui limite les métadonnées disponibles pour les utilisateurs.
+- **#52** API Qualité eau souterraine (2021-02-09) — L'API Qualité des nappes inclut un filtre 'date_debut_prelevement' pour sélectionner les analyses selon la date de prélèvement, résolvant le besoin initial d'accéder aux dernières données sans récupérer l'ensemble de l'historique.
+- **#57** [API qualite_nappes] Erreur avec la dernière page (2021-04-08) — L'API Qualité des nappes limite les requêtes à 20 000 résultats maximum, nécessitant des appels fractionnés pour accéder à l'intégralité des données.
+- **#63** [API Piezométrie] Ajout d'un filtre par code réseau de mesure (2021-08-31) — Demande d'ajout d'un filtre par code réseau de mesure dans l'API Piézométrie, avec mention de la disponibilité des données réseau dans l'index interne et d'une limitation actuelle dans l'API Qualité des nappes.
+- **#79** [api-qualite-nappes] nombre de résultats différents avec la même requête (2022-07-21) — Une instabilité dans le nombre de résultats de l'API qualité-nappes a été corrigée, garantissant désormais des résultats cohérents pour des requêtes identiques.
+- **#149** Tutoriel utilisation des API avec QGIS information #2 by tvilmus was closed on Jul 5, 2022 (2023-12-15) — Les utilisateurs doivent utiliser le paramètre '_format=geojson' dans les URLs API pour obtenir des données GeoJSON compatibles avec QGIS, tout en étant conscients des limitations de format et de volume de données.
+- **#186** [API Qualité des nappes d'eau souterraines] Problème de connexion sur QGIS (2024-09-05) — L'endpoint 'analyses' de l'API Qualité des nappes ne prend pas en charge le format GeoJSON, contrairement à d'autres endpoints comme celui des stations.
+- **#204** [API Qualité des nappes d'eau souterraines] Ajout d'élément à la liste des stations de mesure (2024-12-12) — L'issue demande l'ajout de métadonnées (années, producteurs, paramètres) pour les stations de mesure de la Qualité des nappes afin d'améliorer l'efficacité des requêtes API.
+- **#214** [API Qualité des nappes] - argument fields non pris en compte (fonctionnalité expérimentale) (2025-02-17) — L'API Qualité des nappes nécessite l'utilisation de noms de champs précis pour le paramètre 'fields', comme 'code_param' au lieu de 'code_parametre'.
+- **#217** Absence de data PFAS de la platforme https://pdh.cnrs.fr/fr/datasets/ france_naiades sur hub'eau (2025-05-14) — L'API Hub'eau ne permet pas de sélectionner directement les données PFAS, nécessitant des requêtes supplémentaires par groupe de paramètres et une consultation externe pour les détails des paramètres.
+- **#220** Question sur le calcul de la concentration journalière du métolachlore ESA du departement de Finistère de toutes les stations present. (2025-05-14) — L'issue met en évidence l'absence de méthode standardisée dans l'API Hub'Eau pour calculer des concentrations journalières agrégées de polluants, nécessitant une consultation directe des organismes gestionnaires (Ades/Naïades).
+- **#231** [API Qualité des Nappes] Données fréquemment inaccessibles (2025-05-06) — L'API Qualité des nappes subit des downtimes récurrents en raison de sollicitations massives, affectant sa disponibilité.
+- **#235** [API Qualité des Nappes] Manque du champ “heure de prélèvement” dans les données venant de ADES (2025-06-02) — L'API Qualité des nappes manque le champ 'heure de prélèvement' provenant de ADES, limitant la précision des analyses et la comparaison avec d'autres sources de données.
+- **#269** [API Qualité des nappes d'eau souterraine] - changelog manquant sur la 1.3.0 (2026-02-02) — La mise à jour 1.3.0 de l'API Qualité des nappes implémente un floutage des coordonnées des captages AEP pour des raisons de sécurité.
+- **#270** [API Qualité des Nappes] Floutage des coordonnées de captages (2026-02-02) — L'API Qualité des nappes floute les coordonnées des captages d'eau potable en les remplaçant par celles du chef-lieu de la commune, avec un indicateur de précision spécifique.
+- **#271** [Qualité des nappes] Incohérence de volumétrie entre Hub'Eau et ADES (2026-02-09) — Une incohérence de volumétrie entre Hub'Eau et ADES pour une station a été résolue après une anomalie de chargement des données, maintenant les résultats alignés.
 
 </details>

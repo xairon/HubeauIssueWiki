@@ -1,24 +1,27 @@
 # Phytopharmaceutiques
 
-> 3 issues analysées
+> 2 issues analysées
 
 ## Guide
 
-### Comportement actuel
+### Comportement actuel  
+L'API 'Vente et achat de produits phytopharmaceutiques' (version 1) fournit des données sur les quantités de produits phytopharmaceutiques vendus (2008-2023) et achetés (2013-2023), regroupées à plusieurs niveaux géographiques (France, région, département, zone postale). Les données sont accessibles via des endpoints distincts pour les ventes et les achats, en format JSON. La pagination est nécessaire pour les grandes périodes, et les paramètres clés incluent l'année, le niveau géographique et le type de produit (#201, #232).  
 
-L'API Hub'Eau "Vente et achat de produits phytopharmaceutiques" est en ligne en version 1 (#201) et sa documentation est accessible via le portail Hub'Eau. Elle expose des données ouvertes sur les quantités de produits et substances actives vendues et achetées. Les données de ventes couvrent la période de 2008 à 2023 inclus, tandis que celles des achats s'étendent de 2013 à 2023 (#232). Les données de ventes sont disponibles aux niveaux France entière, région et département, et celles des achats incluent en plus le regroupement par zone postale (#232). L'actualisation des données s'effectue par remplacement intégral, avec une rétroactivité possible sur les trois dernières années (#232).
+### Pièges à éviter  
+Les données sont mises à jour par remplacement intégral, ce qui peut rendre les anciennes versions inaccessibles. Les utilisateurs doivent vérifier la rétroactivité des trois dernières années pour éviter des lacunes. De plus, les niveaux géographiques diffèrent entre ventes (3) et achats (4), ce qui peut compliquer les analyses croisées.  
 
-### Pièges à éviter
+### Bonnes pratiques  
+Utilisez toujours les paramètres de regroupement géographique les plus précis possibles pour éviter une perte d'information. Vérifiez régulièrement les mises à jour de 2023 pour bénéficier des dernières données. Complétez les analyses avec des contextes métiers, comme la redevance pour pollutions diffuses, pour mieux interpréter les quantités de substances actives.  
 
+### Contexte métier  
+Les données servent à calculer la redevance pour pollutions diffuses, liée aux usages agricoles de produits phytopharmaceutiques. Les agences de l'eau collectent les déclarations annuelles des distributeurs, puis l'Office français de la biodiversité bancarise ces données. Les substances actives sont des composants chimiques responsables de la pollution, et leurs quantités influencent les redevances.  
+
+### Évolutions récentes  
+- **2025-05-09** : Mise en ligne des données 2023, avec des niveaux géographiques étendus (4 pour les achats) et une rétroactivité sur trois ans (#232).  
+- **2024-11-25** : Lancement de la version 1 de l'API, couvrant les ventes depuis 2008 et les achats depuis 2013 (#201).  
+
+### Historique notable  
 *Rien de notable.*
-
-### Bonnes pratiques
-
-*Rien de notable.*
-
-### Contexte métier
-
-Cette API diffuse des données ouvertes sur les ventes et achats de produits phytopharmaceutiques, issues des déclarations annuelles des distributeurs agréés (#201). Ces informations sont cruciales car elles sont collectées par les agences de l'eau pour le calcul de la redevance pour pollutions diffuses (#201). L'ensemble de ces données est centralisé et bancarisé par l'Office français de la biodiversité (OFB) au sein de la Banque Nationale des Ventes de produits phytopharmaceutiques (BNV-D) Traçabilité (#201, #232).
 
 ---
 
@@ -27,36 +30,18 @@ Cette API diffuse des données ouvertes sur les ventes et achats de produits phy
 
 ### Faits actuels
 
-- La version 1 de l'API vente et achat de produits phytopharmaceutiques est en ligne. (#201)
-- La documentation de l'API est disponible à l'adresse https://hubeau.eaufrance.fr/page/api-vente-et-achat-de-produits-phytopharmaceutiques. (#201)
-- L'API diffuse des données ouvertes sur les ventes et achats de produits phytopharmaceutiques. (#201)
-- Les données proviennent des déclarations annuelles des distributeurs agréés. (#201)
-- Les données incluent les quantités de produits et de substances actives vendues ou achetées. (#201)
-- Les données de ventes sont disponibles depuis 2008. (#201)
-- Les données d'achats sont disponibles depuis 2013. (#201)
-- Les données sont collectées par les agences de l'eau pour la redevance pour pollutions diffuses. (#201)
-- Les données sont bancarisées par l'Office français de la biodiversité dans la Banque Nationale des Ventes de produits phytopharmaceutiques (BNV-D) Traçabilité. (#201)
-- C'est la treizième API Hub'eau. (#201)
-- L'actualisation des données de l'API Vente et achat de produits phytopharmaceutiques se fait par remplacement intégral. (#232)
-- Une rétroactivité est possible sur les trois dernières années lors de l'actualisation des données de l'API Vente et achat de produits phytopharmaceutiques. (#232)
-- Les données 2023 issues de la banque nationale BNV-D Traçabilité sont désormais exposées par l'API Hub’eau Vente et achat de produits phytopharmaceutiques. (#232)
-- Les données de ventes de produits phytopharmaceutiques couvrent la période de 2008 à 2023 inclus. (#232)
-- Les données de ventes de produits phytopharmaceutiques sont proposées avec les niveaux de regroupement France entière, région et département. (#232)
-- Les données d'achats de produits phytopharmaceutiques couvrent la période de 2013 à 2023 inclus. (#232)
-- Les données d'achats de produits phytopharmaceutiques sont proposées avec les niveaux de regroupement France entière, région, département et zone postale. (#232)
-
-### Historique des problèmes résolus
-
-- ~~Les APIs Hub'Eau ne fournissent pas de concentrations journalières agrégées à l'échelle départementale pour des paramètres spécifiques comme le métolachlore ESA. (#220)~~
-- ~~Le rôle de Hub'Eau est de donner accès aux données brutes ou semi-brutes, et non de fournir des analyses hydrologiques complexes ou des agrégations de données à l'échelle départementale. (#220)~~
-- ~~L'estimation d'une concentration journalière globale pour un paramètre (ex: métolachlore ESA) sur un département entier à partir de mesures de stations multiples nécessite une méthodologie spécifique. (#220)~~
-- ~~La simple moyenne des concentrations mesurées par toutes les stations un jour donné n'est pas nécessairement la méthode la plus pertinente pour estimer une concentration départementale globale. (#220)~~
-- ~~Pour les questions méthodologiques concernant l'interprétation et l'agrégation des données de qualité de l'eau (eaux souterraines ou superficielles), il convient de contacter directement les équipes expertes d'Ades (eaux souterraines) ou de Naïades (eaux superficielles). (#220)~~
+- L'API 'Vente et achat de produits phytopharmaceutiques' est désormais disponible en version 1 sur la plateforme Hub'Eau. (#201)
+- Les données proviennent des déclarations annuelles des distributeurs agréés, collectées par les agences de l'eau et bancarisées par l'Office français de la biodiversité. (#201)
+- Les données couvrent les ventes depuis 2008 et les achats depuis 2013, utilisées pour calculer la redevance pour pollutions diffuses. (#201)
+- Les données décrivent les quantités de produits et de substances actives vendues ou achetées à l'échelle nationale. (#201)
+- L'API propose des données avec des niveaux de regroupement géographique differents pour les ventes (3 niveaux) et les achats (4 niveaux) (#232)
+- Les données ont été mises à jour par remplacement intégral avec rétroactivité possible sur les trois dernières années (#232)
+- Les données de ventes couvrent la période 2008-2023 avec regroupement à la France, région et département (#232)
+- Les données d'achats couvrent la période 2013-2023 avec regroupement à la France, région, département et zone postale (#232)
 
 ### Issues sources
 
-- **#201** [API vente et achat PPP] mise en ligne de la version 1 — L'API vente et achat de produits phytopharmaceutiques (la treizième API Hub'eau) est en ligne en version 1, offrant des données sur les quantités de produits et substances actives vendues (depuis 2008) et achetées (depuis 2013), issues des déclarations des distributeurs et bancarisées par l'OFB. `[information]`
-- **#220** Question sur le calcul de la concentration journalière du métolachlore ESA du departement de Finistère de toutes les stations present. — Hub'Eau ne fournit pas de concentrations journalières agrégées à l'échelle départementale et redirige vers Ades ou Naïades pour les questions méthodologiques d'interprétation des données de qualité de l'eau. `[résolu]`
-- **#232** [API Vente et achat de PPP] Mise en ligne des données 2023 — L'API Hub'eau Vente et achat de produits phytopharmaceutiques a été mise à jour avec les données 2023, couvrant les ventes de 2008 à 2023 et les achats de 2013 à 2023, avec des niveaux de regroupement géographiques spécifiques et une actualisation par remplacement intégral avec rétroactivité sur 3 ans. `[information]`
+- **#201** [API vente et achat PPP] mise en ligne de la version 1 (2024-11-25) — La version 1 de l'API 'Vente et achat de produits phytopharmaceutiques' est mise en ligne, fournissant des données sur les quantités de produits phytopharmaceutiques depuis 2008 et 2013.
+- **#232** [API Vente et achat de PPP] Mise en ligne des données 2023 (2025-05-09) — Les données de vente et d'achat de produits phytopharmaceutiques pour 2023 sont désormais disponibles via l'API Hub'eau avec des périodes et granularités géographiques spécifiques.
 
 </details>

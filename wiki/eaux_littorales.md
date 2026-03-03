@@ -4,21 +4,26 @@
 
 ## Guide
 
-### Comportement actuel
+### Comportement actuel  
+L'API Surveillance des eaux littorales fournit des données via des endpoints structurés, principalement en format JSON. La pagination est appliquée pour les requêtes volumineuses. Les paramètres clés incluent les codes SANDRE (ex. 0000000104, 0000000105) et les thèmes de données (ex. contaminants chimiques). Les données du réseau ROCCH (code 0000000178) sont désormais accessibles, remplacant l'ancien réseau RNO (#65).  
 
-L'API Hub'Eau "Surveillance des eaux littorales" est principalement conçue pour la diffusion des données de contaminants chimiques. Elle intègre désormais les données du réseau ROCCH (Réseau d'Observation de la Contamination Chimique du milieu marin) - Volet Matière vivante (code 0000000178) (#65). Le paramètre `libelle_lieusurv` est disponible pour effectuer des recherches par nom de lieu de surveillance (#101). L'API a été mise à jour et ne diffuse plus les données obsolètes du réseau RNO (0000000020), interrompu depuis 2008 (#65).
+### Pièges à éviter  
+Les wildcards * ne sont pas supportés dans les champs de type libellé (ex. libelle_lieusurv), limitant les recherches flexibles (#101). L'API ne propose pas l'accès à l'ensemble des données historiques de Quadrige, uniquement celles liées aux contaminants chimiques (#175). Ces limitations peuvent entraîner des résultats incomplets si les utilisateurs ne s'alignent pas sur les codes SANDRE ou les thèmes de données.  
 
-### Pièges à éviter
+### Bonnes pratiques  
+Utilisez des codes SANDRE exacts pour les requêtes, et filtrez par thème (ex. contaminants) pour maximiser la pertinence des résultats. Pour les recherches par libellé, privilégiez les termes complets ou les codes associés. Vérifiez régulièrement les mises à jour des codes SANDRE, car certains anciens (ex. 0800000025) sont obsolètes (#65).  
 
-L'API ne fournit pas l'intégralité des données historiques de la base Quadrige, se concentrant exclusivement sur les contaminants chimiques (#175). Les données de surveillance des eaux littorales qui ne relèvent pas de cette thématique ne sont pas accessibles via l'API et nécessitent l'utilisation de l'outil Surval pour leur consultation ou téléchargement (#175). De plus, les wildcards `*` ne sont pas supportées pour le paramètre `libelle_lieusurv` (#101), ce qui limite les recherches floues par libellé.
+### Contexte métier  
+Les codes SANDRE identifient les réseaux et stations de surveillance. Le réseau RNO (Matière vivante) a été remplacé par ROCCH (code 0000000178) en 2008. Les données de contaminants chimiques sont structurées via des codes spécifiques (ex. 0000000104 pour l'eau). Comprendre ces codes permet d'interpréter correctement les résultats de l'API.  
 
-### Bonnes pratiques
+### Évolutions récentes  
+- **2024-06-07** : L'API limite l'accès aux données historiques de Quadrige aux seuls contaminants chimiques (#175).  
+- **2022-07-05** : Les wildcards * restent partiellement supportés pour les codes hydrométriques, mais pas pour les libellés (#101).  
+- **2021-12-14** : Mise à jour des codes SANDRE pour intégrer ROCCH et corriger les données associées à RNO (#65).  
 
-Pour des recherches efficaces, privilégiez les correspondances exactes pour les paramètres de type 'libellé', comme `libelle_lieusurv`, étant donné l'absence de support des wildcards (#101). Si votre besoin concerne des données de surveillance des eaux littorales autres que les contaminants chimiques, orientez-vous directement vers l'outil Surval de l'Ifremer, qui offre un accès complet à l'historique des données de Quadrige (#175).
-
-### Contexte métier
-
-Les données de surveillance des eaux littorales proviennent de la base Quadrige de l'Ifremer (#175). Il est crucial de comprendre l'évolution des réseaux : le réseau RNO (0000000020) a été interrompu en 2008 et remplacé par le ROCCH (#65). Les codes SANDRE associés au ROCCH ont également évolué, le code 0800000025 étant obsolète au profit des codes 0000000105 (volet Sédiments) et 0000000104 (volet Eau), tandis que le réseau 0000000178 représente spécifiquement le volet Matière vivante du ROCCH (#65). Les APIs Hub'Eau distinguent généralement les champs de recherche par 'libellé' et par 'code' (#101).
+### Historique notable  
+- **2021-12-14** : Correction de l'erreur de diffusion des données liées au réseau RNO, remplacé par ROCCH (code 0000000178) (#65).  
+- **2021-12-14** : Intégration des données du réseau ROCCH via les codes SANDRE 0000000104 et 0000000105, conformément aux recommandations de l'IFREMER (#65).
 
 ---
 
@@ -27,33 +32,22 @@ Les données de surveillance des eaux littorales proviennent de la base Quadrige
 
 ### Faits actuels
 
-- L'utilisation de wildcards `*` dans les paramètres de recherche n'est pas systématiquement implémentée dans les APIs Hub'Eau. (#101)
-- Les wildcards sont disponibles dans certains champs de type code (par exemple, les codes entités de l'API Hydrométrie). (#101)
-- Les wildcards ne sont pas supportées pour le paramètre `libelle_lieusurv` de l'API Surveillance des eaux littorales. (#101)
-- Les APIs Hub'Eau distinguent les champs de type 'libellé' et 'code' pour les paramètres de recherche. (#101)
-- Le paramètre `libelle_lieusurv` permet de rechercher des lieux de surveillance dans l'API Surveillance des eaux littorales. (#101)
+- Le réseau RNO (Matière vivante) a été interrompu en 2008 et remplacé par ROCCH, dont les données sont désormais associées au code SANDRE 0000000178. (#65)
+- Les codes SANDRE 0000000104 (Eau) et 0000000105 (Sédiments) remplacent le code obsolète 0800000025 pour le ROCCH. (#65)
+- Les wildcards * ne sont pas systématiquement implémentés dans les champs de recherche de l'API Surveillance des eaux littorales, notamment pour le paramètre libelle_lieusurv. (#101)
+- Les wildcards * sont disponibles dans certains champs de type code de l'API Hydrométrie (ex. codes entités). (#101)
+- L'API Surveillance des eaux littorales ne diffuse que les données de Quadrige liées aux 'Contaminants chimiques', et non toutes les données historiques disponibles. (#175)
+- Les données historiques pour certains lieux de surveillance (ex. 60007272) ne sont pas accessibles via l'API Hub'eau car elles ne relèvent pas de la thématique 'Contaminants chimiques'. (#175)
 
 ### Historique des problèmes résolus
 
-- ~~L'API Surveillance des eaux littorales diffusait des données récentes (2021) pour le réseau RNO (code 0000000020) qui est interrompu depuis 2008. (#65)~~
-- ~~L'API Surveillance des eaux littorales ne diffuse plus de données associées au réseau 0000000020 (RNO). (#65)~~
-- ~~L'API Surveillance des eaux littorales inclut dorénavant les données du réseau 0000000178 (ROCCH - Volet Matière vivante) pour les contaminants chimiques. (#65)~~
-- ~~Le réseau RNO (Réseau National d'Observation de la qualité du milieu marin - Matière vivante, code 0000000020) est interrompu depuis 2008. (#65)~~
-- ~~Le réseau RNO a été remplacé par le réseau ROCCH (Réseau d’Observation de la Contamination Chimique du milieu marin, code 0800000025). (#65)~~
-- ~~Le code SANDRE 0800000025 (ROCCH) est obsolète et doit être remplacé par 0000000105 (volet Sédiments) et 0000000104 (volet Eau). (#65)~~
-- ~~Le réseau 0000000178 correspond au Réseau d'Observation de la Contamination Chimique du milieu marin (ROCCH) - Volet Matière vivante. (#65)~~
-- ~~L'API Hub'eau Surveillance des eaux littorales ne fournit pas toutes les données historiques de Quadrige, se limitant principalement aux contaminants chimiques. (#175)~~
-- ~~Les données de surveillance des eaux littorales qui ne sont pas des contaminants chimiques ne sont pas disponibles via l'API Hub'eau. (#175)~~
-- ~~Pour accéder aux données de surveillance des eaux littorales hors du périmètre des contaminants chimiques, il est nécessaire d'utiliser les téléchargements de l'outil Surval. (#175)~~
-- ~~Les données de surveillance des eaux littorales sont issues de la base Quadrige de l'Ifremer. (#175)~~
-- ~~L'API Hub'eau Surveillance des eaux littorales couvre principalement la thématique des Contaminants chimiques. (#175)~~
-- ~~L'outil Surval permet de visualiser les données de surveillance des eaux littorales et d'identifier la catégorie des analyses (ex: absence de catégorie 'Contaminants'). (#175)~~
-- ~~Le lieu de surveillance 60007272 (Surval) contient des données historiques de 1991 à 2011 qui ne sont pas des contaminants chimiques. (#175)~~
+- ~~L'API Surveillance du Littoral a corrigé la diffusion de données associées au réseau obsolète 0000000020 (RNO) après mise à jour des données. (#65)~~
+- ~~Les données de contaminants chimiques incluent désormais le réseau 0000000178 (ROCCH - Volet Matière vivante) conformément aux recommandations de l'IFREMER. (#65)~~
 
 ### Issues sources
 
-- **#65** [API Surveillance du littoral] — L'API Surveillance des eaux littorales a été mise à jour pour corriger la diffusion de données obsolètes du réseau RNO (0000000020) et intègre désormais les données de contaminants chimiques du réseau ROCCH (0000000178), clarifiant les codes SANDRE associés. `[résolu]`
-- **#101** Utilisation de Wildcards * dans les recherches (un classic) — Les wildcards `*` ne sont pas systématiquement supportées dans les APIs Hub'Eau, étant limitées à certains champs de type code comme les codes entités de l'API Hydrométrie, mais non disponibles pour les libellés. `[information]`
-- **#175** [API Surveillance des eaux littorales] Récupération des données Quadrige - Historique — L'API Hub'eau Surveillance des eaux littorales ne diffuse qu'une partie des données de Quadrige, principalement les contaminants chimiques, et les données hors de ce périmètre doivent être consultées via l'outil Surval. `[résolu]`
+- **#65** [API Surveillance du littoral] (2021-12-14) — L'API Surveillance du Littoral a corrigé une erreur de diffusion de données associées à un réseau obsolète et intègre désormais les données du réseau ROCCH via un nouveau code SANDRE.
+- **#101** Utilisation de Wildcards * dans les recherches (un classic) (2022-07-05) — Les wildcards * sont partiellement supportés dans certaines APIs de Hub'Eau, notamment pour les codes hydrométriques mais pas pour les libellés de lieux de surveillance littorale.
+- **#175** [API Surveillance des eaux littorales] Récupération des données Quadrige - Historique (2024-06-07) — L'API Surveillance des eaux littorales ne propose pas l'accès à l'ensemble des données historiques de Quadrige, uniquement celles liées aux contaminants chimiques.
 
 </details>
