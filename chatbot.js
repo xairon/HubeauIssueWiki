@@ -8,7 +8,7 @@
   var MIN_SCORE = 0.35;
   var DEDUP_THRESHOLD = 0.6;
   var MAX_HISTORY_TURNS = 4; // 4 exchanges = 8 messages
-  var OLLAMA_HOST = window.OLLAMA_HOST || "http://localhost:11434";
+  var OLLAMA_HOST = window.OLLAMA_HOST || "http://" + window.location.hostname + ":11434";
   var OLLAMA_CHAT_MODEL = "qwen3.5:4b";
   var OLLAMA_EMBED_MODEL = "nomic-embed-text";
   var SESSION_KEY = "hubeau_chat_history";
