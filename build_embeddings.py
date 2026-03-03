@@ -1,7 +1,8 @@
 """Pre-compute embeddings for wiki content using HuggingFace Inference API.
 
-Uses BAAI/bge-small-en-v1.5 (384 dims) — available as Xenova/bge-small-en-v1.5
+Uses intfloat/multilingual-e5-small (384 dims) — available as Xenova/multilingual-e5-small
 in Transformers.js, ensuring vector space compatibility between build-time and browser.
+Requires "passage: " prefix at build time and "query: " prefix at query time.
 """
 
 import json
@@ -15,23 +16,78 @@ WIKI_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "wiki")
 SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "site")
 
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
-HF_MODEL = "BAAI/bge-small-en-v1.5"
+HF_MODEL = "intfloat/multilingual-e5-small"
 HF_API_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}"
-CHUNK_SIZE = 500  # characters per chunk
-CHUNK_OVERLAP = 50
 BATCH_SIZE = 32  # texts per API call
 
 
-def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVERLAP) -> list[str]:
-    """Split text into overlapping chunks."""
+def chunk_section(text: str) -> list[str]:
+    """Split a section into semantic chunks.
+
+    - If section <= 1000 chars: return as a single chunk.
+    - If section > 1000 chars: split at paragraph boundaries (double newline),
+      then single newline, then sentence boundaries as fallback.
+    """
+    text = text.strip()
+    if not text:
+        return []
+    if len(text) <= 1000:
+        return [text]
+
+    # Try splitting by double newline (paragraphs)
+    paragraphs = re.split(r"\n\n+", text)
+    if len(paragraphs) > 1:
+        chunks = []
+        for para in paragraphs:
+            para = para.strip()
+            if not para:
+                continue
+            if len(para) <= 1000:
+                chunks.append(para)
+            else:
+                # Paragraph too large, split by sentences
+                chunks.extend(_split_by_sentences(para))
+        return chunks
+
+    # Try splitting by single newline
+    lines = text.split("\n")
+    if len(lines) > 1:
+        chunks = []
+        current = []
+        current_len = 0
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if current_len + len(line) > 1000 and current:
+                chunks.append("\n".join(current))
+                current = []
+                current_len = 0
+            current.append(line)
+            current_len += len(line) + 1
+        if current:
+            chunks.append("\n".join(current))
+        return chunks
+
+    # Fallback: split by sentences
+    return _split_by_sentences(text)
+
+
+def _split_by_sentences(text: str) -> list[str]:
+    """Split text by sentence boundaries, grouping into chunks <= 1000 chars."""
+    sentences = re.split(r"(?<=[.!?])\s+", text)
     chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunk = text[start:end].strip()
-        if chunk:
-            chunks.append(chunk)
-        start = end - overlap
+    current = []
+    current_len = 0
+    for sent in sentences:
+        if current_len + len(sent) > 1000 and current:
+            chunks.append(" ".join(current))
+            current = []
+            current_len = 0
+        current.append(sent)
+        current_len += len(sent) + 1
+    if current:
+        chunks.append(" ".join(current))
     return chunks
 
 
@@ -187,7 +243,7 @@ def main():
 
         for section in sections:
             text = section["text"]
-            chunks = chunk_text(text)
+            chunks = chunk_section(text)
             for chunk in chunks:
                 all_chunks.append({
                     "text": chunk,
@@ -203,7 +259,7 @@ def main():
     with httpx.Client(timeout=120) as client:
         for i in range(0, len(all_chunks), BATCH_SIZE):
             batch = all_chunks[i:i + BATCH_SIZE]
-            texts = [c["text"] for c in batch]
+            texts = ["passage: " + c["text"] for c in batch]
             embeddings = get_embeddings_batch(texts, client)
 
             for j, emb in enumerate(embeddings):

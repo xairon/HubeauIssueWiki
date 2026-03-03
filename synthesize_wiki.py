@@ -22,7 +22,7 @@ from config import (
 SYNTHESIS_PROMPT = """\
 Tu es un expert en hydrologie et en APIs de données environnementales. Tu rédiges un guide pratique pour les développeurs et data scientists qui utilisent l'API Hub'Eau "{api_name}".
 
-Voici {count} faits extraits de {issue_count} issues GitHub. Chaque fait a un statut (résolu/en_cours/information) et un score de pertinence (1-5).
+Voici {count} faits extraits de {issue_count} issues GitHub. Chaque fait a un statut (résolu/en_cours/information), une date source et un score de pertinence (1-5).
 
 ## Faits bruts
 
@@ -50,11 +50,20 @@ Donne des conseils concrets et actionnables pour bien utiliser l'API. Basé sur 
 
 Explique les concepts hydrologiques ou de données nécessaires pour comprendre et utiliser correctement cette API (codes BSS, SANDRE, types de stations, sources de données, etc.). Ce qui est utile pour un non-spécialiste.
 
+### Évolutions récentes
+
+Changements notables récents concernant cette API, classés par date (du plus récent au plus ancien). Inclus les corrections de bugs, nouvelles fonctionnalités, changements de comportement. Utilise les dates sources des faits pour le classement.
+
+### Historique notable
+
+Problèmes importants qui ont été résolus dans le passé et qu'il est utile de connaître (pour ne pas perdre de temps à les re-diagnostiquer, ou pour comprendre l'évolution de l'API). Mentionne la date de résolution si disponible.
+
 Règles :
 - Écris en français, en prose (pas juste des listes à puces)
 - Sois concis : chaque section fait 3-10 lignes max
 - Ne répète pas les mêmes infos entre sections
-- Si un fait est marqué "résolu", ne le mentionne PAS dans le guide (il ira dans l'archive)
+- Les faits marqués "résolu" vont dans "Historique notable" s'ils sont importants, sinon ils sont ignorés
+- Les faits marqués "en_cours" ou "information" vont dans les sections appropriées (Comportement actuel, Pièges, Bonnes pratiques, Contexte métier)
 - Cite les numéros d'issues entre parenthèses quand c'est pertinent, ex: (#123)
 - Si une section serait vide, écris juste "*Rien de notable.*"
 """
@@ -98,23 +107,33 @@ def group_by_api(facts: list[dict]) -> dict[str, list[dict]]:
     return dict(grouped)
 
 
+def _extract_fact_text(f) -> tuple[str, str]:
+    """Extract (text, statut) from a fact entry (dict or string)."""
+    if isinstance(f, dict):
+        return f.get("fait", ""), f.get("statut", "information")
+    return f, "information"
+
+
 def format_facts_for_synthesis(facts: list[dict]) -> str:
     """Format all facts of an API into text for the synthesis prompt."""
     lines = []
     for fact in sorted(facts, key=lambda f: f.get("issue_number", 0)):
         num = fact.get("issue_number", "?")
         title = fact.get("issue_title", "")
-        statut = fact.get("statut", "information")
+        date_source = fact.get("date_source", "")
         pertinence = fact.get("pertinence", 3)
 
-        lines.append(f"### Issue #{num}: {title} [statut: {statut}, pertinence: {pertinence}/5]")
+        header = f"### Issue #{num}: {title} [date: {date_source}, pertinence: {pertinence}/5]"
+        lines.append(header)
 
         for f in fact.get("faits_techniques", []):
-            if f:
-                lines.append(f"- [TECHNIQUE] {f}")
+            text, statut = _extract_fact_text(f)
+            if text:
+                lines.append(f"- [TECHNIQUE | {statut}] {text}")
         for f in fact.get("faits_metier", []):
-            if f:
-                lines.append(f"- [MÉTIER] {f}")
+            text, statut = _extract_fact_text(f)
+            if text:
+                lines.append(f"- [MÉTIER | {statut}] {text}")
 
         resume = fact.get("resume", "")
         if resume:
@@ -168,19 +187,20 @@ def render_archive(facts: list[dict]) -> str:
 
     for fact in facts:
         issue_ref = f"(#{fact.get('issue_number', '?')})"
-        statut = fact.get("statut", "information")
 
         for f in fact.get("faits_techniques", []):
-            if f:
-                entry = f"{f} {issue_ref}"
+            text, statut = _extract_fact_text(f)
+            if text:
+                entry = f"{text} {issue_ref}"
                 if statut == "résolu":
                     resolved_facts.append(entry)
                 else:
                     current_facts.append(entry)
 
         for f in fact.get("faits_metier", []):
-            if f:
-                entry = f"{f} {issue_ref}"
+            text, statut = _extract_fact_text(f)
+            if text:
+                entry = f"{text} {issue_ref}"
                 if statut == "résolu":
                     resolved_facts.append(entry)
                 else:
@@ -204,8 +224,9 @@ def render_archive(facts: list[dict]) -> str:
         num = fact.get("issue_number", "?")
         title = fact.get("issue_title", "")
         resume = fact.get("resume", "")
-        statut = fact.get("statut", "")
-        lines.append(f"- **#{num}** {title} — {resume} `[{statut}]`")
+        date_source = fact.get("date_source", "")
+        date_label = f" ({date_source})" if date_source else ""
+        lines.append(f"- **#{num}** {title}{date_label} — {resume}")
     lines.append("")
 
     return "\n".join(lines)

@@ -31,23 +31,23 @@ Réponds UNIQUEMENT avec un objet JSON valide (pas de markdown, pas de ```), ave
 
 {{
   "api_concernee": ["nom de l'API Hub'Eau concernée parmi: {api_list}"],
+  "date_source": "YYYY-MM-DD",
   "faits_techniques": [
-    "fait technique 1 — une particularité, limite, comportement ou erreur de l'API à connaître",
-    "fait technique 2..."
+    {{"fait": "fait technique — une particularité, limite, comportement ou erreur de l'API", "statut": "résolu|en_cours|information"}}
   ],
   "faits_metier": [
-    "fait métier 1 — une information sur l'hydrologie, les données, les codes, les stations...",
-    "fait métier 2..."
+    {{"fait": "fait métier — une information sur l'hydrologie, les données, les codes, les stations", "statut": "résolu|en_cours|information"}}
   ],
-  "statut": "résolu|en_cours|information",
   "pertinence": 3,
   "resume": "Résumé en une phrase de ce que cette issue apporte comme connaissance."
 }}
 
 Règles :
 - `api_concernee` : une ou plusieurs APIs de la liste. Utilise "Général" si ça concerne toutes les APIs ou le fonctionnement global.
-- `faits_techniques` : ce qu'un développeur utilisant l'API doit savoir. Peut être vide [].
-- `faits_metier` : ce qu'un hydrologue ou data scientist doit savoir sur les données. Peut être vide [].
+- `date_source` : date du dernier commentaire pertinent de l'issue, ou date de création si pas de commentaire utile. Format YYYY-MM-DD.
+- `faits_techniques` : ce qu'un développeur utilisant l'API doit savoir. Chaque fait a son propre statut. Peut être vide [].
+- `faits_metier` : ce qu'un hydrologue ou data scientist doit savoir sur les données. Chaque fait a son propre statut. Peut être vide [].
+- `statut` par fait : "résolu" si le problème a été corrigé, "en_cours" si encore d'actualité, "information" si c'est un fait permanent.
 - `pertinence` : 1=bruit/merci/ça marche, 2=info mineure, 3=utile, 4=important, 5=critique.
 - Sois factuel et concis. Chaque fait doit être autonome (compréhensible sans contexte).
 """
@@ -115,9 +115,9 @@ def extract_facts(client: httpx.Client, issue: dict) -> dict:
             print(f"  WARNING: Could not parse Gemini response for issue #{issue['number']}")
             facts = {
                 "api_concernee": ["Général"],
+                "date_source": issue.get("created_at", "")[:10],
                 "faits_techniques": [],
                 "faits_metier": [],
-                "statut": "information",
                 "pertinence": 1,
                 "resume": "Extraction échouée.",
                 "_raw_response": text,

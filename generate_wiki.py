@@ -48,6 +48,13 @@ def group_by_api(facts: list[dict]) -> dict[str, list[dict]]:
     return dict(grouped)
 
 
+def _get_fact_text(f) -> str:
+    """Extract text from a fact entry (dict or string)."""
+    if isinstance(f, dict):
+        return f.get("fait", "")
+    return f
+
+
 def render_api_page(api_name: str, facts: list[dict]) -> str:
     """Render a single API wiki page."""
     lines = [f"# {api_name}\n"]
@@ -62,20 +69,22 @@ def render_api_page(api_name: str, facts: list[dict]) -> str:
         issue_ref = f"(#{fact.get('issue_number', '?')})"
 
         for f in fact.get("faits_techniques", []):
-            if not f:
+            text = _get_fact_text(f)
+            if not text:
                 continue
             # Classify: if it mentions error/bug/500/erreur, it's a problem
-            lower = f.lower()
+            lower = text.lower()
             if any(w in lower for w in ["erreur", "bug", "500", "404", "problème", "échec", "fail", "broken", "cassé"]):
-                problems.append(f"{f} {issue_ref}")
+                problems.append(f"{text} {issue_ref}")
             elif any(w in lower for w in ["astuce", "conseil", "tip", "utiliser", "préférer", "recommand"]):
-                tips.append(f"{f} {issue_ref}")
+                tips.append(f"{text} {issue_ref}")
             else:
-                tech_facts.append(f"{f} {issue_ref}")
+                tech_facts.append(f"{text} {issue_ref}")
 
         for f in fact.get("faits_metier", []):
-            if f:
-                metier_facts.append(f"{f} {issue_ref}")
+            text = _get_fact_text(f)
+            if text:
+                metier_facts.append(f"{text} {issue_ref}")
 
     # Render sections
     if tech_facts:
@@ -112,8 +121,22 @@ def render_api_page(api_name: str, facts: list[dict]) -> str:
         num = fact.get("issue_number", "?")
         title = fact.get("issue_title", "")
         resume = fact.get("resume", "")
+        date_source = fact.get("date_source", "")
+        # Derive statut from individual facts if no root-level statut
         status = fact.get("statut", "")
-        lines.append(f"- **#{num}** {title} — {resume} `[{status}]`")
+        if not status:
+            all_statuts = set()
+            for f in fact.get("faits_techniques", []) + fact.get("faits_metier", []):
+                if isinstance(f, dict):
+                    all_statuts.add(f.get("statut", "information"))
+            if "en_cours" in all_statuts:
+                status = "en_cours"
+            elif "information" in all_statuts:
+                status = "information"
+            elif "résolu" in all_statuts:
+                status = "résolu"
+        date_label = f" ({date_source})" if date_source else ""
+        lines.append(f"- **#{num}** {title}{date_label} — {resume} `[{status}]`")
     lines.append("")
 
     return "\n".join(lines)

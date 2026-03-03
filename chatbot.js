@@ -73,7 +73,7 @@
       return;
     }
 
-    showStatus("Chargement de l'index et du modele d'embeddings (~45 Mo)...");
+    showStatus("Chargement de l'index et du modele d'embeddings (~120 Mo)...");
 
     fetch(EMBEDDINGS_URL)
       .then(function (r) { return r.json(); })
@@ -97,7 +97,7 @@
     return import(
       "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.1"
     ).then(function (mod) {
-      return mod.pipeline("feature-extraction", "Xenova/bge-small-en-v1.5", {
+      return mod.pipeline("feature-extraction", "Xenova/multilingual-e5-small", {
         dtype: "fp32",
       });
     });
@@ -182,7 +182,7 @@
 
   // --- Embed query via Transformers.js ---
   function embedQuery(text) {
-    return embedder(text, { pooling: "mean", normalize: true }).then(
+    return embedder("query: " + text, { pooling: "mean", normalize: true }).then(
       function (output) {
         return Array.from(output.data);
       }
@@ -222,10 +222,15 @@
 
     var systemPrompt =
       "Tu es un assistant expert sur les APIs Hub'Eau " +
-      "(plateforme de donnees ouvertes sur l'eau en France, par le BRGM). " +
-      "Reponds en francais de maniere concise et utile. " +
-      "Base ta reponse UNIQUEMENT sur le contexte fourni. " +
-      "Si le contexte ne contient pas l'information, dis-le clairement.";
+      "(plateforme de donnees ouvertes sur l'eau en France, par le BRGM).\n\n" +
+      "Regles :\n" +
+      "- Reponds en francais, de maniere concise et structuree.\n" +
+      "- Base ta reponse UNIQUEMENT sur le contexte fourni.\n" +
+      "- Utilise le formatage markdown : **gras** pour les points cles, `code` pour les parametres/endpoints, des listes a puces pour les enumerations.\n" +
+      "- Cite les numeros d'issues quand c'est pertinent, ex: (#123).\n" +
+      "- Structure ta reponse : d'abord une reponse directe et courte, puis les details si necessaire.\n" +
+      "- Si le contexte ne contient pas l'information, dis-le clairement et suggere ou chercher.\n" +
+      "- Si la question n'est pas liee aux APIs Hub'Eau ou a l'hydrologie, indique poliment que tu ne peux aider que sur ces sujets.";
 
     var userMsg =
       "Contexte:\n" + contextParts.join("\n\n") +
@@ -243,7 +248,7 @@
           { role: "system", content: systemPrompt },
           { role: "user", content: userMsg },
         ],
-        max_tokens: 500,
+        max_tokens: 1000,
         temperature: 0.3,
       }),
     })
@@ -283,9 +288,27 @@
     bubble.className = "chat-bubble";
 
     var paragraphs = text.split("\n");
-    paragraphs.forEach(function (para, idx) {
-      if (idx > 0) bubble.appendChild(document.createElement("br"));
-      renderFormattedText(bubble, para);
+    var currentList = null;
+    paragraphs.forEach(function (para) {
+      var listMatch = para.match(/^\s*[-*]\s+(.*)/);
+      if (listMatch) {
+        if (!currentList) {
+          currentList = document.createElement("ul");
+          currentList.style.cssText = "margin:4px 0;padding-left:20px;";
+          bubble.appendChild(currentList);
+        }
+        var li = document.createElement("li");
+        renderFormattedText(li, listMatch[1]);
+        currentList.appendChild(li);
+      } else {
+        currentList = null;
+        if (para.trim()) {
+          var p = document.createElement("p");
+          p.style.margin = "4px 0";
+          renderFormattedText(p, para);
+          bubble.appendChild(p);
+        }
+      }
     });
 
     if (sources && sources.length > 0) {
